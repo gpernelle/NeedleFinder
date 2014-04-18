@@ -180,9 +180,10 @@ class NFLoadModelStep( NFStep ) :
     alreadyloaded = pNode.GetParameter("Template-loaded")
     if alreadyloaded != "1":
       if nb == 3:
-        pathToScene = slicer.modules.needlefinder.path.replace("NeedleFinder.py","Resources/Template/3points/Template.mrml")
+        pathToScene = slicer.modules.needlefinder.path.replace("NeedleFinder/NeedleFinder.py","NeedleFinder/Resources/Template/3points/Template.mrml")
       elif nb ==4:
-        pathToScene = slicer.modules.needlefinder.path.replace("NeedleFinder","Resources/Template/4points/Template.mrml")
+        pathToScene = slicer.modules.needlefinder.path.replace("NeedleFinder/NeedleFinder.py","NeedleFinder/Resources/Template/4points/Template.mrml")
+
       # slicer.util.loadScene( pathToScene, True)
       slicer.util.loadScene( pathToScene)
       self.loadTemplateButton.setEnabled(0)

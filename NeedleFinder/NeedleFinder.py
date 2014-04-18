@@ -6,7 +6,7 @@ class NeedleFinder:
   def __init__( self, parent ):
     parent.title = "NeedleFinder"
     parent.categories = ["IGT"]
-    parent.contributors = ["Guillaume Pernelle", "Xiaojun Chen", "Yi Gao", "Tina Kapur", "Jan Egger", "Carolina Vale"]
+    parent.contributors = ["Guillaume Pernelle",  "Alireza Mehrtash", "Lauren Barber", "Nabgha Fahrat", "Jan Egger", "Tobias Penzkofer", "Sandy Wells", "Sam Song", "Xiaojun Chen", "Yi Gao", "Antonio Damato", "Tina Kapur", "Akila Viswanathan"]
     parent.helpText = "https://github.com/gpernelle/NeedleFinder/wiki";
     parent.acknowledgementText = " Version : " + "NeedleFinder v1.0."
     self.parent = parent
