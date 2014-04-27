@@ -635,7 +635,7 @@ class NeedleFinderWidget:
     """save the label statistics
     """
     self.fileDialog = qt.QFileDialog(self.parent)
-    self.fileDialog.setDirectory(slicer.modules.needlefinder.path.replace("NeedleFinder/NeedleFinder.py","NeedleFinder/Config"))
+    self.fileDialog.setDirectory(slicer.modules.needlefinder.path.replace("NeedleFinder.py","Config"))
     self.fileDialog.options = self.fileDialog.DontUseNativeDialog
     self.fileDialog.acceptMode = self.fileDialog.AcceptSave
     self.fileDialog.defaultSuffix = "cfg"
@@ -648,7 +648,7 @@ class NeedleFinderWidget:
 
   def onLoad (self) :
     self.fileDialog = qt.QFileDialog(self.parent)
-    self.fileDialog.setDirectory(slicer.modules.needlefinder.path.replace("NeedleFinder/NeedleFinder.py","NeedleFinder/Config"))
+    self.fileDialog.setDirectory(slicer.modules.needlefinder.path.replace("NeedleFinder.py","Config"))
     self.fileDialog.options = self.fileDialog.DontUseNativeDialog
     self.fileDialog.acceptMode = self.fileDialog.AcceptOpen
     self.fileDialog.defaultSuffix = "cfg"
@@ -660,7 +660,7 @@ class NeedleFinderWidget:
     self.logic.loadParameters(fileName)
 
   def onReset (self) :
-    fileName = pathToScene = slicer.modules.needlefinder.path.replace("NeedleFinder/NeedleFinder.py","NeedleFinder/Config/default.cfg")
+    fileName = pathToScene = slicer.modules.needlefinder.path.replace("NeedleFinder.py","Config/default.cfg")
     self.logic.loadParameters(fileName)
 
 '''
