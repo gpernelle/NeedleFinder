@@ -8,6 +8,7 @@ import thread
 import random
 import copy
 import csv
+import ConfigParser
 
 from __main__ import vtk, qt, ctk, slicer
 
@@ -61,7 +62,8 @@ class NeedleFinderWidget:
     # class var
     self.validationNeedleNumber    = 1
     self.stepNeedle                = 0
-    
+    self.fileName     = None
+    self.fileDialog   = None
     self.logic                  = NeedleFinderLogic() 
 
 
@@ -204,7 +206,29 @@ class NeedleFinderWidget:
     self.__bendingFrame.collapsed = 1
     bendingFrame = qt.QFormLayout(self.__bendingFrame)
     
-    
+    # Save/Load/Reset parameters
+    self.configFrame = qt.QFrame()
+    self.configFrame.setLayout(qt.QHBoxLayout())
+    bendingFrame.layout().addRow(self.configFrame)
+    self.loadButton = qt.QPushButton()
+    self.loadButton.text = "Load Parameters"
+    self.loadButton.checkable = False
+    self.loadButton.toolTip = "Click to load parameters from a configuration file."
+    self.loadButton.connect('clicked()',self.onLoad)
+    self.saveButton = qt.QPushButton()
+    self.saveButton.checkable = False
+    self.saveButton.text = "Save Parameters"
+    self.saveButton.toolTip = "Click to save the parameters in a configuration file."
+    self.saveButton.connect('clicked()',self.onSave)
+    self.resetParametersButton = qt.QPushButton()
+    self.resetParametersButton.checkable = False
+    self.resetParametersButton.text = "Reset Default Parameters"
+    self.resetParametersButton.toolTip = "Click to reset the default parameters from default.cfg"
+    self.resetParametersButton.connect('clicked()',self.onReset)
+    self.configFrame.layout().addWidget( self.loadButton )
+    self.configFrame.layout().addWidget( self.saveButton )
+    self.configFrame.layout().addWidget( self.resetParametersButton )
+
     # Auto correct tip position?
     self.autoCorrectTip = qt.QCheckBox('Auto correct tip position?')
     bendingFrame.addRow(self.autoCorrectTip)
@@ -360,6 +384,8 @@ class NeedleFinderWidget:
     self.widget = slicer.qMRMLWidget()
     self.widget.setLayout(self.layout)
     self.layout2.addWidget(self.widget)
+
+    self.onReset()
 
   def cleanup(self):
     pass
@@ -604,6 +630,38 @@ class NeedleFinderWidget:
       # ijk=self.ras2ijk(ras)
       # self.t0=time.clock()
       self.logic.addManualTip(ras)
+
+  def onSave(self):
+    """save the label statistics
+    """
+    self.fileDialog = qt.QFileDialog(self.parent)
+    self.fileDialog.setDirectory(slicer.modules.needlefinder.path.replace("NeedleFinder/NeedleFinder.py","NeedleFinder/Config"))
+    self.fileDialog.options = self.fileDialog.DontUseNativeDialog
+    self.fileDialog.acceptMode = self.fileDialog.AcceptSave
+    self.fileDialog.defaultSuffix = "cfg"
+    self.fileDialog.setNameFilter("Configuration file (*.cfg)")
+    self.fileDialog.connect("fileSelected(QString)", self.onSaveFileSelected)
+    self.fileDialog.show()
+
+  def onSaveFileSelected(self,fileName):
+    self.logic.saveParameters(fileName)
+
+  def onLoad (self) :
+    self.fileDialog = qt.QFileDialog(self.parent)
+    self.fileDialog.setDirectory(slicer.modules.needlefinder.path.replace("NeedleFinder/NeedleFinder.py","NeedleFinder/Config"))
+    self.fileDialog.options = self.fileDialog.DontUseNativeDialog
+    self.fileDialog.acceptMode = self.fileDialog.AcceptOpen
+    self.fileDialog.defaultSuffix = "cfg"
+    self.fileDialog.setNameFilter("Configuration File (*.cfg)")
+    self.fileDialog.connect("fileSelected(QString)", self.onLoadFileSelected)
+    self.fileDialog.show()
+
+  def onLoadFileSelected(self,fileName):
+    self.logic.loadParameters(fileName)
+
+  def onReset (self) :
+    fileName = pathToScene = slicer.modules.needlefinder.path.replace("NeedleFinder/NeedleFinder.py","NeedleFinder/Config/default.cfg")
+    self.logic.loadParameters(fileName)
 
 '''
 
@@ -3749,9 +3807,84 @@ class NeedleFinderLogic:
     '''
     boldFont = qt.QFont( "Sans Serif", 12, qt.QFont.Bold )
     return boldFont 
+  
+  def saveParameters (self ,filePath) :
+    widget = slicer.modules.NeedleFinderWidget
+    config = ConfigParser.RawConfigParser()
+    config.add_section('NeedleFinder Parameters')
+    config.add_section('BooleanSection')
+    config.add_section('IntegerSection')
 
+    config.set('BooleanSection', 'autoCorrectTip', widget.autoCorrectTip.isChecked())
+    config.set('BooleanSection', 'invertedContrast', widget.invertedContrast.isChecked())
+    config.set('BooleanSection', 'gradient', widget.gradient.isChecked())
+    config.set('BooleanSection', 'filterControlPoints', widget.filterControlPoints.isChecked())
+    config.set('BooleanSection', 'drawFiducialPoints', widget.drawFiducialPoints.isChecked())
+    config.set('BooleanSection', 'autoStopTip', widget.autoStopTip.isChecked())
+    config.set('BooleanSection', 'extendNeedle', widget.extendNeedle.isChecked())
+    config.set('BooleanSection', 'maxLength', widget.maxLength.isChecked())
+    config.set('BooleanSection', 'gaussianAttenuationButton', widget.gaussianAttenuationButton.isChecked())
 
+    config.set('IntegerSection', 'realNeedleLength', widget.realNeedleLength.value)
+    config.set('IntegerSection', 'sigmaValue', widget.sigmaValue.value)
+    config.set('IntegerSection', 'gradientPonderation', widget.gradientPonderation.value)
+    config.set('IntegerSection', 'exponent', widget.exponent.value)
+    config.set('IntegerSection', 'distanceMax', widget.distanceMax.value)
+    config.set('IntegerSection', 'nbRotatingIterations', widget.nbRotatingIterations.value)
+    config.set('IntegerSection', 'numberOfPointsPerNeedle', widget.numberOfPointsPerNeedle.value)
+    config.set('IntegerSection', 'lenghtNeedleParameter', widget.lenghtNeedleParameter.value)
+    config.set('IntegerSection', 'radiusNeedleParameter', widget.radiusNeedleParameter.value)
 
+    # Writing our configuration file to 'example.cfg'
+    with open(filePath, 'wb') as configfile:
+        config.write(configfile)
+
+  def loadParameters (self, filePath):
+    widget = slicer.modules.NeedleFinderWidget
+    config = ConfigParser.RawConfigParser()
+    config.read(filePath)
+
+    autoCorrectTip            = config.getboolean('BooleanSection', 'autoCorrectTip')
+    invertedContrast          = config.getboolean('BooleanSection', 'invertedContrast')
+    gradient                  = config.getboolean('BooleanSection', 'gradient')
+    filterControlPoints       = config.getboolean('BooleanSection', 'filterControlPoints')
+    drawFiducialPoints        = config.getboolean('BooleanSection', 'drawFiducialPoints')
+    autoStopTip               = config.getboolean('BooleanSection', 'autoStopTip')
+    extendNeedle              = config.getboolean('BooleanSection', 'extendNeedle')
+    maxLength                 = config.getboolean('BooleanSection', 'maxLength')
+    gaussianAttenuationButton = config.getboolean('BooleanSection', 'gaussianAttenuationButton')
+
+    realNeedleLength          = config.getint('IntegerSection', 'realNeedleLength')
+    sigmaValue                = config.getint('IntegerSection', 'sigmaValue')
+    gradientPonderation       = config.getint('IntegerSection', 'gradientPonderation')
+    exponent                  = config.getint('IntegerSection', 'exponent')
+    distanceMax               = config.getint('IntegerSection', 'distanceMax')
+    nbRotatingIterations      = config.getint('IntegerSection', 'nbRotatingIterations')
+    numberOfPointsPerNeedle   = config.getint('IntegerSection', 'numberOfPointsPerNeedle')
+    lenghtNeedleParameter     = config.getint('IntegerSection', 'lenghtNeedleParameter')
+    radiusNeedleParameter     = config.getint('IntegerSection', 'radiusNeedleParameter')
+    
+    widget.autoCorrectTip.checked       = autoCorrectTip
+    widget.invertedContrast.checked     = invertedContrast
+    widget.gradient.checked             = gradient 
+    widget.filterControlPoints.checked  = filterControlPoints
+    widget.drawFiducialPoints.checked   = drawFiducialPoints
+    widget.autoStopTip.checked          = autoStopTip
+    widget.extendNeedle.checked         = extendNeedle
+    widget.maxLength.checked            = maxLength
+    widget.gaussianAttenuationButton.checked =  gaussianAttenuationButton
+
+    widget.realNeedleLength.value         = realNeedleLength
+    widget.sigmaValue.value               = sigmaValue
+    widget.gradientPonderation.value      = gradientPonderation
+    widget.exponent.value                 = exponent
+    widget.distanceMax.value              = distanceMax
+    widget.nbRotatingIterations.value     = nbRotatingIterations
+    widget.numberOfPointsPerNeedle.value  = numberOfPointsPerNeedle
+    widget.lenghtNeedleParameter.value    = lenghtNeedleParameter
+    widget.radiusNeedleParameter.value    = radiusNeedleParameter
+
+    print "Parameters successfully loaded!"
 """
 
 ########################################################################################################################
