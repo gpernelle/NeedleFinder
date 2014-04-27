@@ -9,7 +9,7 @@ set(EXTENSION_CATEGORY "IGT")
 
 set(EXTENSION_CONTRIBUTORS "Guillaume Pernelle,  Alireza Mehrtash, Lauren Barber, Nabgha Fahrat, Jan Egger, Tobias Penzkofer, Sandy Wells, Sam Song, Xiaojun Chen, Yi Gao, Antonio Damato, Tina Kapur, Akila Viswanathan")
 
-set(EXTENSION_DESCRIPTION "NeedleFinder: fast interactive needle detection. It is an open source software for MR-Guided Interstitial Gynecologic Brachytherapy. It enables on-time processing of the intra-operative MRI data via a DICOM connection to the scanner followed by a multi-stage registration of CAD models of the template and the obturator to the patient images. This allows the virtual placement of interstitial needles during the intervention, as well as the detection/labeling of needles in MR images")
+set(EXTENSION_DESCRIPTION "NeedleFinder: fast interactive needle detection. It provides interactive tools to segment needles in MR/CT images. It has been mostly tested on MRI from gynelogical brachytherapy cases. Cf <<Validation of Catheter Segmentation for MR-Guided Gynecologic Cancer Brachytherapy.>> MICCAI 2013)")
 
 set(EXTENSION_ICONURL "https://raw.github.com/gpernelle/NeedleFinder/master/NeedleFinder.png")
 set(EXTENSION_SCREENSHOTURLS "https://raw.github.com/gpernelle/NeedleFinder/master/LabelingResult.png")
