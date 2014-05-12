@@ -319,7 +319,7 @@ class NeedleFinderWidget:
     # nb radius iteration spin box
     self.nbRadiusIterations = qt.QSpinBox()
     self.nbRadiusIterations.setMinimum(2)
-    self.nbRadiusIterations.setMaximum(50)
+    self.nbRadiusIterations.setMaximum(1000)
     self.nbRadiusIterations.setValue(13)
     nbRadiusIterationsLabel = qt.QLabel("Number of distance iterations: ")
     # bendingFrame.addRow( nbRadiusIterationsLabel, self.nbRadiusIterations)
@@ -327,7 +327,7 @@ class NeedleFinderWidget:
     # distance max spin box
     self.distanceMax = qt.QSpinBox()
     self.distanceMax.setMinimum(0)
-    self.distanceMax.setMaximum(50)
+    self.distanceMax.setMaximum(1000)
     self.distanceMax.setValue(5)
     distanceMaxLabel = qt.QLabel("Radius of cone base (mm): ")
     bendingFrame.addRow( distanceMaxLabel, self.distanceMax)
@@ -335,7 +335,7 @@ class NeedleFinderWidget:
     # nb rotating iterations spin box
     self.nbRotatingIterations = qt.QSpinBox()
     self.nbRotatingIterations.setMinimum(2)
-    self.nbRotatingIterations.setMaximum(50)
+    self.nbRotatingIterations.setMaximum(1000)
     self.nbRotatingIterations.setValue(35)
     nbRotatingIterationsLabel = qt.QLabel("Number of rotating steps: ")
     bendingFrame.addRow( nbRotatingIterationsLabel, self.nbRotatingIterations)
@@ -351,7 +351,7 @@ class NeedleFinderWidget:
     # nb heights per needle spin box
     self.stepsize = qt.QSpinBox()
     self.stepsize.setMinimum(1)
-    self.stepsize.setMaximum(50)
+    self.stepsize.setMaximum(500)
     self.stepsize.setValue(5)
     stepsizeLabel = qt.QLabel("Stepsize: ")
     # bendingFrame.addRow( stepsizeLabel, self.stepsize)
@@ -359,7 +359,7 @@ class NeedleFinderWidget:
     #lenghtNeedle
     self.lenghtNeedleParameter = qt.QSpinBox()
     self.lenghtNeedleParameter.setMinimum(1)
-    self.lenghtNeedleParameter.setMaximum(1000)
+    self.lenghtNeedleParameter.setMaximum(10000)
     self.lenghtNeedleParameter.setValue(100)
     stepsizeLabel = qt.QLabel("Lenght of the needles (mm): ")
     bendingFrame.addRow( stepsizeLabel, self.lenghtNeedleParameter)
