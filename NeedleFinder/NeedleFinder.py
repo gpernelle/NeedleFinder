@@ -2515,12 +2515,12 @@ class NeedleFinderLogic:
     '''
     self.initTableView()
     if label !=None:
-      ref = int(label[0])
+      ref = int(label[0]) % 60
       needleLabel = self.option[ref]
       reliability = label[1]
     else:
       needleLabel = str(ID)
-      ref = ID
+      ref = ID % 60
       reliability = '-'
     # ref = int(modelNode.GetAttribute("nth"))
     
