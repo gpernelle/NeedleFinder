@@ -1342,14 +1342,15 @@ class NeedleFinderLogic:
   #------------------------------------------------------------------------------
 
   def findTip(self, A, imageData, radiusNeedle, coeff, sigmaValue, gradientPonderation, X, Y, Z):
+    A=[int(A[0]),int(A[1]),int(A[2])]
     minTotalTip=0
     X = int(X)
     Y = int(Y)
     Z = int(Z)
     for I in range(-X,X):
-      i=I/float(coeff)
+      i=int(I/float(coeff))
       for J in range(-Y,Y):
-        j=J/float(coeff)
+        j=int(J/float(coeff))
         for k in range(1):
           v0=0
           totalTip=0
@@ -1445,7 +1446,7 @@ class NeedleFinderLogic:
 
     ### length needle = distance Aijk[2]*0.9
     # lenghtNeedle = abs(self.ijk2ras(A)[2]*0.9)
-
+    A=[int(A[0]),int(A[1]),int(A[2])]
     if axialSegmentationLimit!=None:
       lenghtNeedle = abs(A[2] - axialSegmentationLimit)*1.15*spacing[2]
     elif axialSegmentationLimit==None and widget.maxLength.isChecked():
