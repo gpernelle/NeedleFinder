@@ -2272,12 +2272,12 @@ class NeedleFinderLogic:
     scene.AddNode(modelDisplay)
     model.SetAndObserveDisplayNodeID(modelDisplay.GetID())
     ### Add to scene
-    modelDisplay.SetInputPolyData(model.GetPolyData())
+    modelDisplay.SetInputPolyDataConnection(model.GetPolyDataConnection())
     scene.AddNode(model)
     ###Create Tube around the line
     tube=vtk.vtkTubeFilter()
     polyData = model.GetPolyData()
-    tube.SetInput(polyData)
+    tube.SetInputData(polyData)
     tube.SetRadius(1)
     tube.SetNumberOfSides(50)
     tube.Update()
