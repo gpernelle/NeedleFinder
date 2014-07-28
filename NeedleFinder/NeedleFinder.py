@@ -3348,11 +3348,12 @@ class NeedleFinderLogic:
     # can be used. Notice that we can specify the value of the implicit function
     # with the SetValue method.
     clipper = vtk.vtkClipPolyData()
-    clipper.SetInput(node.GetPolyData())
+    clipper.SetInputData(node.GetPolyData())
     clipper.SetClipFunction(plane)
     clipper.GenerateClipScalarsOn()
     clipper.GenerateClippedOutputOn()
     clipper.SetValue(value)
+    clipper.Update()
     polyData = clipper.GetOutput()
     if 1==1:
         scene   =   slicer.mrmlScene
@@ -3365,7 +3366,7 @@ class NeedleFinderLogic:
         scene.AddNode(modelDisplay)
         model.SetAndObserveDisplayNodeID(modelDisplay.GetID())
         ### Add to scene
-        modelDisplay.SetInputPolyData(model.GetPolyData())
+        modelDisplay.SetInputPolyDataConnection(model.GetPolyDataConnection())
         scene.AddNode(model)
     if visible!=1:
         scene.RemoveNode(model)
