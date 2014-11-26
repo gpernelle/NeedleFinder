@@ -1102,7 +1102,12 @@ class NeedleFinderLogic:
     # print polyData
     scene = slicer.mrmlScene
     modelNodes = slicer.util.getNodes('vtkMRMLModelNode*')
+    #??? i suppose here is a bug:
+    print 'modelNodes: ',modelNodes
+    print 'self.ContourNode: ', self.contourNode
+    #!!! self.contourNode is None
     contourNode = slicer.util.getNode(self.contourNode)
+    print 'contourNode: ',contourNode
     if contourNode != None:
       slicer.mrmlScene.RemoveNode(contourNode.GetStorageNode())
       contourNode.RemoveAllDisplayNodeIDs()
