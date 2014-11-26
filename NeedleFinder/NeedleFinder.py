@@ -1106,14 +1106,21 @@ class NeedleFinderLogic:
     print 'modelNodes: ',modelNodes
     print 'self.ContourNode: ', self.contourNode
     #!!! self.contourNode is None
+    
+    #bugfix>>>>
+    modelNode = slicer.vtkMRMLModelNode()
+    self.contourNode = modelNode.GetID()
+    print 'self.ContourNode: ', self.contourNode 
+    #<<<bugfix
+    
     contourNode = slicer.util.getNode(self.contourNode)
     print 'contourNode: ',contourNode
     if contourNode != None:
       slicer.mrmlScene.RemoveNode(contourNode.GetStorageNode())
       contourNode.RemoveAllDisplayNodeIDs()
-      slicer.mrmlScene.RemoveNode(contourNode)        
-  
-    modelNode = slicer.vtkMRMLModelNode()
+      slicer.mrmlScene.RemoveNode(contourNode)
+      
+    #modelNode = slicer.vtkMRMLModelNode()
     modelNode.SetScene(scene)
     modelNode.SetAndObservePolyData(polyData)
     # display node
@@ -1139,7 +1146,7 @@ class NeedleFinderLogic:
     displayNode.SetInputPolyData(modelNode.GetPolyData())
     scene.AddNode(modelNode)
 
-    self.contourNode = modelNode.GetID()
+    #self.contourNode = modelNode.GetID()
 
     qt.QApplication.processEvents()
 
@@ -2503,7 +2510,7 @@ class NeedleFinderLogic:
     ??? this fx does not delete the obtu' needles from the scene
     '''
     #productive #onButton
-    if profiling: print "resetNeedleDetection"; msgbox('resetNeedleDetection')
+    if profiling: print "resetNeedleDetection";
     widget      = slicer.modules.NeedleFinderWidget
     dialog      = qt.QDialog()
     ret         = messageBox = qt.QMessageBox.question( dialog, 'Attention','''
