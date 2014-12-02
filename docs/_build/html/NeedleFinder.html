@@ -1,0 +1,817 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>NeedleFinder module &mdash; NeedleFinder 1.0 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="NeedleFinder 1.0 documentation" href="index.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="index.html" class="fa fa-home"> NeedleFinder</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul class="simple">
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">NeedleFinder</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>NeedleFinder module</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          <a href="_sources/NeedleFinder.txt" rel="nofollow"> View page source</a>
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <div class="section" id="module-NeedleFinder">
+<span id="needlefinder-module"></span><h1>NeedleFinder module<a class="headerlink" href="#module-NeedleFinder" title="Permalink to this headline">¶</a></h1>
+<p><strong>NeedleFinder Documentation</strong></p>
+<p>Guillaume Pernelle,  Andre Mastmeyer</p>
+<div class="section" id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li></li>
+<li></li>
+</ul>
+</div></blockquote>
+<dl class="class">
+<dt id="NeedleFinder.NeedleFinder">
+<em class="property">class </em><code class="descclassname">NeedleFinder.</code><code class="descname">NeedleFinder</code><span class="sig-paren">(</span><em>parent</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinder" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="NeedleFinder.NeedleFinder.runTest">
+<code class="descname">runTest</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinder.runTest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinder.runTest" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="NeedleFinder.NeedleFinderLogic">
+<em class="property">class </em><code class="descclassname">NeedleFinder.</code><code class="descname">NeedleFinderLogic</code><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class implements all the actual
+computation done by the module.  The interface
+is such that other python code can import
+this class and make use of the functionality without
+requiring an instance of the Widget</p>
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.AddContour">
+<code class="descname">AddContour</code><span class="sig-paren">(</span><em>polyData</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.AddContour"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.AddContour" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? Add caculated isosurfaces (self.drawIsoSurfaces) around visible needles to the scene
+and add opacity, color...</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.AddModel">
+<code class="descname">AddModel</code><span class="sig-paren">(</span><em>i</em>, <em>polyData</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.AddModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.AddModel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.AddRadiation">
+<code class="descname">AddRadiation</code><span class="sig-paren">(</span><em>i</em>, <em>needleID</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.AddRadiation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.AddRadiation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.Fibonacci">
+<code class="descname">Fibonacci</code><span class="sig-paren">(</span><em>n</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.Fibonacci"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.Fibonacci" title="Permalink to this definition">¶</a></dt>
+<dd><p>calc&#8217;s Fibonacci #</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.addButtons">
+<code class="descname">addButtons</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.addButtons"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.addButtons" title="Permalink to this definition">¶</a></dt>
+<dd><p>???</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.addManualTip">
+<code class="descname">addManualTip</code><span class="sig-paren">(</span><em>A</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.addManualTip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.addManualTip" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? used?</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.addNeedleToScene">
+<code class="descname">addNeedleToScene</code><span class="sig-paren">(</span><em>controlPoint</em>, <em>colorVar</em>, <em>needleType='Detection'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.addNeedleToScene"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.addNeedleToScene" title="Permalink to this definition">¶</a></dt>
+<dd><p>adds visual representation of a needle to the scene</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.addSegmentedNeedleToTable">
+<code class="descname">addSegmentedNeedleToTable</code><span class="sig-paren">(</span><em>ID</em>, <em>label=None</em>, <em>needleType=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.addSegmentedNeedleToTable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.addSegmentedNeedleToTable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add last segmented needle to the table
+The color icon corresponds to the color of the needle, which corresponds to its label (color code)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.array2">
+<code class="descname">array2</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.array2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.array2" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.binomial">
+<code class="descname">binomial</code><span class="sig-paren">(</span><em>n</em>, <em>k</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.binomial"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.binomial" title="Permalink to this definition">¶</a></dt>
+<dd><p>calc&#8217;s binomial coefficient</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.changeCursor">
+<code class="descname">changeCursor</code><span class="sig-paren">(</span><em>cursorNumber</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.changeCursor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.changeCursor" title="Permalink to this definition">¶</a></dt>
+<dd><p>changes the cursor</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.changeValue">
+<code class="descname">changeValue</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.changeValue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.changeValue" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? chose needle for control point scrolling</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.clipPolyData">
+<code class="descname">clipPolyData</code><span class="sig-paren">(</span><em>node</em>, <em>value</em>, <em>visible=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.clipPolyData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.clipPolyData" title="Permalink to this definition">¶</a></dt>
+<dd><p>???</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.computerPolydataAndMatrix">
+<code class="descname">computerPolydataAndMatrix</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.computerPolydataAndMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.computerPolydataAndMatrix" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.delayDisplay">
+<code class="descname">delayDisplay</code><span class="sig-paren">(</span><em>message</em>, <em>msec=1000</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.delayDisplay"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.delayDisplay" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.deleteSegmentedNeedle">
+<code class="descname">deleteSegmentedNeedle</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.deleteSegmentedNeedle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.deleteSegmentedNeedle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete every segmented needles of the current round</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.displayBentNeedle">
+<code class="descname">displayBentNeedle</code><span class="sig-paren">(</span><em>i</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.displayBentNeedle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.displayBentNeedle" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? not used anymore. works with Yi Gao CLI module for straight needle detection + bending post-computed</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.displayContour">
+<code class="descname">displayContour</code><span class="sig-paren">(</span><em>i</em>, <em>visibility</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.displayContour"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.displayContour" title="Permalink to this definition">¶</a></dt>
+<dd><p>???</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.displayContours">
+<code class="descname">displayContours</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.displayContours"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.displayContours" title="Permalink to this definition">¶</a></dt>
+<dd><p>???</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.displayFiducial">
+<code class="descname">displayFiducial</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.displayFiducial"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.displayFiducial" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.displayNeedle">
+<code class="descname">displayNeedle</code><span class="sig-paren">(</span><em>i</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.displayNeedle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.displayNeedle" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.displayNeedleTube">
+<code class="descname">displayNeedleTube</code><span class="sig-paren">(</span><em>ID</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.displayNeedleTube"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.displayNeedleTube" title="Permalink to this definition">¶</a></dt>
+<dd><p>from segmentation report, show/hide needle tube</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.displayRadPlanned">
+<code class="descname">displayRadPlanned</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.displayRadPlanned"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.displayRadPlanned" title="Permalink to this definition">¶</a></dt>
+<dd><p>???</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.displayRadSegmented">
+<code class="descname">displayRadSegmented</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.displayRadSegmented"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.displayRadSegmented" title="Permalink to this definition">¶</a></dt>
+<dd><p>???</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.distTip">
+<code class="descname">distTip</code><span class="sig-paren">(</span><em>id1</em>, <em>id2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.distTip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.distTip" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? calc&#8217;s distance of two needle tips</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.distance">
+<code class="descname">distance</code><span class="sig-paren">(</span><em>pt1</em>, <em>pt2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.distance"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.distance" title="Permalink to this definition">¶</a></dt>
+<dd><p>calc&#8217;s distance between two points</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.distanceTwoPoints">
+<code class="descname">distanceTwoPoints</code><span class="sig-paren">(</span><em>A</em>, <em>B</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.distanceTwoPoints"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.distanceTwoPoints" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns distance between two pts.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.drawIsoSurfaces">
+<code class="descname">drawIsoSurfaces</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.drawIsoSurfaces"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.drawIsoSurfaces" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? Draw isosurfaces from models of the visible needles only</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.drawIsoSurfaces0">
+<code class="descname">drawIsoSurfaces0</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.drawIsoSurfaces0"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.drawIsoSurfaces0" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.drawObturatorNeedles">
+<code class="descname">drawObturatorNeedles</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.drawObturatorNeedles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.drawObturatorNeedles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw needles around the obturator of length realNeedleLength
+Draw straigth lines, parallel to the one defined by two control points
+given by the first two clicks</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.drawValidationNeedles">
+<code class="descname">drawValidationNeedles</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.drawValidationNeedles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.drawValidationNeedles" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? Render the needles as tubes</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.evaluate">
+<code class="descname">evaluate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.evaluate" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? calc&#8217;s Hausdorff distance of nearby needles</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.exportEvaluation">
+<code class="descname">exportEvaluation</code><span class="sig-paren">(</span><em>results</em>, <em>url</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.exportEvaluation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.exportEvaluation" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? used?</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.factorial">
+<code class="descname">factorial</code><span class="sig-paren">(</span><em>n</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.factorial"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.factorial" title="Permalink to this definition">¶</a></dt>
+<dd><p>factorial(n): return the factorial of the integer n.
+factorial(0) = 1
+factorial(n) with n&lt;0 is -factorial(abs(n))</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.findLabelNeedleID">
+<code class="descname">findLabelNeedleID</code><span class="sig-paren">(</span><em>ID</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.findLabelNeedleID"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.findLabelNeedleID" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.findTip">
+<code class="descname">findTip</code><span class="sig-paren">(</span><em>A</em>, <em>imageData</em>, <em>radiusNeedle</em>, <em>coeff</em>, <em>sigmaValue</em>, <em>gradientPonderation</em>, <em>X</em>, <em>Y</em>, <em>Z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.findTip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.findTip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find tip</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.getBoldFont">
+<code class="descname">getBoldFont</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.getBoldFont"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.getBoldFont" title="Permalink to this definition">¶</a></dt>
+<dd><p>???</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.hasImageData">
+<code class="descname">hasImageData</code><span class="sig-paren">(</span><em>volumeNode</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.hasImageData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.hasImageData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.hausdorffDistance2">
+<code class="descname">hausdorffDistance2</code><span class="sig-paren">(</span><em>id1</em>, <em>id2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.hausdorffDistance2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.hausdorffDistance2" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? calc&#8217;s hausdorff distance of two needles</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.hideIsoSurfaces">
+<code class="descname">hideIsoSurfaces</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.hideIsoSurfaces"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.hideIsoSurfaces" title="Permalink to this definition">¶</a></dt>
+<dd><p>Hide isosurfaces from models of the visible needles only</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.ijk2ras">
+<code class="descname">ijk2ras</code><span class="sig-paren">(</span><em>A</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.ijk2ras"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.ijk2ras" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert IJK coordinates to RAS coordinates. The transformation matrix is the one 
+of the active volume on the red slice</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.initTableView">
+<code class="descname">initTableView</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.initTableView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.initTableView" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize a table gathering information on segmented needles
+Model and view for stats table</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.loadParameters">
+<code class="descname">loadParameters</code><span class="sig-paren">(</span><em>filePath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.loadParameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.loadParameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>load the parameters from parameter text file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.needleDetection">
+<code class="descname">needleDetection</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.needleDetection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.needleDetection" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.needleDetectionThread">
+<code class="descname">needleDetectionThread</code><span class="sig-paren">(</span><em>A</em>, <em>imageData</em>, <em>colorVar</em>, <em>spacing</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.needleDetectionThread"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.needleDetectionThread" title="Permalink to this definition">¶</a></dt>
+<dd><p>From the needle tip, the algorithm looks for a direction maximizing the &#8220;needle likelihood&#8221; of a small segment in a conic region. 
+The second extremity of this segment is saved as a control point (in controlPoints), used later. 
+Then, this step is iterated, replacing the needle tip by the latest control point. 
+The height of the new conic region (stepsize) is increased as well as its base diameter (rMax) and its normal is collinear to the previous computed segment. (cf. C0) 
+NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
+From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
+??? is this a threaded function</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.needleDetectionUPThread">
+<code class="descname">needleDetectionUPThread</code><span class="sig-paren">(</span><em>A</em>, <em>imageData</em>, <em>colorVar</em>, <em>spacing</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.needleDetectionUPThread"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.needleDetectionUPThread" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.needleMatching">
+<code class="descname">needleMatching</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.needleMatching"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.needleMatching" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? create a list of matching needles</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.needleSegmentation">
+<code class="descname">needleSegmentation</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.needleSegmentation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.needleSegmentation" title="Permalink to this definition">¶</a></dt>
+<dd><p>???</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.needleValidation">
+<code class="descname">needleValidation</code><span class="sig-paren">(</span><em>A</em>, <em>imageData</em>, <em>colorVar</em>, <em>spacing</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.needleValidation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.needleValidation" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? display a fiducial for a control point</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.newInsertionNeedle">
+<code class="descname">newInsertionNeedle</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.newInsertionNeedle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.newInsertionNeedle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start a new round</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.objectiveFunction">
+<code class="descname">objectiveFunction</code><span class="sig-paren">(</span><em>imageData</em>, <em>ijk</em>, <em>radiusNeedleParameter</em>, <em>spacing</em>, <em>gradientPonderation</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.objectiveFunction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.objectiveFunction" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.objectiveFunctionLOG">
+<code class="descname">objectiveFunctionLOG</code><span class="sig-paren">(</span><em>imageData</em>, <em>ijk</em>, <em>radiusNeedleParameter</em>, <em>spacing</em>, <em>gradientPonderation</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.objectiveFunctionLOG"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.objectiveFunctionLOG" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.obturatorNeedle">
+<code class="descname">obturatorNeedle</code><span class="sig-paren">(</span><em>A</em>, <em>imageData</em>, <em>colorVar</em>, <em>spacing</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.obturatorNeedle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.obturatorNeedle" title="Permalink to this definition">¶</a></dt>
+<dd><p>???</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.parameterNode">
+<code class="descname">parameterNode</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.parameterNode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.parameterNode" title="Permalink to this definition">¶</a></dt>
+<dd><p>???</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.ras2ijk">
+<code class="descname">ras2ijk</code><span class="sig-paren">(</span><em>A</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.ras2ijk"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.ras2ijk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert RAS coordinates to IJK coordinates. The transformation matrix is the one 
+of the active volume on the red slice</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.reformatNeedle">
+<code class="descname">reformatNeedle</code><span class="sig-paren">(</span><em>i</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.reformatNeedle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.reformatNeedle" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.reformatSagittalView4Needle">
+<code class="descname">reformatSagittalView4Needle</code><span class="sig-paren">(</span><em>ID</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.reformatSagittalView4Needle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.reformatSagittalView4Needle" title="Permalink to this definition">¶</a></dt>
+<dd><p>reformat sagittal view to be tangent to needle and display a 3D plane</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.resetNeedleDetection">
+<code class="descname">resetNeedleDetection</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.resetNeedleDetection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.resetNeedleDetection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reset the needle detection to completely start over.
+??? this fx does not delete the obtu&#8217; needles from the scene</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.resetNeedleValidation">
+<code class="descname">resetNeedleValidation</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.resetNeedleValidation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.resetNeedleValidation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reset the needle detection to completely start over.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.returnTips">
+<code class="descname">returnTips</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.returnTips"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.returnTips" title="Permalink to this definition">¶</a></dt>
+<dd><p>???</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.run">
+<code class="descname">run</code><span class="sig-paren">(</span><em>inputVolume</em>, <em>outputVolume</em>, <em>enableScreenshots=0</em>, <em>screenshotScaleFactor=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.saveParameters">
+<code class="descname">saveParameters</code><span class="sig-paren">(</span><em>filePath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.saveParameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.saveParameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>save the current needle detection parameters to file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.scrollPoint">
+<code class="descname">scrollPoint</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.scrollPoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.scrollPoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>???</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.selectCurrentAxialSlice">
+<code class="descname">selectCurrentAxialSlice</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.selectCurrentAxialSlice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.selectCurrentAxialSlice" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the K (of IJK) value of the current axial slice. 
+Used to define the slice containing the template</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.setColors">
+<code class="descname">setColors</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.setColors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.setColors" title="Permalink to this definition">¶</a></dt>
+<dd><p>???</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.setColors255">
+<code class="descname">setColors255</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.setColors255"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.setColors255" title="Permalink to this definition">¶</a></dt>
+<dd><p>???</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.setHolesCoordinates">
+<code class="descname">setHolesCoordinates</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.setHolesCoordinates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.setHolesCoordinates" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? set coord&#8217;s of obturator template</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.setLabels">
+<code class="descname">setLabels</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.setLabels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.setLabels" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? set the list of labels</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.setParameterNode">
+<code class="descname">setParameterNode</code><span class="sig-paren">(</span><em>parameterNode</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.setParameterNode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.setParameterNode" title="Permalink to this definition">¶</a></dt>
+<dd><p>???</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.setWL">
+<code class="descname">setWL</code><span class="sig-paren">(</span><em>dn</em>, <em>w</em>, <em>l</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.setWL"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.setWL" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? set window/level in mpr slice view</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.showOneNeedle">
+<code class="descname">showOneNeedle</code><span class="sig-paren">(</span><em>i</em>, <em>visibility</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.showOneNeedle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.showOneNeedle" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.sortTable">
+<code class="descname">sortTable</code><span class="sig-paren">(</span><em>table</em>, <em>cols</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.sortTable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.sortTable" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>sort a table by multiple columns</dt>
+<dd><dl class="first last docutils">
+<dt>table: a list of lists (or tuple of tuples) where each inner list </dt>
+<dd>represents a row</dd>
+<dt>cols:  a list (or tuple) specifying the column numbers to sort by</dt>
+<dd>e.g. (1,0) would sort by column 1, then by column 0</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.sortTableReverse">
+<code class="descname">sortTableReverse</code><span class="sig-paren">(</span><em>table</em>, <em>cols</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.sortTableReverse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.sortTableReverse" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>sort a table by multiple columns</dt>
+<dd><dl class="first last docutils">
+<dt>table: a list of lists (or tuple of tuples) where each inner list </dt>
+<dd>represents a row</dd>
+<dt>cols:  a list (or tuple) specifying the column numbers to sort by</dt>
+<dd>e.g. (1,0) would sort by column 1, then by column 0</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.startValidation">
+<code class="descname">startValidation</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.startValidation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.startValidation" title="Permalink to this definition">¶</a></dt>
+<dd><p>???</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.stepSize">
+<code class="descname">stepSize</code><span class="sig-paren">(</span><em>k</em>, <em>l</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.stepSize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.stepSize" title="Permalink to this definition">¶</a></dt>
+<dd><p>The size of the step depends on:
+- the length of the needle
+- how many control points per needle</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.takeScreenshot">
+<code class="descname">takeScreenshot</code><span class="sig-paren">(</span><em>name</em>, <em>description</em>, <em>type=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.takeScreenshot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.takeScreenshot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderLogic.validationNeedle">
+<code class="descname">validationNeedle</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.validationNeedle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.validationNeedle" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? new validation needle</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="NeedleFinder.NeedleFinderTest">
+<em class="property">class </em><code class="descclassname">NeedleFinder.</code><code class="descname">NeedleFinderTest</code><span class="sig-paren">(</span><em>methodName='runTest'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderTest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderTest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">unittest.case.TestCase</span></code></p>
+<p>This is the test case for your scripted module.</p>
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderTest.delayDisplay">
+<code class="descname">delayDisplay</code><span class="sig-paren">(</span><em>message</em>, <em>msec=1000</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderTest.delayDisplay"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderTest.delayDisplay" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? used?</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderTest.runTest">
+<code class="descname">runTest</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderTest.runTest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderTest.runTest" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderTest.setUp">
+<code class="descname">setUp</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderTest.setUp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderTest.setUp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Do whatever is needed to reset the state - typically a scene clear will be enough.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderTest.test_NeedleFinder1">
+<code class="descname">test_NeedleFinder1</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderTest.test_NeedleFinder1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderTest.test_NeedleFinder1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="NeedleFinder.NeedleFinderWidget">
+<em class="property">class </em><code class="descclassname">NeedleFinder.</code><code class="descname">NeedleFinderWidget</code><span class="sig-paren">(</span><em>parent=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.cleanup">
+<code class="descname">cleanup</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.cleanup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.cleanup" title="Permalink to this definition">¶</a></dt>
+<dd><p>clean up memory</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.onLoad">
+<code class="descname">onLoad</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.onLoad"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.onLoad" title="Permalink to this definition">¶</a></dt>
+<dd><p>show file dialogue to load parameter file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.onLoadFileSelected">
+<code class="descname">onLoadFileSelected</code><span class="sig-paren">(</span><em>fileName</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.onLoadFileSelected"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.onLoadFileSelected" title="Permalink to this definition">¶</a></dt>
+<dd><p>load parameters</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.onReload">
+<code class="descname">onReload</code><span class="sig-paren">(</span><em>moduleName='NeedleFinder'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.onReload"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.onReload" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.onReloadAndTest">
+<code class="descname">onReloadAndTest</code><span class="sig-paren">(</span><em>moduleName='NeedleFinder'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.onReloadAndTest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.onReloadAndTest" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.onReset">
+<code class="descname">onReset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.onReset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.onReset" title="Permalink to this definition">¶</a></dt>
+<dd><p>load default parameter file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.onSave">
+<code class="descname">onSave</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.onSave"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.onSave" title="Permalink to this definition">¶</a></dt>
+<dd><p>show file dialog to save parameters</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.onStartStopGivingNeedleTipsToggled">
+<code class="descname">onStartStopGivingNeedleTipsToggled</code><span class="sig-paren">(</span><em>checked</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.onStartStopGivingNeedleTipsToggled"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.onStartStopGivingNeedleTipsToggled" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start/stop giving needle tips</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.onStartStopGivingObturatorNeedleTipsToggled">
+<code class="descname">onStartStopGivingObturatorNeedleTipsToggled</code><span class="sig-paren">(</span><em>checked</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.onStartStopGivingObturatorNeedleTipsToggled"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.onStartStopGivingObturatorNeedleTipsToggled" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start/stop giving obturator needle tips</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.onStartStopGivingValidationControlPointsToggled">
+<code class="descname">onStartStopGivingValidationControlPointsToggled</code><span class="sig-paren">(</span><em>checked</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.onStartStopGivingValidationControlPointsToggled"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.onStartStopGivingValidationControlPointsToggled" title="Permalink to this definition">¶</a></dt>
+<dd><p>??? Start/stop needle validation control points</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.processEvent">
+<code class="descname">processEvent</code><span class="sig-paren">(</span><em>observee</em>, <em>event=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.processEvent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.processEvent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the mouse clicks and create a fiducial node at this position. Used later for the fiducial registration</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.processEventAddManualTips">
+<code class="descname">processEventAddManualTips</code><span class="sig-paren">(</span><em>observee</em>, <em>event=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.processEventAddManualTips"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.processEventAddManualTips" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the mouse clicks and create a fiducial node at this position. Used later for the fiducial registration</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.processEventAddObturatorNeedleTips">
+<code class="descname">processEventAddObturatorNeedleTips</code><span class="sig-paren">(</span><em>observee</em>, <em>event=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.processEventAddObturatorNeedleTips"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.processEventAddObturatorNeedleTips" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the mouse clicks and create a fiducial node at this position.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.processEventNeedleValidation">
+<code class="descname">processEventNeedleValidation</code><span class="sig-paren">(</span><em>observee</em>, <em>event=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.processEventNeedleValidation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.processEventNeedleValidation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the mouse clicks and create a fiducial node at this position.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.removeObservers">
+<code class="descname">removeObservers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.removeObservers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.removeObservers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove observers and reset</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.saveFileSelected">
+<code class="descname">saveFileSelected</code><span class="sig-paren">(</span><em>fileName</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.saveFileSelected"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.saveFileSelected" title="Permalink to this definition">¶</a></dt>
+<dd><p>save parameters</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.setup">
+<code class="descname">setup</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.setup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.setup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Instantiate and connect widgets</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.start">
+<code class="descname">start</code><span class="sig-paren">(</span><em>process=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.start"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start to observe the mouse clicks given by user (clicks on needle tips)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="NeedleFinder.NeedleFinderWidget.stop">
+<code class="descname">stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderWidget.stop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderWidget.stop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stop to observe the mouse clicks given by user</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="NeedleFinder.msgbox">
+<code class="descclassname">NeedleFinder.</code><code class="descname">msgbox</code><span class="sig-paren">(</span><em>text</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#msgbox"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.msgbox" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014, Guillaume Pernelle, Andre Mastmeyer.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://c328740.ssl.cf1.rackcdn.com/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
