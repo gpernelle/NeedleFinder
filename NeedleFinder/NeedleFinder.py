@@ -1136,15 +1136,15 @@ class NeedleFinderLogic:
     #bugfix>>>>
     modelNode = slicer.vtkMRMLModelNode()
     self.contourNode = modelNode.GetID()
-    print 'self.ContourNode: ', self.contourNode 
+    # print 'self.ContourNode: ', self.contourNode
     #<<<bugfix
     
-    contourNode = slicer.util.getNode(self.contourNode)
-    print 'contourNode: ',contourNode
-    if contourNode != None:
-      slicer.mrmlScene.RemoveNode(contourNode.GetStorageNode())
-      contourNode.RemoveAllDisplayNodeIDs()
-      slicer.mrmlScene.RemoveNode(contourNode)
+    # contourNode = slicer.util.getNode(self.contourNode)
+    # print 'contourNode: ',contourNode
+    if self.contourNode != None:
+      slicer.mrmlScene.RemoveNode(self.contourNode.GetStorageNode())
+      self.contourNode.RemoveAllDisplayNodeIDs()
+      slicer.mrmlScene.RemoveNode(self.contourNode)
       
     #modelNode = slicer.vtkMRMLModelNode()
     modelNode.SetScene(scene)
