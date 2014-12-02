@@ -5,9 +5,9 @@ Guillaume Pernelle,  Andre Mastmeyer
 
 .. moduleauthor:: gpernelle <gpernelle@gmail.com>
 
-.. image:: ../../_static/algo-figure-high_res.png
-           :height: 300px
-           :width: 1000 px
+.. image:: https://raw.githubusercontent.com/gpernelle/NeedleFinder/amastm/docs/_static/algo-figure-high_res.png
+           :height: 250px
+           :width: 700 px
            :scale: 100 %
            :alt: alternate text
            :align: center
