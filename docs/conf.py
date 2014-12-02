@@ -16,7 +16,7 @@ import sys, os, mock
 import os
 # import sphinx_rtd_theme
 
-MOCK_MODULES = ['EditorLib', 'vtk', 'qt', 'slicer', '__main__']
+MOCK_MODULES = ['EditorLib', 'vtk', 'qt', 'slicer', '__main__', 'numpy']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 
