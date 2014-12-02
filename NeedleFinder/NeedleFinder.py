@@ -38,7 +38,7 @@ from __main__ import vtk, qt, ctk, slicer
 profiling=True
 frequent=False
 def msgbox(text):
-  qt.QMessageBox.about(0, 'Profiling:', text)
+  qt.QMessageBox.about(0, 'Needle Finder Profiling:', text)
 if profiling: msgbox("turned on")
 
 #
@@ -234,10 +234,10 @@ class NeedleFinderWidget:
 
     self.displayFiducialButton = qt.QPushButton('Display Labels On Needles')
     self.displayFiducialButton.connect('clicked()',logic.displayFiducial)
-    self.displayContourButton = qt.QPushButton('Draw Isosurfaces')
+    self.displayContourButton = qt.QPushButton('Rsc: Draw Radiation Isosurfaces')
     self.displayContourButton.checkable = False
     self.displayContourButton.connect('clicked()',logic.drawIsoSurfaces)
-    self.hideContourButton = qt.QPushButton('Hide Isosurfaces')
+    self.hideContourButton = qt.QPushButton('Rsc: Hide Radiation Isosurfaces')
     self.hideContourButton.checkable = True
     self.hideContourButton.connect('clicked()',logic.hideIsoSurfaces)
     self.hideContourButton.setEnabled(0)
@@ -900,8 +900,9 @@ class NeedleFinderLogic:
 
   def drawIsoSurfaces( self ):
     """ Draw isosurfaces from models of the visible needles only.
+    This shall indicate radiation influence zones.
     """
-    #productive
+    #research
     if profiling: print "drawIsoSurfaces";
 
     slicer.modules.NeedleFinderWidget.hideContourButton.setEnabled(1)
@@ -944,7 +945,7 @@ class NeedleFinderLogic:
 
   def hideIsoSurfaces(self):
     """
-    Hide isosurfaces from models of the visible needles only
+    Hide radiation isosurfaces from models of the visible needles only
     """
     #productive
     if profiling: print "hideIsoSurfaces";
@@ -1119,8 +1120,9 @@ class NeedleFinderLogic:
     """
     Add caculated isosurfaces (self.drawIsoSurfaces) around visible needles to the scene
     and add opacity, color...
+    Used by drawIsoSurface,0
     """
-    #productive
+    #research
     # called by drawIsoSurfaces
     if profiling: print "AddContour";
     # print polyData
@@ -3316,7 +3318,7 @@ class NeedleFinderLogic:
 
   def reformatNeedle(self,i):
     """
-    Reformat the sagittal view to be tangent to the needle
+    ??? used? Reformat the sagittal view to be tangent to the needle
     """
     print "reformatNeedle"; msgbox('reformatNeedle')
     modelNodes = slicer.util.getNodes('vtkMRMLModelNode*')
@@ -3346,7 +3348,9 @@ class NeedleFinderLogic:
   def drawIsoSurfaces0( self ):
     """
     ??? used? for development purposes.
+    This shall indicate radiation influence zones.
     """
+    #research
     print "drawIsoSurfaces0"; msgbox('drawIsoSurfaces0')
     modelNodes = slicer.util.getNodes('vtkMRMLModelNode*')
     v= vtk.vtkAppendPolyData()
