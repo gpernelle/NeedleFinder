@@ -5,11 +5,21 @@ Guillaume Pernelle,  Andre Mastmeyer
 
 .. moduleauthor:: gpernelle <gpernelle@gmail.com>
 
-Notes
------
-    * 
-    * ..
+.. image:: ../../_static/algo-figure-high_res.png
+           :height: 300px
+           :width: 1000 px
+           :scale: 100 %
+           :alt: alternate text
+           :align: center
 
+Links
+-----
+    * Validation of Catheter Segmentation for MR-guided Gynecologic Cancer Brachytherapy [1]_
+
+    * Labeled Needle Rendering Solution for Image Guided Brachytherapy [2]_
+
+  .. [1] https://www.spl.harvard.edu/publications/item/view/2459
+  .. [2] https://www.spl.harvard.edu/publications/item/view/2316
 """
 
 import os
@@ -483,7 +493,8 @@ class NeedleFinderWidget:
 
   def onStartStopGivingValidationControlPointsToggled(self, checked):
     """
-    ??? Start/stop needle validation control points
+    Start/stop needle validation control points. When checked is true, the mouse clicks are observed and leads to an action
+    (here a new control point for a validation needle)
     """
     #productive
     if profiling: print "onStartStopGivingValidationControlPointsToggled";
@@ -888,8 +899,7 @@ class NeedleFinderLogic:
     return True
 
   def drawIsoSurfaces( self ):
-    """
-    ??? Draw isosurfaces from models of the visible needles only
+    """ Draw isosurfaces from models of the visible needles only.
     """
     #productive
     if profiling: print "drawIsoSurfaces";
@@ -1107,7 +1117,7 @@ class NeedleFinderLogic:
   
   def AddContour(self,polyData):
     """
-    ??? Add caculated isosurfaces (self.drawIsoSurfaces) around visible needles to the scene
+    Add caculated isosurfaces (self.drawIsoSurfaces) around visible needles to the scene
     and add opacity, color...
     """
     #productive
@@ -1371,7 +1381,14 @@ class NeedleFinderLogic:
 
   def needleValidation(self,A, imageData,colorVar,spacing):
     """
-    ??? display a fiducial for a control point
+    Add a fiducial point to the vtkMRMLScence, where the mouse click was triggered. The fiducial points reprents a control
+    point for a manually segmented needle (validation needle)
+
+    :param A: RAS coordinates of the mouse click
+    :param imageData: volumeNode.GetImageDate()
+    :param colorVar: color of the fiducial point
+    :param spacing: volumeNode.GetSpacing()
+    :return: tableValueCtrPt : table containing control points of every validation needle
     """
     #productive #onClick
     if profiling: print "needleValidation";
@@ -1396,8 +1413,16 @@ class NeedleFinderLogic:
     self.tableValueCtrPt[widget.validationNeedleNumber][widget.stepNeedle] = self.ijk2ras(A)
 
   def obturatorNeedle(self,A, imageData,colorVar,spacing):
-    """
-    ???
+    """ Use the mouse click coordinates to draw obturator needles:
+    * For the first obturator needle, two points are necessary: give both extremities of an obturator needle
+    * For the following needles, only give the tip of the needle. It will draw parallel to the first obturator needle
+    and having the same length
+
+    :param A: RAS coordinates of the mouse click
+    :param imageData: volumeNode.GetImageDate()
+    :param colorVar: color of the fiducial point
+    :param spacing: volumeNode.GetSpacing()
+    :return: obturator needle
     """
     #productive
     if profiling: print "obturatorNeedle";
@@ -1605,8 +1630,21 @@ class NeedleFinderLogic:
     The height of the new conic region (stepsize) is increased as well as its base diameter (rMax) and its normal is collinear to the previous computed segment. (cf. C0) 
     NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
     From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
-    ??? is this a threaded function
+    ??? is this a threaded function -> no it is not yet unfortunately, but the idea was to do it
+
+    :param A: RAS coordinates of the needle tip
+    :param imageData: volumeNode.GetImageData()
+    :param colorVar: color of the needle
+    :param spacing: volumneNode.GetSpacing()
+    :return: a needle in 3D!!
+
+
+
+
+
     """
+
+
     #productive
     if profiling: print "needleDetectionThread";
     ### initialisation of the parameters
@@ -1716,17 +1754,18 @@ class NeedleFinderLogic:
         
         tot     = stepSize
 
-      #step 1,2,...
-      #------------------------------------------------------------------------------
-      #       [   vector V   ]
-      #       *--------------*---------------------X   -> direction of tracking
-      #      tip0            A                    C0
-      #
-      #      then, for the following step:
-      #                                    tip0<-A, A<-C, C0 = A + K.V
-     
       else:
 
+        """
+          step 1,2,...
+          ------------------------------------------------------------------------------
+                 [   vector V   ]
+                 *--------------*---------------------X   -> direction of tracking
+                tip0            A                    C0
+
+                then, for the following step:
+                                              tip0<-A, A<-C, C0 = A + K.V
+        """
         """
         stepSize = self.stepSize(step+1,NbStepsNeedle+1)*lenghtNeedle
         #print '\nstepsize',step, ':',stepSize
@@ -2340,8 +2379,12 @@ class NeedleFinderLogic:
             self.addNeedleToScene(controlPoints,i,'Obturator')
       
   def drawValidationNeedles(self):
-    """
-    ??? Render the needles as tubes
+    """This function takes the values inside the table tableValueCtrPt and add attributes such as color, name ,.. for every
+     validation needle.
+     * To add the needle to the scene, the points given for every needle has to be sorted sagitally,so they can be used as
+     control points in a Beziers curve
+     * For each sets of needle points, the function addNeedleToScene fits a Bezier curve and render it as a
+     tube (vtkMRMLModelNode)
     """ 
     #productive #onButton
     if profiling: print "drawValidationNeedles";
@@ -2383,9 +2426,15 @@ class NeedleFinderLogic:
         print i  
 
   def addNeedleToScene(self,controlPoint,colorVar, needleType='Detection'): 
+    """Computes the Bezier's curve and adds visual representation of a needle to the scene
+
+    :param controlPoint: array of RAS coordinates of points of a needle (used as control point for the Bezier's curve
+    :param colorVar: color of the needle
+    :param needleType: 'validation' for a manually segmentated needle, 'detection' for an automatically segmented needle,
+    'obturator' for an obturator needle
+    :return: needle added to the scene
     """
-    adds visual representation of a needle to the scene
-    """
+
     #productive
     if profiling: print "addNeedleToScene";
     """
@@ -2608,8 +2657,8 @@ class NeedleFinderLogic:
       sliceWidget.setCursor(qt.QCursor(cursorNumber))
 
   def changeValue(self):
-    """
-    ??? chose needle for control point scrolling
+    """Read the value of the Qt widget and select this needle. It is then possible to display sequentially the points used as
+     control points of this needle
     """
     #productive #onUpDnArrow
     if profiling: print "changeValue";
@@ -2617,8 +2666,7 @@ class NeedleFinderLogic:
     widget.scrollPointButton.setText('Scroll Point for Needle ' + str(widget.editNeedleTxtBox.value)+ ' (pt: '+str(self.ptNumber)+')')
 
   def scrollPoint(self):
-    """
-    ???
+    """Reformat the axial view to display the slice containing the currently selected point.
     """
     #productive #onButton
     if profiling: print "scrollPoint"
@@ -2670,8 +2718,9 @@ class NeedleFinderLogic:
         self.scrollPoint()
 
   def validationNeedle(self):
-    """
-    ??? new validation needle
+    """ When the button 'new validation needle' is pressed, the needle number is incremented, the needle step is reset to
+     0
+
     """
     #productive #onButton
     if profiling: print "validationNeedle";
@@ -2777,12 +2826,12 @@ class NeedleFinderLogic:
   # Radiation
 
   def AddRadiation(self,i,needleID):
-    print "AddRadiation"; msgbox('AddRadiation')
     """
     Goal of this function is to draw quadrics simulating the dose radiation.
     Currently, ellipse is a too naive model.
-    This project might be continuated later
+    This project might be continued later
     """
+    print "AddRadiation"; msgbox('AddRadiation')
     pass
     # needleNode = slicer.mrmlScene.GetNodeByID(needleID)
     # polyData = needleNode.GetPolyData()
@@ -2984,8 +3033,7 @@ class NeedleFinderLogic:
     self.addButtons()
   
   def addButtons(self):
-    """
-    ???
+    """Buttons for the reporting widget, displaying information of the segmented needles
     """
     print "addButtons"; msgbox('addButtons')
     if self.buttonsGroupBox != None:
@@ -3014,11 +3062,11 @@ class NeedleFinderLogic:
         buttonReformat = qt.QPushButton("Reformat "+self.option[i])
         buttonReformat.connect("clicked()", lambda who=i: self.reformatNeedle(who))
         widgets = qt.QWidget()
-        hlay    = qt.QHBoxLayout(widget)
+        hlay    = qt.QHBoxLayout(widgets)
         hlay.addWidget(buttonDisplay)
         hlay.addWidget(buttonBentDisplay)
         hlay.addWidget(buttonReformat)
-        self.buttonsGroupBoxLayout.addRow(widget)
+        self.buttonsGroupBoxLayout.addRow(widgets)
   
   def displayBentNeedle(self,i):
     """
@@ -3039,10 +3087,10 @@ class NeedleFinderLogic:
           displayNode.SetVisibility(1)
   
   def displayNeedle(self,i):
-    print "displayNeedle"; msgbox('displayNeedle')
     """
     ??? not used anymore. works with Yi Gao CLI module for straight needle detection + bending post-computed
     """
+    print "displayNeedle"; msgbox('displayNeedle')
     modelNodes = slicer.util.getNodes('vtkMRMLModelNode*')
     for modelNode in modelNodes.values():
       if modelNode.GetAttribute("nth")==str(i) and modelNode.GetAttribute("segmented")=='1' :
@@ -3057,10 +3105,11 @@ class NeedleFinderLogic:
           displayNode.SetVisibility(1)
       
   def showOneNeedle(self,i,visibility):
-    print "showOneNeedle"; msgbox('showOneNeedle')
     """
     ??? Not used anymore. But can be usefull later
     """
+
+    print "showOneNeedle"; msgbox('showOneNeedle')
     fidname = "fid"+self.option[i]
     pNode = self.parameterNode()
     needleID = pNode.GetParameter(self.option[i]+'.vtp')
@@ -3131,10 +3180,10 @@ class NeedleFinderLogic:
       self.showOneNeedle(i,visibility)
             
   def AddModel(self,i,polyData):
+    """
+    Not used. Check if can be removed
+    """
     print "AddModel"; msgbox('AddModel')
-    """
-    ??? Not used. Check if can be removed
-    """
     modelNode = slicer.vtkMRMLModelNode()
     displayNode = slicer.vtkMRMLModelDisplayNode()
     storageNode = slicer.vtkMRMLModelStorageNode()
@@ -3167,7 +3216,7 @@ class NeedleFinderLogic:
 
   def displayRadPlanned(self):
     """
-    ???
+    Display 'radiation' of planned needle -> cf iGyne / not used anymore
     """
     print "displayRadPlanned"; msgbox('displayRadPlanned')
     modelNodes = slicer.util.getNodes('vtkMRMLModelNode*')
@@ -3180,7 +3229,7 @@ class NeedleFinderLogic:
             
   def displayRadSegmented(self):
     """
-    ???
+    Display 'radiation' of segmented needles
     """
     print "displayRadSegmented"; msgbox('displayRadSegmented')
     modelNodes = slicer.util.getNodes('vtkMRMLModelNode*')
@@ -3195,7 +3244,10 @@ class NeedleFinderLogic:
             
   def displayContour(self,i,visibility):
     """
-    ???
+    Display the iso-contour of needle i
+
+    :param i: nth value of needle
+    :param visibility: boolean to set the visibility state of the needle
     """
     print "displayContour"; msgbox('displayContour')
     modelNodes = slicer.util.getNodes('vtkMRMLModelNode*')
@@ -3210,7 +3262,7 @@ class NeedleFinderLogic:
             
   def displayContours(self):
     """
-    ???
+    Display or hide the iso-contours of every needles
     """
     print "displayContours"; msgbox('displayContours')
     modelNodes = slicer.util.getNodes('vtkMRMLModelNode*')
@@ -3224,10 +3276,10 @@ class NeedleFinderLogic:
             d.SetSliceIntersectionVisibility(abs(int(slicer.modules.NeedleFinderWidget.displayContourButton.checked)-1)) 
 
   def displayFiducial(self):
-    print "displayFiducial"; msgbox('displayFiducial')
     """
     ??? used? show labels of the needles by adding a fiducial point at the tip
     """
+    print "displayFiducial"; msgbox('displayFiducial')
     modelNodes = slicer.util.getNodes('vtkMRMLModelNode*')
     for modelNode in modelNodes.values():
       displayNode = modelNode.GetDisplayNode()
@@ -3263,10 +3315,10 @@ class NeedleFinderLogic:
               self.displayFiducialButton.text = "Display Labels on Needles" 
 
   def reformatNeedle(self,i):
+    """
+    Reformat the sagittal view to be tangent to the needle
+    """
     print "reformatNeedle"; msgbox('reformatNeedle')
-    """
-    ??? used? reformat the sagital view to be tangent to the needle
-    """
     modelNodes = slicer.util.getNodes('vtkMRMLModelNode*')
     for i in range(2):  
       for modelNode in modelNodes.values():
@@ -3292,10 +3344,10 @@ class NeedleFinderLogic:
           sYellow.Modified()
 
   def drawIsoSurfaces0( self ):
-    print "drawIsoSurfaces0"; msgbox('drawIsoSurfaces0')
     """
     ??? used? for development purposes.
     """
+    print "drawIsoSurfaces0"; msgbox('drawIsoSurfaces0')
     modelNodes = slicer.util.getNodes('vtkMRMLModelNode*')
     v= vtk.vtkAppendPolyData()
     
@@ -3339,8 +3391,9 @@ class NeedleFinderLogic:
   #----------------------------------------------------------------------------------------------
   
   def returnTips(self):
-    """
-    ???
+    """ Returns the IJK coordinates of the tips of manually segmented needles
+
+    :return: array of IJK coordinates of validation needle tips
     """
     #productive
     if profiling: print "returnTips";
@@ -3363,8 +3416,13 @@ class NeedleFinderLogic:
     return returnTips
 
   def startValidation(self):
-    """
-    ???
+    """Start the evaluation process:
+    * Calls returnTips() to build an array of the tip of manually segmented needles
+    * Use theses tips to generate auto segmented needles
+    * Calls evaluate() to compute the Hausdorff's distance between every pair of needles
+
+    :return: print the results in the python interactor (CMD+3 or CTRL+3)
+
     """
     #productive #button
     if profiling: print "startValidation";
@@ -3416,8 +3474,11 @@ class NeedleFinderLogic:
     fd.SetColor([0,1,0])
 
   def exportEvaluation(self,results,url):
-    """
-    ??? used?
+    """ Export evaluation results to a CSV file
+
+    :param results: array containing the results of the evaluation
+    :param url: url for saving the file
+
     """
     print "exportEvaluation"; msgbox('exportEvaluation')
     widget = slicer.modules.NeedleFinderWidget
@@ -3435,12 +3496,30 @@ class NeedleFinderLogic:
     results.append(self.valuesExperience)
     wr.writerow(results)
 
-  def hausdorffDistance2(self,id1,id2):
+  def hausdorffDistance(self,id1,id2):
     """
-    ??? calc's hausdorff distance of two needles
+    Calculates the Hausdorff's distance [HD]_ of two needles. Both needles are truncated to start and end at the same slices.
+
+    :param id1: vtkMRMLModelNodeID of Needle 1
+    :param id2: vtkMRMLModelNodeID of Needle 2
+    :return: Hausdorff's distance in millimeters
+
+    .. math::  d_{\mathrm H}(X,Y) = \max\{\,\sup_{x \in X} \inf_{y \in Y} d(x,y),\, \sup_{y \in Y} \inf_{x \in X} d(x,y)\,\}
+
+    .. image:: http://upload.wikimedia.org/wikipedia/commons/2/21/Hausdorff_distance_sample.svg
+           :height: 300px
+           :width: 500 px
+           :scale: 100 %
+           :alt: alternate text
+           :align: center
+
+    .. [HD] http://en.wikipedia.org/wiki/Hausdorff_distance
+
+
+
     """
     #productive #math
-    if profiling: print "hausdorffDistance2";
+    if profiling: print "hausdorffDistance";
     node1 = slicer.mrmlScene.GetNodeByID(id1)
     polydata1=node1.GetPolyData()
     node2 = slicer.mrmlScene.GetNodeByID(id2)
@@ -3509,21 +3588,28 @@ class NeedleFinderLogic:
 
   def evaluate(self):
     """
-    ??? calc's Hausdorff distance of nearby needles
+    This function first invokes needleMatching() with, for each automatically segmented needle in the vtkMRMLScene,
+    associates it with its manually segmented version.
+    Then, the HD is computed between each pairs of needle and the results are reported in a numpy array
+
+    :return numpy array of [ value , ID needle 1, ID needle 2 ]
     """
     #productive
     if profiling: print "evaluate";
     result=self.needleMatching()
     HD=[]
     for i in range(len(result)):
-      val=self.hausdorffDistance2(result[i][1],result[i][2])
+      val=self.hausdorffDistance(result[i][1],result[i][2])
       results = [float(val),int(result[i][1].strip('vtkMRMLModelNode')),int(result[i][2].strip('vtkMRMLModelNode'))]
       HD.append(results)
     return numpy.array(HD).astype(numpy.longdouble)
 
   def distTip(self,id1,id2):
-    """
-    ??? calc's distance of two needle tips
+    """ Returns the axial distance between the tip of two needles
+
+    :param id1: ID number for the needle 1 (vtkMRMLModelNode)
+    :param id2: ID number for the needle 2 (vtkMRMLModelNode)
+    :return: distance in millimeters between the tip of both needles
     """
     #productive #math
     if profiling: print "distTip";
@@ -3549,8 +3635,12 @@ class NeedleFinderLogic:
 
 
   def needleMatching(self):
-    """
-    ??? create a list of matching needles
+    """This functions associates manually segmented needles to their automatically segmented version. To do so,
+    each manually segmented needle has a 'type' attribute named 'validation'. For each manually segmented needle, an axial
+    distance between the tip of this needle, and the tip of every auto segmented needle is computed. The auto needle that
+    offers the minimal tip axial distance is considered as corresponding needle
+
+    :return: array of tuple of corresponding needles
     """
     #productive
     if profiling: print "needleMatching";
@@ -3596,8 +3686,11 @@ class NeedleFinderLogic:
     return result
 
   def distance(self,pt1,pt2):
-    """
-    calc's distance between two points
+    """3D distance between two points
+
+    :param pt1: point 1 [x,y,z]
+    :param pt2: point 2 [x,y,z
+    :return: Euclidian's distance
     """
     #productive #frequent
     if profiling: print "distance";
@@ -3605,8 +3698,9 @@ class NeedleFinderLogic:
     return d
 
   def addManualTip(self,A):
-    """
-    ??? used?
+    """Add fiducial node to the scene (called by processEventAddManualTips). Used as starting point for needle segmentation
+
+    :param A: RAS coordinates
     """
     print "addManualTip"; msgbox('addManualTip')
     self.fiducialNode = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
@@ -3618,8 +3712,11 @@ class NeedleFinderLogic:
     fd.SetColor([0,1,0])
 
   def distanceTwoPoints(self,A,B):
-    """
-    returns distance between two pts.
+    """3D distance between two points
+
+    :param pt1: point 1 [x,y,z]
+    :param pt2: point 2 [x,y,z
+    :return: Euclidian's distance
     """
     #productive
     # used by addNeedleToScene
@@ -3628,8 +3725,11 @@ class NeedleFinderLogic:
     return length
   
   def clipPolyData(self,node,value,visible=0):
-    """
-    ???
+    """ Function used to truncate needle models to evaluate the Hausdorff's distance.
+
+    :param node: vtkMRMLModelNode
+    :param value: axial slice where to cut the model
+    :return: vtkPolyData of the cutted model
     """
     #productive
     if profiling: print "clipPolyData";
@@ -3670,7 +3770,7 @@ class NeedleFinderLogic:
 
   def setWL(self,dn,w,l):
     """
-    ??? set window/level in mpr slice view
+    Set window/level in mpr slice view
     """
     #productive #frequent #onDrag
     if profiling and frequent: print "setWL";
@@ -3678,8 +3778,7 @@ class NeedleFinderLogic:
     dn.SetLevel(l)
 
   def setColors255(self):
-    """
-    ???
+    """Set color map with colors encoded in RGB between 0 and 255
     """
     #productive
     if profiling: print "setColors255";
@@ -3893,8 +3992,7 @@ class NeedleFinderLogic:
     return self.color255
 
   def setColors(self):
-    """
-    ???
+    """Sets color map with colors encoded in RGB between 0 and 1
     """
     #productive
     if profiling: print "setColors";
@@ -3907,8 +4005,7 @@ class NeedleFinderLogic:
     return self.color
 
   def setHolesCoordinates(self):
-    """
-    ??? set coord's of obturator template
+    """Coordinates of the 63 holes in the obturator
     """
     #productive
     if profiling: print "setHolesCoordinates";
@@ -4044,7 +4141,7 @@ class NeedleFinderLogic:
 
   def setLabels(self):
     """
-    ??? set the list of labels
+    Set the list of labels corresponding of the 63 holes of the obturator
     """
     #productive
     if profiling: print "setLabels";
@@ -4116,22 +4213,19 @@ class NeedleFinderLogic:
     return self.option
   
   def setParameterNode(self, parameterNode):
-    """
-    ???
+    """Set Parameter Node (to save parameters from one step to the other)
     """
     print "setParameterNode"; msgbox('setParameterNode')
     self.parameterNode = parameterNode
 
   def parameterNode(self):
-    """
-    ???
+    """Returns parameter node
     """
     print "parameterNode"; msgbox('parameterNode')
     return self.parameterNode
 
   def getBoldFont( self ):
-    """
-    ???
+    """Get a Qt bold font
     """
     print "getBoldFont"; msgbox('getBoldFont')
     boldFont = qt.QFont( "Sans Serif", 12, qt.QFont.Bold )

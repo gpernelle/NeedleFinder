@@ -55,11 +55,21 @@
 
 <span class="sd">.. moduleauthor:: gpernelle &lt;gpernelle@gmail.com&gt;</span>
 
-<span class="sd">Notes</span>
-<span class="sd">-----</span>
-<span class="sd">    * </span>
-<span class="sd">    * ..</span>
+<span class="sd">.. image:: ../../_static/algo-figure-high_res.png</span>
+<span class="sd">           :height: 300px</span>
+<span class="sd">           :width: 1000 px</span>
+<span class="sd">           :scale: 100 %</span>
+<span class="sd">           :alt: alternate text</span>
+<span class="sd">           :align: center</span>
 
+<span class="sd">Links</span>
+<span class="sd">-----</span>
+<span class="sd">    * Validation of Catheter Segmentation for MR-guided Gynecologic Cancer Brachytherapy [1]_</span>
+
+<span class="sd">    * Labeled Needle Rendering Solution for Image Guided Brachytherapy [2]_</span>
+
+<span class="sd">  .. [1] https://www.spl.harvard.edu/publications/item/view/2459</span>
+<span class="sd">  .. [2] https://www.spl.harvard.edu/publications/item/view/2316</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">os</span>
@@ -533,7 +543,8 @@
 </div>
 <div class="viewcode-block" id="NeedleFinderWidget.onStartStopGivingValidationControlPointsToggled"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderWidget.onStartStopGivingValidationControlPointsToggled">[docs]</a>  <span class="k">def</span> <span class="nf">onStartStopGivingValidationControlPointsToggled</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checked</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? Start/stop needle validation control points</span>
+<span class="sd">    Start/stop needle validation control points. When checked is true, the mouse clicks are observed and leads to an action</span>
+<span class="sd">    (here a new control point for a validation needle)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;onStartStopGivingValidationControlPointsToggled&quot;</span><span class="p">;</span>
@@ -938,8 +949,7 @@
     <span class="k">return</span> <span class="bp">True</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.drawIsoSurfaces"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.drawIsoSurfaces">[docs]</a>  <span class="k">def</span> <span class="nf">drawIsoSurfaces</span><span class="p">(</span> <span class="bp">self</span> <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? Draw isosurfaces from models of the visible needles only</span>
+    <span class="sd">&quot;&quot;&quot; Draw isosurfaces from models of the visible needles only.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;drawIsoSurfaces&quot;</span><span class="p">;</span>
@@ -1157,7 +1167,7 @@
   </div>
 <div class="viewcode-block" id="NeedleFinderLogic.AddContour"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.AddContour">[docs]</a>  <span class="k">def</span> <span class="nf">AddContour</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">polyData</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? Add caculated isosurfaces (self.drawIsoSurfaces) around visible needles to the scene</span>
+<span class="sd">    Add caculated isosurfaces (self.drawIsoSurfaces) around visible needles to the scene</span>
 <span class="sd">    and add opacity, color...</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive</span>
@@ -1421,7 +1431,14 @@
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.needleValidation"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.needleValidation">[docs]</a>  <span class="k">def</span> <span class="nf">needleValidation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">A</span><span class="p">,</span> <span class="n">imageData</span><span class="p">,</span><span class="n">colorVar</span><span class="p">,</span><span class="n">spacing</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? display a fiducial for a control point</span>
+<span class="sd">    Add a fiducial point to the vtkMRMLScence, where the mouse click was triggered. The fiducial points reprents a control</span>
+<span class="sd">    point for a manually segmented needle (validation needle)</span>
+
+<span class="sd">    :param A: RAS coordinates of the mouse click</span>
+<span class="sd">    :param imageData: volumeNode.GetImageDate()</span>
+<span class="sd">    :param colorVar: color of the fiducial point</span>
+<span class="sd">    :param spacing: volumeNode.GetSpacing()</span>
+<span class="sd">    :return: tableValueCtrPt : table containing control points of every validation needle</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive #onClick</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;needleValidation&quot;</span><span class="p">;</span>
@@ -1446,8 +1463,16 @@
     <span class="bp">self</span><span class="o">.</span><span class="n">tableValueCtrPt</span><span class="p">[</span><span class="n">widget</span><span class="o">.</span><span class="n">validationNeedleNumber</span><span class="p">][</span><span class="n">widget</span><span class="o">.</span><span class="n">stepNeedle</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ijk2ras</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.obturatorNeedle"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.obturatorNeedle">[docs]</a>  <span class="k">def</span> <span class="nf">obturatorNeedle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">A</span><span class="p">,</span> <span class="n">imageData</span><span class="p">,</span><span class="n">colorVar</span><span class="p">,</span><span class="n">spacing</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ???</span>
+    <span class="sd">&quot;&quot;&quot; Use the mouse click coordinates to draw obturator needles:</span>
+<span class="sd">    * For the first obturator needle, two points are necessary: give both extremities of an obturator needle</span>
+<span class="sd">    * For the following needles, only give the tip of the needle. It will draw parallel to the first obturator needle</span>
+<span class="sd">    and having the same length</span>
+
+<span class="sd">    :param A: RAS coordinates of the mouse click</span>
+<span class="sd">    :param imageData: volumeNode.GetImageDate()</span>
+<span class="sd">    :param colorVar: color of the fiducial point</span>
+<span class="sd">    :param spacing: volumeNode.GetSpacing()</span>
+<span class="sd">    :return: obturator needle</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;obturatorNeedle&quot;</span><span class="p">;</span>
@@ -1655,8 +1680,21 @@
 <span class="sd">    The height of the new conic region (stepsize) is increased as well as its base diameter (rMax) and its normal is collinear to the previous computed segment. (cf. C0) </span>
 <span class="sd">    NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. </span>
 <span class="sd">    From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.</span>
-<span class="sd">    ??? is this a threaded function</span>
+<span class="sd">    ??? is this a threaded function -&gt; no it is not yet unfortunately, but the idea was to do it</span>
+
+<span class="sd">    :param A: RAS coordinates of the needle tip</span>
+<span class="sd">    :param imageData: volumeNode.GetImageData()</span>
+<span class="sd">    :param colorVar: color of the needle</span>
+<span class="sd">    :param spacing: volumneNode.GetSpacing()</span>
+<span class="sd">    :return: a needle in 3D!!</span>
+
+
+
+
+
 <span class="sd">    &quot;&quot;&quot;</span>
+
+
     <span class="c">#productive</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;needleDetectionThread&quot;</span><span class="p">;</span>
     <span class="c">### initialisation of the parameters</span>
@@ -1766,17 +1804,18 @@
         
         <span class="n">tot</span>     <span class="o">=</span> <span class="n">stepSize</span>
 
-      <span class="c">#step 1,2,...</span>
-      <span class="c">#------------------------------------------------------------------------------</span>
-      <span class="c">#       [   vector V   ]</span>
-      <span class="c">#       *--------------*---------------------X   -&gt; direction of tracking</span>
-      <span class="c">#      tip0            A                    C0</span>
-      <span class="c">#</span>
-      <span class="c">#      then, for the following step:</span>
-      <span class="c">#                                    tip0&lt;-A, A&lt;-C, C0 = A + K.V</span>
-     
       <span class="k">else</span><span class="p">:</span>
 
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">          step 1,2,...</span>
+<span class="sd">          ------------------------------------------------------------------------------</span>
+<span class="sd">                 [   vector V   ]</span>
+<span class="sd">                 *--------------*---------------------X   -&gt; direction of tracking</span>
+<span class="sd">                tip0            A                    C0</span>
+
+<span class="sd">                then, for the following step:</span>
+<span class="sd">                                              tip0&lt;-A, A&lt;-C, C0 = A + K.V</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        stepSize = self.stepSize(step+1,NbStepsNeedle+1)*lenghtNeedle</span>
 <span class="sd">        #print &#39;\nstepsize&#39;,step, &#39;:&#39;,stepSize</span>
@@ -2390,8 +2429,12 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">addNeedleToScene</span><span class="p">(</span><span class="n">controlPoints</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="s">&#39;Obturator&#39;</span><span class="p">)</span>
       </div>
 <div class="viewcode-block" id="NeedleFinderLogic.drawValidationNeedles"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.drawValidationNeedles">[docs]</a>  <span class="k">def</span> <span class="nf">drawValidationNeedles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? Render the needles as tubes</span>
+    <span class="sd">&quot;&quot;&quot;This function takes the values inside the table tableValueCtrPt and add attributes such as color, name ,.. for every</span>
+<span class="sd">     validation needle.</span>
+<span class="sd">     * To add the needle to the scene, the points given for every needle has to be sorted sagitally,so they can be used as</span>
+<span class="sd">     control points in a Beziers curve</span>
+<span class="sd">     * For each sets of needle points, the function addNeedleToScene fits a Bezier curve and render it as a</span>
+<span class="sd">     tube (vtkMRMLModelNode)</span>
 <span class="sd">    &quot;&quot;&quot;</span> 
     <span class="c">#productive #onButton</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;drawValidationNeedles&quot;</span><span class="p">;</span>
@@ -2433,9 +2476,15 @@
         <span class="k">print</span> <span class="n">i</span>  
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.addNeedleToScene"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.addNeedleToScene">[docs]</a>  <span class="k">def</span> <span class="nf">addNeedleToScene</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">controlPoint</span><span class="p">,</span><span class="n">colorVar</span><span class="p">,</span> <span class="n">needleType</span><span class="o">=</span><span class="s">&#39;Detection&#39;</span><span class="p">):</span> 
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    adds visual representation of a needle to the scene</span>
+    <span class="sd">&quot;&quot;&quot;Computes the Bezier&#39;s curve and adds visual representation of a needle to the scene</span>
+
+<span class="sd">    :param controlPoint: array of RAS coordinates of points of a needle (used as control point for the Bezier&#39;s curve</span>
+<span class="sd">    :param colorVar: color of the needle</span>
+<span class="sd">    :param needleType: &#39;validation&#39; for a manually segmentated needle, &#39;detection&#39; for an automatically segmented needle,</span>
+<span class="sd">    &#39;obturator&#39; for an obturator needle</span>
+<span class="sd">    :return: needle added to the scene</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="c">#productive</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;addNeedleToScene&quot;</span><span class="p">;</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -2658,8 +2707,8 @@
       <span class="n">sliceWidget</span><span class="o">.</span><span class="n">setCursor</span><span class="p">(</span><span class="n">qt</span><span class="o">.</span><span class="n">QCursor</span><span class="p">(</span><span class="n">cursorNumber</span><span class="p">))</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.changeValue"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.changeValue">[docs]</a>  <span class="k">def</span> <span class="nf">changeValue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? chose needle for control point scrolling</span>
+    <span class="sd">&quot;&quot;&quot;Read the value of the Qt widget and select this needle. It is then possible to display sequentially the points used as</span>
+<span class="sd">     control points of this needle</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive #onUpDnArrow</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;changeValue&quot;</span><span class="p">;</span>
@@ -2667,8 +2716,7 @@
     <span class="n">widget</span><span class="o">.</span><span class="n">scrollPointButton</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s">&#39;Scroll Point for Needle &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">widget</span><span class="o">.</span><span class="n">editNeedleTxtBox</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">+</span> <span class="s">&#39; (pt: &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ptNumber</span><span class="p">)</span><span class="o">+</span><span class="s">&#39;)&#39;</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.scrollPoint"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.scrollPoint">[docs]</a>  <span class="k">def</span> <span class="nf">scrollPoint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ???</span>
+    <span class="sd">&quot;&quot;&quot;Reformat the axial view to display the slice containing the currently selected point.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive #onButton</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;scrollPoint&quot;</span>
@@ -2720,8 +2768,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">scrollPoint</span><span class="p">()</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.validationNeedle"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.validationNeedle">[docs]</a>  <span class="k">def</span> <span class="nf">validationNeedle</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? new validation needle</span>
+    <span class="sd">&quot;&quot;&quot; When the button &#39;new validation needle&#39; is pressed, the needle number is incremented, the needle step is reset to</span>
+<span class="sd">     0</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive #onButton</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;validationNeedle&quot;</span><span class="p">;</span>
@@ -2827,12 +2876,12 @@
   <span class="c"># Radiation</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.AddRadiation"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.AddRadiation">[docs]</a>  <span class="k">def</span> <span class="nf">AddRadiation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">needleID</span><span class="p">):</span>
-    <span class="k">print</span> <span class="s">&quot;AddRadiation&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;AddRadiation&#39;</span><span class="p">)</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Goal of this function is to draw quadrics simulating the dose radiation.</span>
 <span class="sd">    Currently, ellipse is a too naive model.</span>
-<span class="sd">    This project might be continuated later</span>
+<span class="sd">    This project might be continued later</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">print</span> <span class="s">&quot;AddRadiation&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;AddRadiation&#39;</span><span class="p">)</span>
     <span class="k">pass</span>
     <span class="c"># needleNode = slicer.mrmlScene.GetNodeByID(needleID)</span>
     <span class="c"># polyData = needleNode.GetPolyData()</span>
@@ -3034,8 +3083,7 @@
     <span class="bp">self</span><span class="o">.</span><span class="n">addButtons</span><span class="p">()</span>
   </div>
 <div class="viewcode-block" id="NeedleFinderLogic.addButtons"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.addButtons">[docs]</a>  <span class="k">def</span> <span class="nf">addButtons</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ???</span>
+    <span class="sd">&quot;&quot;&quot;Buttons for the reporting widget, displaying information of the segmented needles</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">print</span> <span class="s">&quot;addButtons&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;addButtons&#39;</span><span class="p">)</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buttonsGroupBox</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
@@ -3064,11 +3112,11 @@
         <span class="n">buttonReformat</span> <span class="o">=</span> <span class="n">qt</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s">&quot;Reformat &quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">option</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
         <span class="n">buttonReformat</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&quot;clicked()&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">who</span><span class="o">=</span><span class="n">i</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">reformatNeedle</span><span class="p">(</span><span class="n">who</span><span class="p">))</span>
         <span class="n">widgets</span> <span class="o">=</span> <span class="n">qt</span><span class="o">.</span><span class="n">QWidget</span><span class="p">()</span>
-        <span class="n">hlay</span>    <span class="o">=</span> <span class="n">qt</span><span class="o">.</span><span class="n">QHBoxLayout</span><span class="p">(</span><span class="n">widget</span><span class="p">)</span>
+        <span class="n">hlay</span>    <span class="o">=</span> <span class="n">qt</span><span class="o">.</span><span class="n">QHBoxLayout</span><span class="p">(</span><span class="n">widgets</span><span class="p">)</span>
         <span class="n">hlay</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">buttonDisplay</span><span class="p">)</span>
         <span class="n">hlay</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">buttonBentDisplay</span><span class="p">)</span>
         <span class="n">hlay</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">buttonReformat</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">buttonsGroupBoxLayout</span><span class="o">.</span><span class="n">addRow</span><span class="p">(</span><span class="n">widget</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buttonsGroupBoxLayout</span><span class="o">.</span><span class="n">addRow</span><span class="p">(</span><span class="n">widgets</span><span class="p">)</span>
   </div>
 <div class="viewcode-block" id="NeedleFinderLogic.displayBentNeedle"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.displayBentNeedle">[docs]</a>  <span class="k">def</span> <span class="nf">displayBentNeedle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -3089,10 +3137,10 @@
           <span class="n">displayNode</span><span class="o">.</span><span class="n">SetVisibility</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
   </div>
 <div class="viewcode-block" id="NeedleFinderLogic.displayNeedle"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.displayNeedle">[docs]</a>  <span class="k">def</span> <span class="nf">displayNeedle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">):</span>
-    <span class="k">print</span> <span class="s">&quot;displayNeedle&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;displayNeedle&#39;</span><span class="p">)</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    ??? not used anymore. works with Yi Gao CLI module for straight needle detection + bending post-computed</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">print</span> <span class="s">&quot;displayNeedle&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;displayNeedle&#39;</span><span class="p">)</span>
     <span class="n">modelNodes</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">getNodes</span><span class="p">(</span><span class="s">&#39;vtkMRMLModelNode*&#39;</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">modelNode</span> <span class="ow">in</span> <span class="n">modelNodes</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
       <span class="k">if</span> <span class="n">modelNode</span><span class="o">.</span><span class="n">GetAttribute</span><span class="p">(</span><span class="s">&quot;nth&quot;</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="ow">and</span> <span class="n">modelNode</span><span class="o">.</span><span class="n">GetAttribute</span><span class="p">(</span><span class="s">&quot;segmented&quot;</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;1&#39;</span> <span class="p">:</span>
@@ -3107,10 +3155,11 @@
           <span class="n">displayNode</span><span class="o">.</span><span class="n">SetVisibility</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
       </div>
 <div class="viewcode-block" id="NeedleFinderLogic.showOneNeedle"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.showOneNeedle">[docs]</a>  <span class="k">def</span> <span class="nf">showOneNeedle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">visibility</span><span class="p">):</span>
-    <span class="k">print</span> <span class="s">&quot;showOneNeedle&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;showOneNeedle&#39;</span><span class="p">)</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    ??? Not used anymore. But can be usefull later</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">print</span> <span class="s">&quot;showOneNeedle&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;showOneNeedle&#39;</span><span class="p">)</span>
     <span class="n">fidname</span> <span class="o">=</span> <span class="s">&quot;fid&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">option</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
     <span class="n">pNode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameterNode</span><span class="p">()</span>
     <span class="n">needleID</span> <span class="o">=</span> <span class="n">pNode</span><span class="o">.</span><span class="n">GetParameter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">option</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">+</span><span class="s">&#39;.vtp&#39;</span><span class="p">)</span>
@@ -3181,10 +3230,10 @@
       <span class="bp">self</span><span class="o">.</span><span class="n">showOneNeedle</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">visibility</span><span class="p">)</span>
             </div>
 <div class="viewcode-block" id="NeedleFinderLogic.AddModel"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.AddModel">[docs]</a>  <span class="k">def</span> <span class="nf">AddModel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">polyData</span><span class="p">):</span>
-    <span class="k">print</span> <span class="s">&quot;AddModel&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;AddModel&#39;</span><span class="p">)</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? Not used. Check if can be removed</span>
+<span class="sd">    Not used. Check if can be removed</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">print</span> <span class="s">&quot;AddModel&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;AddModel&#39;</span><span class="p">)</span>
     <span class="n">modelNode</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">vtkMRMLModelNode</span><span class="p">()</span>
     <span class="n">displayNode</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">vtkMRMLModelDisplayNode</span><span class="p">()</span>
     <span class="n">storageNode</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">vtkMRMLModelStorageNode</span><span class="p">()</span>
@@ -3217,7 +3266,7 @@
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.displayRadPlanned"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.displayRadPlanned">[docs]</a>  <span class="k">def</span> <span class="nf">displayRadPlanned</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ???</span>
+<span class="sd">    Display &#39;radiation&#39; of planned needle -&gt; cf iGyne / not used anymore</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">print</span> <span class="s">&quot;displayRadPlanned&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;displayRadPlanned&#39;</span><span class="p">)</span>
     <span class="n">modelNodes</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">getNodes</span><span class="p">(</span><span class="s">&#39;vtkMRMLModelNode*&#39;</span><span class="p">)</span>
@@ -3230,7 +3279,7 @@
             </div>
 <div class="viewcode-block" id="NeedleFinderLogic.displayRadSegmented"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.displayRadSegmented">[docs]</a>  <span class="k">def</span> <span class="nf">displayRadSegmented</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ???</span>
+<span class="sd">    Display &#39;radiation&#39; of segmented needles</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">print</span> <span class="s">&quot;displayRadSegmented&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;displayRadSegmented&#39;</span><span class="p">)</span>
     <span class="n">modelNodes</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">getNodes</span><span class="p">(</span><span class="s">&#39;vtkMRMLModelNode*&#39;</span><span class="p">)</span>
@@ -3245,7 +3294,10 @@
             </div>
 <div class="viewcode-block" id="NeedleFinderLogic.displayContour"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.displayContour">[docs]</a>  <span class="k">def</span> <span class="nf">displayContour</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">visibility</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ???</span>
+<span class="sd">    Display the iso-contour of needle i</span>
+
+<span class="sd">    :param i: nth value of needle</span>
+<span class="sd">    :param visibility: boolean to set the visibility state of the needle</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">print</span> <span class="s">&quot;displayContour&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;displayContour&#39;</span><span class="p">)</span>
     <span class="n">modelNodes</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">getNodes</span><span class="p">(</span><span class="s">&#39;vtkMRMLModelNode*&#39;</span><span class="p">)</span>
@@ -3260,7 +3312,7 @@
             </div>
 <div class="viewcode-block" id="NeedleFinderLogic.displayContours"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.displayContours">[docs]</a>  <span class="k">def</span> <span class="nf">displayContours</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ???</span>
+<span class="sd">    Display or hide the iso-contours of every needles</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">print</span> <span class="s">&quot;displayContours&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;displayContours&#39;</span><span class="p">)</span>
     <span class="n">modelNodes</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">getNodes</span><span class="p">(</span><span class="s">&#39;vtkMRMLModelNode*&#39;</span><span class="p">)</span>
@@ -3274,10 +3326,10 @@
             <span class="n">d</span><span class="o">.</span><span class="n">SetSliceIntersectionVisibility</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">slicer</span><span class="o">.</span><span class="n">modules</span><span class="o">.</span><span class="n">NeedleFinderWidget</span><span class="o">.</span><span class="n">displayContourButton</span><span class="o">.</span><span class="n">checked</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span> 
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.displayFiducial"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.displayFiducial">[docs]</a>  <span class="k">def</span> <span class="nf">displayFiducial</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="k">print</span> <span class="s">&quot;displayFiducial&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;displayFiducial&#39;</span><span class="p">)</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    ??? used? show labels of the needles by adding a fiducial point at the tip</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">print</span> <span class="s">&quot;displayFiducial&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;displayFiducial&#39;</span><span class="p">)</span>
     <span class="n">modelNodes</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">getNodes</span><span class="p">(</span><span class="s">&#39;vtkMRMLModelNode*&#39;</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">modelNode</span> <span class="ow">in</span> <span class="n">modelNodes</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
       <span class="n">displayNode</span> <span class="o">=</span> <span class="n">modelNode</span><span class="o">.</span><span class="n">GetDisplayNode</span><span class="p">()</span>
@@ -3313,10 +3365,10 @@
               <span class="bp">self</span><span class="o">.</span><span class="n">displayFiducialButton</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="s">&quot;Display Labels on Needles&quot;</span> 
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.reformatNeedle"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.reformatNeedle">[docs]</a>  <span class="k">def</span> <span class="nf">reformatNeedle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">):</span>
-    <span class="k">print</span> <span class="s">&quot;reformatNeedle&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;reformatNeedle&#39;</span><span class="p">)</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? used? reformat the sagital view to be tangent to the needle</span>
+<span class="sd">    Reformat the sagittal view to be tangent to the needle</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">print</span> <span class="s">&quot;reformatNeedle&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;reformatNeedle&#39;</span><span class="p">)</span>
     <span class="n">modelNodes</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">getNodes</span><span class="p">(</span><span class="s">&#39;vtkMRMLModelNode*&#39;</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>  
       <span class="k">for</span> <span class="n">modelNode</span> <span class="ow">in</span> <span class="n">modelNodes</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
@@ -3342,10 +3394,10 @@
           <span class="n">sYellow</span><span class="o">.</span><span class="n">Modified</span><span class="p">()</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.drawIsoSurfaces0"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.drawIsoSurfaces0">[docs]</a>  <span class="k">def</span> <span class="nf">drawIsoSurfaces0</span><span class="p">(</span> <span class="bp">self</span> <span class="p">):</span>
-    <span class="k">print</span> <span class="s">&quot;drawIsoSurfaces0&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;drawIsoSurfaces0&#39;</span><span class="p">)</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    ??? used? for development purposes.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">print</span> <span class="s">&quot;drawIsoSurfaces0&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;drawIsoSurfaces0&#39;</span><span class="p">)</span>
     <span class="n">modelNodes</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">getNodes</span><span class="p">(</span><span class="s">&#39;vtkMRMLModelNode*&#39;</span><span class="p">)</span>
     <span class="n">v</span><span class="o">=</span> <span class="n">vtk</span><span class="o">.</span><span class="n">vtkAppendPolyData</span><span class="p">()</span>
     
@@ -3389,8 +3441,9 @@
   <span class="c">#----------------------------------------------------------------------------------------------</span>
   
 <div class="viewcode-block" id="NeedleFinderLogic.returnTips"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.returnTips">[docs]</a>  <span class="k">def</span> <span class="nf">returnTips</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ???</span>
+    <span class="sd">&quot;&quot;&quot; Returns the IJK coordinates of the tips of manually segmented needles</span>
+
+<span class="sd">    :return: array of IJK coordinates of validation needle tips</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;returnTips&quot;</span><span class="p">;</span>
@@ -3413,8 +3466,13 @@
     <span class="k">return</span> <span class="n">returnTips</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.startValidation"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.startValidation">[docs]</a>  <span class="k">def</span> <span class="nf">startValidation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ???</span>
+    <span class="sd">&quot;&quot;&quot;Start the evaluation process:</span>
+<span class="sd">    * Calls returnTips() to build an array of the tip of manually segmented needles</span>
+<span class="sd">    * Use theses tips to generate auto segmented needles</span>
+<span class="sd">    * Calls evaluate() to compute the Hausdorff&#39;s distance between every pair of needles</span>
+
+<span class="sd">    :return: print the results in the python interactor (CMD+3 or CTRL+3)</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive #button</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;startValidation&quot;</span><span class="p">;</span>
@@ -3466,8 +3524,11 @@
     <span class="n">fd</span><span class="o">.</span><span class="n">SetColor</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.exportEvaluation"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.exportEvaluation">[docs]</a>  <span class="k">def</span> <span class="nf">exportEvaluation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">results</span><span class="p">,</span><span class="n">url</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? used?</span>
+    <span class="sd">&quot;&quot;&quot; Export evaluation results to a CSV file</span>
+
+<span class="sd">    :param results: array containing the results of the evaluation</span>
+<span class="sd">    :param url: url for saving the file</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">print</span> <span class="s">&quot;exportEvaluation&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;exportEvaluation&#39;</span><span class="p">)</span>
     <span class="n">widget</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">modules</span><span class="o">.</span><span class="n">NeedleFinderWidget</span>
@@ -3485,12 +3546,30 @@
     <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">valuesExperience</span><span class="p">)</span>
     <span class="n">wr</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
 </div>
-<div class="viewcode-block" id="NeedleFinderLogic.hausdorffDistance2"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.hausdorffDistance2">[docs]</a>  <span class="k">def</span> <span class="nf">hausdorffDistance2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">id1</span><span class="p">,</span><span class="n">id2</span><span class="p">):</span>
+<div class="viewcode-block" id="NeedleFinderLogic.hausdorffDistance"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.hausdorffDistance">[docs]</a>  <span class="k">def</span> <span class="nf">hausdorffDistance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">id1</span><span class="p">,</span><span class="n">id2</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? calc&#39;s hausdorff distance of two needles</span>
+<span class="sd">    Calculates the Hausdorff&#39;s distance [HD]_ of two needles. Both needles are truncated to start and end at the same slices.</span>
+
+<span class="sd">    :param id1: vtkMRMLModelNodeID of Needle 1</span>
+<span class="sd">    :param id2: vtkMRMLModelNodeID of Needle 2</span>
+<span class="sd">    :return: Hausdorff&#39;s distance in millimeters</span>
+
+<span class="sd">    .. math::  d_{\mathrm H}(X,Y) = \max\{\,\sup_{x \in X} \inf_{y \in Y} d(x,y),\, \sup_{y \in Y} \inf_{x \in X} d(x,y)\,\}</span>
+
+<span class="sd">    .. image:: http://upload.wikimedia.org/wikipedia/commons/2/21/Hausdorff_distance_sample.svg</span>
+<span class="sd">           :height: 300px</span>
+<span class="sd">           :width: 500 px</span>
+<span class="sd">           :scale: 100 %</span>
+<span class="sd">           :alt: alternate text</span>
+<span class="sd">           :align: center</span>
+
+<span class="sd">    .. [HD] http://en.wikipedia.org/wiki/Hausdorff_distance</span>
+
+
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive #math</span>
-    <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;hausdorffDistance2&quot;</span><span class="p">;</span>
+    <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;hausdorffDistance&quot;</span><span class="p">;</span>
     <span class="n">node1</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">mrmlScene</span><span class="o">.</span><span class="n">GetNodeByID</span><span class="p">(</span><span class="n">id1</span><span class="p">)</span>
     <span class="n">polydata1</span><span class="o">=</span><span class="n">node1</span><span class="o">.</span><span class="n">GetPolyData</span><span class="p">()</span>
     <span class="n">node2</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">mrmlScene</span><span class="o">.</span><span class="n">GetNodeByID</span><span class="p">(</span><span class="n">id2</span><span class="p">)</span>
@@ -3559,21 +3638,28 @@
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.evaluate"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.evaluate">[docs]</a>  <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? calc&#39;s Hausdorff distance of nearby needles</span>
+<span class="sd">    This function first invokes needleMatching() with, for each automatically segmented needle in the vtkMRMLScene,</span>
+<span class="sd">    associates it with its manually segmented version.</span>
+<span class="sd">    Then, the HD is computed between each pairs of needle and the results are reported in a numpy array</span>
+
+<span class="sd">    :return numpy array of [ value , ID needle 1, ID needle 2 ]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;evaluate&quot;</span><span class="p">;</span>
     <span class="n">result</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">needleMatching</span><span class="p">()</span>
     <span class="n">HD</span><span class="o">=</span><span class="p">[]</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)):</span>
-      <span class="n">val</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">hausdorffDistance2</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span><span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span>
+      <span class="n">val</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">hausdorffDistance</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span><span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span>
       <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">val</span><span class="p">),</span><span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39;vtkMRMLModelNode&#39;</span><span class="p">)),</span><span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39;vtkMRMLModelNode&#39;</span><span class="p">))]</span>
       <span class="n">HD</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">HD</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">longdouble</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.distTip"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.distTip">[docs]</a>  <span class="k">def</span> <span class="nf">distTip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">id1</span><span class="p">,</span><span class="n">id2</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? calc&#39;s distance of two needle tips</span>
+    <span class="sd">&quot;&quot;&quot; Returns the axial distance between the tip of two needles</span>
+
+<span class="sd">    :param id1: ID number for the needle 1 (vtkMRMLModelNode)</span>
+<span class="sd">    :param id2: ID number for the needle 2 (vtkMRMLModelNode)</span>
+<span class="sd">    :return: distance in millimeters between the tip of both needles</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive #math</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;distTip&quot;</span><span class="p">;</span>
@@ -3599,8 +3685,12 @@
 
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.needleMatching"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.needleMatching">[docs]</a>  <span class="k">def</span> <span class="nf">needleMatching</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? create a list of matching needles</span>
+    <span class="sd">&quot;&quot;&quot;This functions associates manually segmented needles to their automatically segmented version. To do so,</span>
+<span class="sd">    each manually segmented needle has a &#39;type&#39; attribute named &#39;validation&#39;. For each manually segmented needle, an axial</span>
+<span class="sd">    distance between the tip of this needle, and the tip of every auto segmented needle is computed. The auto needle that</span>
+<span class="sd">    offers the minimal tip axial distance is considered as corresponding needle</span>
+
+<span class="sd">    :return: array of tuple of corresponding needles</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;needleMatching&quot;</span><span class="p">;</span>
@@ -3646,8 +3736,11 @@
     <span class="k">return</span> <span class="n">result</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.distance"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.distance">[docs]</a>  <span class="k">def</span> <span class="nf">distance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">pt1</span><span class="p">,</span><span class="n">pt2</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    calc&#39;s distance between two points</span>
+    <span class="sd">&quot;&quot;&quot;3D distance between two points</span>
+
+<span class="sd">    :param pt1: point 1 [x,y,z]</span>
+<span class="sd">    :param pt2: point 2 [x,y,z</span>
+<span class="sd">    :return: Euclidian&#39;s distance</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive #frequent</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;distance&quot;</span><span class="p">;</span>
@@ -3655,8 +3748,9 @@
     <span class="k">return</span> <span class="n">d</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.addManualTip"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.addManualTip">[docs]</a>  <span class="k">def</span> <span class="nf">addManualTip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">A</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? used?</span>
+    <span class="sd">&quot;&quot;&quot;Add fiducial node to the scene (called by processEventAddManualTips). Used as starting point for needle segmentation</span>
+
+<span class="sd">    :param A: RAS coordinates</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">print</span> <span class="s">&quot;addManualTip&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;addManualTip&#39;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">fiducialNode</span> <span class="o">=</span> <span class="n">slicer</span><span class="o">.</span><span class="n">mrmlScene</span><span class="o">.</span><span class="n">CreateNodeByClass</span><span class="p">(</span><span class="s">&#39;vtkMRMLAnnotationFiducialNode&#39;</span><span class="p">)</span>
@@ -3668,8 +3762,11 @@
     <span class="n">fd</span><span class="o">.</span><span class="n">SetColor</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.distanceTwoPoints"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.distanceTwoPoints">[docs]</a>  <span class="k">def</span> <span class="nf">distanceTwoPoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">A</span><span class="p">,</span><span class="n">B</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    returns distance between two pts.</span>
+    <span class="sd">&quot;&quot;&quot;3D distance between two points</span>
+
+<span class="sd">    :param pt1: point 1 [x,y,z]</span>
+<span class="sd">    :param pt2: point 2 [x,y,z</span>
+<span class="sd">    :return: Euclidian&#39;s distance</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive</span>
     <span class="c"># used by addNeedleToScene</span>
@@ -3678,8 +3775,11 @@
     <span class="k">return</span> <span class="n">length</span>
   </div>
 <div class="viewcode-block" id="NeedleFinderLogic.clipPolyData"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.clipPolyData">[docs]</a>  <span class="k">def</span> <span class="nf">clipPolyData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">node</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">visible</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ???</span>
+    <span class="sd">&quot;&quot;&quot; Function used to truncate needle models to evaluate the Hausdorff&#39;s distance.</span>
+
+<span class="sd">    :param node: vtkMRMLModelNode</span>
+<span class="sd">    :param value: axial slice where to cut the model</span>
+<span class="sd">    :return: vtkPolyData of the cutted model</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;clipPolyData&quot;</span><span class="p">;</span>
@@ -3720,7 +3820,7 @@
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.setWL"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.setWL">[docs]</a>  <span class="k">def</span> <span class="nf">setWL</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">dn</span><span class="p">,</span><span class="n">w</span><span class="p">,</span><span class="n">l</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? set window/level in mpr slice view</span>
+<span class="sd">    Set window/level in mpr slice view</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive #frequent #onDrag</span>
     <span class="k">if</span> <span class="n">profiling</span> <span class="ow">and</span> <span class="n">frequent</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;setWL&quot;</span><span class="p">;</span>
@@ -3728,8 +3828,7 @@
     <span class="n">dn</span><span class="o">.</span><span class="n">SetLevel</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.setColors255"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.setColors255">[docs]</a>  <span class="k">def</span> <span class="nf">setColors255</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ???</span>
+    <span class="sd">&quot;&quot;&quot;Set color map with colors encoded in RGB between 0 and 255</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;setColors255&quot;</span><span class="p">;</span>
@@ -3943,8 +4042,7 @@
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">color255</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.setColors"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.setColors">[docs]</a>  <span class="k">def</span> <span class="nf">setColors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ???</span>
+    <span class="sd">&quot;&quot;&quot;Sets color map with colors encoded in RGB between 0 and 1</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;setColors&quot;</span><span class="p">;</span>
@@ -3957,8 +4055,7 @@
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">color</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.setHolesCoordinates"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.setHolesCoordinates">[docs]</a>  <span class="k">def</span> <span class="nf">setHolesCoordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? set coord&#39;s of obturator template</span>
+    <span class="sd">&quot;&quot;&quot;Coordinates of the 63 holes in the obturator</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;setHolesCoordinates&quot;</span><span class="p">;</span>
@@ -4094,7 +4191,7 @@
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.setLabels"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.setLabels">[docs]</a>  <span class="k">def</span> <span class="nf">setLabels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ??? set the list of labels</span>
+<span class="sd">    Set the list of labels corresponding of the 63 holes of the obturator</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c">#productive</span>
     <span class="k">if</span> <span class="n">profiling</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;setLabels&quot;</span><span class="p">;</span>
@@ -4166,22 +4263,19 @@
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">option</span>
   </div>
 <div class="viewcode-block" id="NeedleFinderLogic.setParameterNode"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.setParameterNode">[docs]</a>  <span class="k">def</span> <span class="nf">setParameterNode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameterNode</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ???</span>
+    <span class="sd">&quot;&quot;&quot;Set Parameter Node (to save parameters from one step to the other)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">print</span> <span class="s">&quot;setParameterNode&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;setParameterNode&#39;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">parameterNode</span> <span class="o">=</span> <span class="n">parameterNode</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.parameterNode"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.parameterNode">[docs]</a>  <span class="k">def</span> <span class="nf">parameterNode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ???</span>
+    <span class="sd">&quot;&quot;&quot;Returns parameter node</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">print</span> <span class="s">&quot;parameterNode&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;parameterNode&#39;</span><span class="p">)</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameterNode</span>
 </div>
 <div class="viewcode-block" id="NeedleFinderLogic.getBoldFont"><a class="viewcode-back" href="../NeedleFinder.html#NeedleFinder.NeedleFinderLogic.getBoldFont">[docs]</a>  <span class="k">def</span> <span class="nf">getBoldFont</span><span class="p">(</span> <span class="bp">self</span> <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ???</span>
+    <span class="sd">&quot;&quot;&quot;Get a Qt bold font</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">print</span> <span class="s">&quot;getBoldFont&quot;</span><span class="p">;</span> <span class="n">msgbox</span><span class="p">(</span><span class="s">&#39;getBoldFont&#39;</span><span class="p">)</span>
     <span class="n">boldFont</span> <span class="o">=</span> <span class="n">qt</span><span class="o">.</span><span class="n">QFont</span><span class="p">(</span> <span class="s">&quot;Sans Serif&quot;</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="n">qt</span><span class="o">.</span><span class="n">QFont</span><span class="o">.</span><span class="n">Bold</span> <span class="p">)</span>
