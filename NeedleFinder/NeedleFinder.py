@@ -947,7 +947,7 @@ class NeedleFinderLogic:
     """
     Hide radiation isosurfaces from models of the visible needles only
     """
-    #productive
+    #research
     if profiling: print "hideIsoSurfaces";
     contourNode = slicer.util.getNode(self.contourNode)
     widget = slicer.modules.NeedleFinderWidget
