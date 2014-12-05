@@ -2581,7 +2581,7 @@ class NeedleFinderLogic:
     Delete every segmented needles of the current round
     """
     #productive #onButton
-    profbox()
+    profprint()
     while slicer.util.getNodes('python-catch-round_'+str(self.round)+'*') != {}:
       nodes = slicer.util.getNodes('python-catch-round_'+str(self.round)+'*')
       for node in nodes.values():
@@ -2592,7 +2592,7 @@ class NeedleFinderLogic:
     Start a new round
     """
     #productive #onButton
-    profbox()
+    profprint()
     widget      = slicer.modules.NeedleFinderWidget
     dialog      = qt.QDialog()
     messageBox  = qt.QMessageBox.information( dialog, 'Information','You are creating a new set of needles')
