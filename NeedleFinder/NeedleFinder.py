@@ -135,7 +135,7 @@ class NeedleFinderWidget:
     # Needle Finder Logic
     logic = NeedleFinderLogic()
 
-    #Report Frame
+    #Report Frame########################################
     self.__reportFrame = ctk.ctkCollapsibleButton()
     self.__reportFrame.text = "Segmentation Report"
     self.__reportFrame.collapsed = 1
@@ -150,7 +150,7 @@ class NeedleFinderWidget:
 
     #-----------------------------------------------------------------------------
 
-    #Segmentation Frame
+    #Segmentation Frame##########################################
     self.__segmentationFrame = ctk.ctkCollapsibleButton()
     self.__segmentationFrame.text = "Segmentation"
     self.__segmentationFrame.collapsed = 1
@@ -199,7 +199,7 @@ class NeedleFinderWidget:
     segmentationFrame.addRow(self.templateSliceButton)
     self.templateSliceButton.connect('clicked()', logic.selectCurrentAxialSlice)
       
-    #Validation Frame
+    #Validation Frame##########################################
     self.__validationFrame = ctk.ctkCollapsibleButton()
     self.__validationFrame.text = "Validation"
     self.__validationFrame.collapsed = 1
@@ -241,36 +241,16 @@ class NeedleFinderWidget:
     validationFrame.addRow(self.scrollPointButton)
     self.scrollPointButton.connect('clicked()', logic.scrollPoint)
 
-    #Filter Needles Button
-    self.__filterFrame = ctk.ctkCollapsibleButton()
-    self.__filterFrame.text = "Filter Needles"
-    self.__filterFrame.collapsed = 1
-    filterFrame = qt.QFormLayout(self.__filterFrame)
-
-    self.displayFiducialButton = qt.QPushButton('Display Labels On Needles')
-    self.displayFiducialButton.connect('clicked()',logic.displayFiducial)
-    self.displayContourButton = qt.QPushButton('Rsc: Draw Radiation Isosurfaces')
-    self.displayContourButton.checkable = False
-    self.displayContourButton.connect('clicked()',logic.drawIsoSurfaces)
-    self.hideContourButton = qt.QPushButton('Rsc: Hide Radiation Isosurfaces')
-    self.hideContourButton.checkable = True
-    self.hideContourButton.connect('clicked()',logic.hideIsoSurfaces)
-    self.hideContourButton.setEnabled(0)
+    # Needle detection parameters#################################
+    self.__parameterFrame = ctk.ctkCollapsibleButton()
+    self.__parameterFrame.text = "Needle Detection Parameters"
+    self.__parameterFrame.collapsed = 1
+    parameterFrame = qt.QFormLayout(self.__parameterFrame)
     
-    # segmentationFrame.addRow(self.displayFiducialButton)
-    segmentationFrame.addRow(self.displayContourButton)
-    segmentationFrame.addRow(self.hideContourButton)
-    
-    # Bending parameters
-    self.__bendingFrame = ctk.ctkCollapsibleButton()
-    self.__bendingFrame.text = "Needle Detection Parameters"
-    self.__bendingFrame.collapsed = 1
-    bendingFrame = qt.QFormLayout(self.__bendingFrame)
-    
-    # Save/Load/Reset parameters
+    # Load/Save/Reset
     self.configFrame = qt.QFrame()
     self.configFrame.setLayout(qt.QHBoxLayout())
-    bendingFrame.layout().addRow(self.configFrame)
+    parameterFrame.layout().addRow(self.configFrame)
     self.loadButton = qt.QPushButton()
     self.loadButton.text = "Load Parameters"
     self.loadButton.checkable = False
@@ -292,36 +272,36 @@ class NeedleFinderWidget:
 
     # Auto correct tip position?
     self.autoCorrectTip = qt.QCheckBox('Auto correct tip position?')
-    bendingFrame.addRow(self.autoCorrectTip)
+    parameterFrame.addRow(self.autoCorrectTip)
     self.autoCorrectTip.setChecked(1)
 
     # Look for needles in CT?
     self.invertedContrast = qt.QCheckBox('Search for bright needles (CT)?')
-    bendingFrame.addRow(self.invertedContrast)
+    parameterFrame.addRow(self.invertedContrast)
     # Compute gradient?
     self.gradient=qt.QCheckBox('Compute gradient?')
     self.gradient.setChecked(1)
-    bendingFrame.addRow(self.gradient)
+    parameterFrame.addRow(self.gradient)
 
     # Filter ControlPoints?
     self.filterControlPoints=qt.QCheckBox('Filter Control Points?')
     self.filterControlPoints.setChecked(0)
-    # bendingFrame.addRow(self.filterControlPoints)
+    # parameterFrame.addRow(self.filterControlPoints)
 
     # Draw Fiducial Points?
     self.drawFiducialPoints=qt.QCheckBox('Draw Control Points?')
     self.drawFiducialPoints.setChecked(0)
-    bendingFrame.addRow(self.drawFiducialPoints)
+    parameterFrame.addRow(self.drawFiducialPoints)
 
     # Auto find Tips: Tracking in +z and -z direction
     self.autoStopTip = qt.QCheckBox('Tracking in both directions')
     self.autoStopTip.setChecked(0)
-    bendingFrame.addRow(self.autoStopTip)
+    parameterFrame.addRow(self.autoStopTip)
 
     # Extend Needle to the wanted value
     self.extendNeedle = qt.QCheckBox('Extend Needle')
     self.extendNeedle.setChecked(0)
-    bendingFrame.addRow(self.extendNeedle)
+    parameterFrame.addRow(self.extendNeedle)
 
     # Real Needle Value (used to extend the needle)
     realNeedleLengthLabel = qt.QLabel('Real Needle Length (mm):')
@@ -329,17 +309,17 @@ class NeedleFinderWidget:
     self.realNeedleLength.setMinimum(0.1)
     self.realNeedleLength.setMaximum(1500)
     self.realNeedleLength.setValue(240)
-    bendingFrame.addRow(realNeedleLengthLabel,self.realNeedleLength)
+    parameterFrame.addRow(realNeedleLengthLabel,self.realNeedleLength)
 
     # Max Needle Length?
     self.maxLength=qt.QCheckBox('Max Needle Length?')
     self.maxLength.setChecked(1)
-    bendingFrame.addRow(self.maxLength)
+    parameterFrame.addRow(self.maxLength)
 
     # Add Gaussian Estimation?
     self.gaussianAttenuationButton = qt.QCheckBox('Add Gaussian Prob. Attenuation?')
     self.gaussianAttenuationButton.setChecked(1)
-    bendingFrame.addRow(self.gaussianAttenuationButton)
+    parameterFrame.addRow(self.gaussianAttenuationButton)
 
     # nb points per line spin box
     ### previously 4 - try with 20
@@ -348,7 +328,7 @@ class NeedleFinderWidget:
     self.sigmaValue.setMaximum(500)
     self.sigmaValue.setValue(20)
     sigmaValueLabel = qt.QLabel("Sigma Value (exp(-x^2/(2*(sigma/10)^2))): ")
-    bendingFrame.addRow( sigmaValueLabel, self.sigmaValue)
+    parameterFrame.addRow( sigmaValueLabel, self.sigmaValue)
 
     # nb points per line spin box
     self.gradientPonderation = qt.QSpinBox()
@@ -356,7 +336,7 @@ class NeedleFinderWidget:
     self.gradientPonderation.setMaximum(500)
     self.gradientPonderation.setValue(5)
     gradientPonderationLabel = qt.QLabel("Neighborhood Ponderation: ")
-    bendingFrame.addRow( gradientPonderationLabel, self.gradientPonderation)
+    parameterFrame.addRow( gradientPonderationLabel, self.gradientPonderation)
 
     # center accuentuation
     ### previously 1, try with 2 ( avoids exiting catheter track)
@@ -365,7 +345,7 @@ class NeedleFinderWidget:
     self.exponent.setMaximum(500)
     self.exponent.setValue(2)
     exponentLabel = qt.QLabel("Center Ponderation: ")
-    bendingFrame.addRow( exponentLabel, self.exponent)
+    parameterFrame.addRow( exponentLabel, self.exponent)
 
     # nb points per line spin box
     self.nbPointsPerLine = qt.QSpinBox()
@@ -373,7 +353,7 @@ class NeedleFinderWidget:
     self.nbPointsPerLine.setMaximum(500)
     self.nbPointsPerLine.setValue(20)
     nbPointsPerLineLabel = qt.QLabel("Number of points per line: ")
-    # bendingFrame.addRow( nbPointsPerLineLabel, self.nbPointsPerLine)
+    # parameterFrame.addRow( nbPointsPerLineLabel, self.nbPointsPerLine)
 
     # nb radius iteration spin box
     self.nbRadiusIterations = qt.QSpinBox()
@@ -381,7 +361,7 @@ class NeedleFinderWidget:
     self.nbRadiusIterations.setMaximum(1000)
     self.nbRadiusIterations.setValue(13)
     nbRadiusIterationsLabel = qt.QLabel("Number of distance iterations: ")
-    # bendingFrame.addRow( nbRadiusIterationsLabel, self.nbRadiusIterations)
+    # parameterFrame.addRow( nbRadiusIterationsLabel, self.nbRadiusIterations)
     
     # distance max spin box
     self.distanceMax = qt.QSpinBox()
@@ -389,7 +369,7 @@ class NeedleFinderWidget:
     self.distanceMax.setMaximum(1000)
     self.distanceMax.setValue(5)
     distanceMaxLabel = qt.QLabel("Radius of cone base (mm): ")
-    bendingFrame.addRow( distanceMaxLabel, self.distanceMax)
+    parameterFrame.addRow( distanceMaxLabel, self.distanceMax)
     
     # nb rotating iterations spin box
     self.nbRotatingIterations = qt.QSpinBox()
@@ -397,7 +377,7 @@ class NeedleFinderWidget:
     self.nbRotatingIterations.setMaximum(1000)
     self.nbRotatingIterations.setValue(35)
     nbRotatingIterationsLabel = qt.QLabel("Number of rotating steps: ")
-    bendingFrame.addRow( nbRotatingIterationsLabel, self.nbRotatingIterations)
+    parameterFrame.addRow( nbRotatingIterationsLabel, self.nbRotatingIterations)
     
     # nb heights per needle spin box
     self.numberOfPointsPerNeedle = qt.QSpinBox()
@@ -405,7 +385,7 @@ class NeedleFinderWidget:
     self.numberOfPointsPerNeedle.setMaximum(50)
     self.numberOfPointsPerNeedle.setValue(6)
     numberOfPointsPerNeedleLabel = qt.QLabel("Number of Control Points: ")
-    bendingFrame.addRow( numberOfPointsPerNeedleLabel, self.numberOfPointsPerNeedle)
+    parameterFrame.addRow( numberOfPointsPerNeedleLabel, self.numberOfPointsPerNeedle)
     
     # nb heights per needle spin box
     self.stepsize = qt.QSpinBox()
@@ -413,7 +393,7 @@ class NeedleFinderWidget:
     self.stepsize.setMaximum(500)
     self.stepsize.setValue(5)
     stepsizeLabel = qt.QLabel("Stepsize: ")
-    # bendingFrame.addRow( stepsizeLabel, self.stepsize)
+    # parameterFrame.addRow( stepsizeLabel, self.stepsize)
 
     #lenghtNeedle
     self.lenghtNeedleParameter = qt.QSpinBox()
@@ -421,7 +401,7 @@ class NeedleFinderWidget:
     self.lenghtNeedleParameter.setMaximum(10000)
     self.lenghtNeedleParameter.setValue(100)
     stepsizeLabel = qt.QLabel("Lenght of the needles (mm): ")
-    bendingFrame.addRow( stepsizeLabel, self.lenghtNeedleParameter)
+    parameterFrame.addRow( stepsizeLabel, self.lenghtNeedleParameter)
 
     #radius
     self.radiusNeedleParameter = qt.QSpinBox()
@@ -429,15 +409,38 @@ class NeedleFinderWidget:
     self.radiusNeedleParameter.setMaximum(200)
     self.radiusNeedleParameter.setValue(2)
     radiusLabel = qt.QLabel("Radius of the needles (mm): ")
-    bendingFrame.addRow( radiusLabel, self.radiusNeedleParameter)
+    parameterFrame.addRow( radiusLabel, self.radiusNeedleParameter)
     
+    # Research/dev. area#################################
+    self.__devFrame = ctk.ctkCollapsibleButton()
+    self.__devFrame.text = "R&&D"
+    self.__devFrame.collapsed = 1
+    devFrame = qt.QFormLayout(self.__devFrame)
+    
+    self.displayFiducialButton = qt.QPushButton('Display Labels On Needles')
+    self.displayFiducialButton.connect('clicked()',logic.displayFiducial)
+    
+    self.displayContourButton = qt.QPushButton('Draw Radiation Isosurfaces')
+    self.displayContourButton.checkable = False
+    self.displayContourButton.connect('clicked()',logic.drawIsoSurfaces)
+    
+    self.hideContourButton = qt.QPushButton('Hide Radiation Isosurfaces')
+    self.hideContourButton.checkable = True
+    self.hideContourButton.connect('clicked()',logic.hideIsoSurfaces)
+    self.hideContourButton.setEnabled(0)
+    
+    # devFrame.addRow(self.displayFiducialButton)
+    devFrame.addRow(self.displayContourButton)
+    devFrame.addRow(self.hideContourButton)
+    
+    #put frames on the tab########################################
     self.layout.addRow(self.__reportFrame)
     self.layout.addRow(self.__segmentationFrame)
     self.layout.addRow(self.__validationFrame)
-    # self.layout.addRow(self.__filterFrame)
-    self.layout.addRow(self.__bendingFrame)
-    # reset module
+    self.layout.addRow(self.__parameterFrame)
+    self.layout.addRow(self.__devFrame)
     
+    # reset module
     resetButton = qt.QPushButton( 'Reset Module' )
     resetButton.connect( 'clicked()', self.onReload )
     self.widget = slicer.qMRMLWidget()
