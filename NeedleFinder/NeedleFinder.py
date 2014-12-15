@@ -34,6 +34,8 @@ import copy
 import csv
 import ConfigParser
 import inspect
+import SimpleITK as sitk
+import sitkUtils
 from __main__ import vtk, qt, ctk, slicer
 def whoami():
     return inspect.stack()[1][3]
@@ -429,9 +431,15 @@ class NeedleFinderWidget:
     self.hideContourButton.connect('clicked()',logic.hideIsoSurfaces)
     self.hideContourButton.setEnabled(0)
     
+    self.filterButton = qt.QPushButton('Preprocessing')
+    self.filterButton.checkable = False
+    self.filterButton.connect('clicked()',logic.filterWithSITK)
+    self.filterButton.setEnabled(1)
+    
     # devFrame.addRow(self.displayFiducialButton)
     devFrame.addRow(self.displayContourButton)
     devFrame.addRow(self.hideContourButton)
+    devFrame.addRow(self.filterButton)
     
     #put frames on the tab########################################
     self.layout.addRow(self.__reportFrame)
@@ -462,7 +470,7 @@ class NeedleFinderWidget:
     Generic reload method for any scripted module.
     ModuleWizard will subsitute correct default moduleName.
     """
-    if profiling : print "onReload"; msgbox(whoami())
+    if profiling : profbox()
     #framework
     globals()[moduleName] = slicer.util.reloadScriptedModule(moduleName)
 
@@ -2771,6 +2779,24 @@ class NeedleFinderLogic:
     # self.tableValueCtrPt.append([])
     widget.stepNeedle = 0     
 
+  def filterWithSITK(self):
+    """
+    Demo method for filter with SimpleITK.
+    See https://github.com/Slicer/Slicer/blob/140b36b50877d85703c094a97fe13303dee570b5/Modules/Scripted/EditorLib/WatershedFromMarkerEffect.py
+    """
+    #research
+    profbox()
+    backgroundNode  = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
+    backgroundNodeName = backgroundNode.GetName()
+    backgroundImage = sitk.ReadImage( sitkUtils.GetSlicerITKReadWriteAddress( backgroundNodeName ) )
+    filterImage = sitk.GradientMagnitudeRecursiveGaussian( backgroundImage, float(2) );
+    del backgroundImage
+    sitk.WriteImage( filterImage, sitkUtils.GetSlicerITKReadWriteAddress( backgroundNodeName ) )
+    
+    # notify
+    backgroundNode.GetImageData().Modified()
+    backgroundNode.Modified()
+    
   #----------------------------------------------------------------------------------------------
   """ Needle segmentation report"""
   #---------------------------------------------------------------------------------------------- 
