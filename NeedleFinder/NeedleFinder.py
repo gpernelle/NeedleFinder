@@ -41,7 +41,7 @@ def whosdaddy():
     return inspect.stack()[2][3]
 def whosgranny():
     return inspect.stack()[3][3]
-profiling=True
+profiling=False
 frequent=False
 
 def msgbox(text):
@@ -462,7 +462,7 @@ class NeedleFinderWidget:
     Generic reload method for any scripted module.
     ModuleWizard will subsitute correct default moduleName.
     """
-    print "onReload"; msgbox(whoami())
+    if profiling : print "onReload"; msgbox(whoami())
     #framework
     globals()[moduleName] = slicer.util.reloadScriptedModule(moduleName)
 
@@ -1594,7 +1594,9 @@ class NeedleFinderLogic:
     """
     #productive #onClick
     profprint()
+    radiusNeedle = int(radiusNeedle)
     A=[int(A[0]),int(A[1]),int(A[2])]
+    print A
     minTotalTip=0
     X = int(X)
     Y = int(Y)
@@ -2457,7 +2459,8 @@ class NeedleFinderLogic:
         print controlPointsUnsorted
         self.addNeedleToScene(controlPoints,i,'Validation') 
       else:
-        print i  
+        # print i
+        pass
 
   def addNeedleToScene(self,controlPoint,colorVar, needleType='Detection'): 
     """Computes the Bezier's curve and adds visual representation of a needle to the scene
@@ -2603,7 +2606,7 @@ class NeedleFinderLogic:
     widget.newInsertionButton.setText('Start a new set of needles - Round ' + str(self.round+1)+'?')
     widget.deleteNeedleButton.setText('Delete Needles from round ' + str(self.round))
 
-  def resetNeedleDetection(self):
+  def resetNeedleDetection(self, script=False):
     """
     Reset the needle detection to completely start over.
     ??? this fx does not delete the obtu' needles from the scene
@@ -2611,12 +2614,14 @@ class NeedleFinderLogic:
     #productive #onButton
     profprint()
     widget      = slicer.modules.NeedleFinderWidget
-    dialog      = qt.QDialog()
-    ret         = messageBox = qt.QMessageBox.question( dialog, 'Attention',"""
-      Are you sure that you want to reset the needle detection? 
-      It will delete every segmented needles...
-      """,qt.QMessageBox.Ok, qt.QMessageBox.Cancel)
-    if ret == qt.QMessageBox.Ok:
+    ret = 0
+    if script == False:
+        dialog      = qt.QDialog()
+        ret         = messageBox = qt.QMessageBox.question( dialog, 'Attention',"""
+          Are you sure that you want to reset the needle detection?
+          It will delete every segmented needles...
+          """,qt.QMessageBox.Ok, qt.QMessageBox.Cancel)
+    if ret == qt.QMessageBox.Ok or script == True:
       while slicer.util.getNodes('python-catch*') != {}:
         nodes = slicer.util.getNodes('python-catch*')
         for node in nodes.values():
@@ -3468,7 +3473,7 @@ class NeedleFinderLogic:
                 returnTips.append(self.ras2ijk(p))
     return returnTips
 
-  def startValidation(self):
+  def startValidation(self, script=False):
     """Start the evaluation process:
     * Calls returnTips() to build an array of the tip of manually segmented needles
     * Use theses tips to generate auto segmented needles
@@ -3493,11 +3498,12 @@ class NeedleFinderLogic:
       self.needleDetectionThread(A, imageData, colorVar,spacing)
 
     #print tips
-    t = self.evaluate()
-    print '#######################'
-    print 'New Validation Results:'
-    for i in range(len(t)):
-        print t[i][0]
+    if script == False:
+        t = self.evaluate()
+        print '#######################'
+        print 'New Validation Results:'
+        for i in range(len(t)):
+            print t[i][0]
 
   def selectCurrentAxialSlice(self):
     """
@@ -3532,22 +3538,16 @@ class NeedleFinderLogic:
     :param url: url for saving the file
     ??? used?
     """
-    #obsolete?
     profbox()
-    widget = slicer.modules.NeedleFinderWidget
-    self.valuesExperience=[ widget.radiusNeedleParameter.value,
-                            widget.lenghtNeedleParameter.value,
-                            widget.distanceMax.value,
-                            widget.numberOfPointsPerNeedle.value, 
-                            widget.nbRotatingIterations.value,
-                            widget.stepsize.value,
-                            widget.gradientPonderation.value,
-                            widget.gaussianAttenuationChecked.value,
-                            widget.sigmaValue.value]
+
     myfile = open(url, 'a')
-    wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-    results.append(self.valuesExperience)
-    wr.writerow(results)
+
+    wr = csv.writer(myfile)
+    r = numpy.array(results)
+    if len(r.shape) == 1:
+      wr.writerow(results)
+    else:
+      wr.writerows(results)
 
   def hausdorffDistance(self,id1,id2):
     """
@@ -3639,7 +3639,7 @@ class NeedleFinderLogic:
     hausdorff21 = max(minima)
     return max(hausdorff12,hausdorff21)
 
-  def evaluate(self):
+  def evaluate(self, script = False):
     """
     This function first invokes needleMatching() with, for each automatically segmented needle in the vtkMRMLScene,
     associates it with its manually segmented version.
@@ -3651,11 +3651,28 @@ class NeedleFinderLogic:
     profprint()
     result=self.needleMatching()
     HD=[]
+    widget = slicer.modules.NeedleFinderWidget
+    self.valuesExperience=[ widget.radiusNeedleParameter.value,
+                            widget.lenghtNeedleParameter.value,
+                            widget.distanceMax.value,
+                            widget.numberOfPointsPerNeedle.value,
+                            widget.nbRotatingIterations.value,
+                            widget.stepsize.value,
+                            widget.gradientPonderation.value,
+                            widget.gaussianAttenuationButton.isChecked()*1,
+                            widget.sigmaValue.value]
+
     for i in range(len(result)):
       val=self.hausdorffDistance(result[i][1],result[i][2])
-      results = [float(val),int(result[i][1].strip('vtkMRMLModelNode')),int(result[i][2].strip('vtkMRMLModelNode'))]
+      if script == True:
+        results = [float(val),int(result[i][1].strip('vtkMRMLModelNode')),int(result[i][2].strip('vtkMRMLModelNode'))] + self.valuesExperience
+      else:
+        results = [float(val),int(result[i][1].strip('vtkMRMLModelNode')),int(result[i][2].strip('vtkMRMLModelNode'))]
       HD.append(results)
-    return numpy.array(HD).astype(numpy.longdouble)
+    if script == False:
+      return numpy.array(HD).astype(numpy.double)
+    else:
+      return HD
 
   def distTip(self,id1,id2):
     """ Returns the axial distance between the tip of two needles
@@ -3683,7 +3700,7 @@ class NeedleFinderLogic:
         polydata2.GetPoint(i,p2bis)
         if p2bis[2]>p2[2]:
           p2=p2bis
-        axialDistance.append((( p2[0]-p[0] )**2 +  ( p2[1]-p[1] )**2)**0.5)
+        axialDistance.append((( p2[0]-p[0] )**2 +  ( p2[1]-p[1] )**2 + (p2[2]-p[2])**2)**0.5)
     return min(axialDistance)
 
 
@@ -3714,16 +3731,7 @@ class NeedleFinderLogic:
             if node2.GetID() not in found and node2.GetAttribute('type')=='Validation':
               polydata2 = node2.GetPolyData()
               if polydata2!=None and polydata2.GetNumberOfPoints()>100 and polydata.GetNumberOfPoints()>100:
-                bounds2 = polydata2.GetBounds()
-                tot=0
-                p,pbis=[0,0,0],[0,0,0]
-                p2=[0,0,0]
-                p2bis=[0,0,0]
-                polydata.GetPoint(0,p)
-                polydata.GetPoint(0,pbis)
-                polydata2.GetPoint(2499,p2)
-                polydata2.GetPoint(0,p2bis)
-                
+
                 axialDistance=self.distTip( int(node.GetID().strip('vtkMRMLModelNode')) , int(node2.GetID().strip('vtkMRMLModelNode')))
                 
                 dist.append([axialDistance,node2.GetID()])
