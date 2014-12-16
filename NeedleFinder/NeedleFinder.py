@@ -28,6 +28,7 @@ import math,time, functools, operator
 import EditorLib
 import string
 import numpy
+import numpy as np
 import thread
 import random
 import copy
@@ -36,6 +37,11 @@ import ConfigParser
 import inspect
 import SimpleITK as sitk
 import sitkUtils
+import csv
+import random
+import os.path
+import time as t
+
 from __main__ import vtk, qt, ctk, slicer
 def whoami():
     return inspect.stack()[1][3]
@@ -436,10 +442,16 @@ class NeedleFinderWidget:
     self.filterButton.connect('clicked()',logic.filterWithSITK)
     self.filterButton.setEnabled(1)
     
+    self.parSearchButton = qt.QPushButton('Parameter Search')
+    self.parSearchButton.checkable = False
+    self.parSearchButton.connect('clicked()',logic.parSearch)
+    self.parSearchButton.setEnabled(1)
+    
     # devFrame.addRow(self.displayFiducialButton)
     devFrame.addRow(self.displayContourButton)
     devFrame.addRow(self.hideContourButton)
     devFrame.addRow(self.filterButton)
+    devFrame.addRow(self.parSearchButton)
     
     #put frames on the tab########################################
     self.layout.addRow(self.__reportFrame)
@@ -2797,6 +2809,67 @@ class NeedleFinderLogic:
     backgroundNode.GetImageData().Modified()
     backgroundNode.Modified()
     
+  def parSearch(self):
+    """
+    Parameter optimization using brute-force algo...
+    """
+    #research
+    profbox()
+    w = slicer.modules.NeedleFinderWidget
+    l = w.logic
+    path = [ 0 for i in range(100)]
+    path[24] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 24 NRRD/Manual/2013-02-25-Scene-without-CtrPt.mrml'
+    path[29] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 29 NRRD/Manual/2013-02-26-Scene-without-CtrPts.mrml'
+    path[30] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 30 NRRD/Manual/2013-02-26-Scene-without-CtrPt.mrml'
+    path[31] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 31 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+    path[34] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 34 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+    path[35] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 35 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+    path[37] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 37 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+    path[38] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 38 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+    path[40] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 40 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+
+    # code piece from Guillaume parameterSearch.py
+    for i in range(1,2):
+      l.resetNeedleDetection(script=True)
+      w.sigmaValue.setValue(i) # change parameter sigma
+      l.startValidation(script=True)
+      results = l.evaluate(script=True) # calculate HD distances
+      l.exportEvaluation(results, '/tmp/text.csv')
+      # stats
+      HD=np.array(results)
+      # HD.shape = (int(len(results)/float(3)),3)
+      maxHD=HD[:,0].max()
+      avgHD=HD[:,0].mean()
+      stdHD=HD[:,0].std()
+      resultsEval=[maxHD,avgHD,stdHD] + l.valuesExperience
+      l.exportEvaluation(resultsEval,'/tmp/stats.csv')
+    
+    # code piece from Guillaume bruteForce.py  
+    for id in range(100):
+      if path[id]:
+        print "processing ",path[id]
+        slicer.util.loadScene( path[id] )
+        for i in range(1,10000):
+          l.resetNeedleDetection(script=True)
+          w.radiusNeedleParameter.setValue(np.random.randint(1,6))
+          w.stepsize.setValue(np.random.randint(1,40))
+          w.sigmaValue.setValue(np.random.randint(1,40)) # change parameter sigma
+          w.gradientPonderation.setValue(np.random.randint(1,20))
+          w.exponent.setValue(np.random.randint(1,20))
+          w.numberOfPointsPerNeedle.setValue(np.random.randint(3,11))
+          l.startValidation(script=True)
+          results = l.evaluate(script=True) # calculate HD distances
+          l.exportEvaluation(results, '/tmp/'+str(id)+'.csv')
+          HD=np.array(results)
+          maxHD=HD[:,0].max()
+          avgHD=HD[:,0].mean()
+          stdHD=HD[:,0].std()
+          resultsEval=[maxHD,avgHD,stdHD] + l.valuesExperience
+          l.exportEvaluation(resultsEval,'/tmp/'+str(id)+'_stats.csv')
+          # end = time.time()
+          # print 'processing time: ', end-start
+          # start = time.time()
+
   #----------------------------------------------------------------------------------------------
   """ Needle segmentation report"""
   #---------------------------------------------------------------------------------------------- 
@@ -3565,7 +3638,8 @@ class NeedleFinderLogic:
     ??? used?
     """
     profbox()
-
+    if not os.path.exists(url):
+      open(url, 'w').close()
     myfile = open(url, 'a')
 
     wr = csv.writer(myfile)
