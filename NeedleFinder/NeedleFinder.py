@@ -43,23 +43,30 @@ import os.path
 import time as t
 
 from __main__ import vtk, qt, ctk, slicer
+
 def whoami():
     return inspect.stack()[1][3]
 def whosdaddy():
     return inspect.stack()[2][3]
 def whosgranny():
     return inspect.stack()[3][3]
-profiling=False
+profiling=True
 frequent=False
+MAXNEEDLES=1000
 
 def msgbox(text):
   qt.QMessageBox.about(0, 'Needle Finder Profiling:', text)
-def profprint():
-  if profiling: print whosdaddy()
-def profbox():  
-  if profiling: print whosdaddy(); msgbox(whosdaddy())
+def profprint(className=""):
+  if profiling: print "%s.%s -----------------------"%(className,whosdaddy())
+def profbox(className=""):  
+  if profiling: strg="%s.%s -----------------------"%(className,whosdaddy()); print strg; msgbox(strg)
 if profiling: msgbox("turned on")
-
+def getClassName(self):
+  """
+  return class name
+  """
+  return self.__class__.__name__
+    
 #
 # NeedleFinder
 #
@@ -85,6 +92,12 @@ class NeedleFinder:
       slicer.selfTests = {}
     slicer.selfTests['NeedleFinder'] = self.runTest
 
+  def getName(self):
+    """
+    return class name
+    """
+    return self.__class__.__name__
+  
   def runTest(self):
     """
     Unit testing 
@@ -123,6 +136,12 @@ class NeedleFinderWidget:
     self.interactorObserverTags = []    
     self.styleObserverTags      = []
     self.axialSegmentationLimit = None
+    self.templateSliceButton    = None
+    self.fiducialButton         = None
+    self.newInsertionButton     = None
+    self.deleteNeedleButton     = None
+    self.resetDetectionButton   = None
+    self.resetValidationButton  = None
     # class var
     self.validationNeedleNumber    = 1
     self.stepNeedle                = 0
@@ -133,6 +152,12 @@ class NeedleFinderWidget:
     self.addManualTipClicks=2
     self.obturatorNeedleTipClicks=3
 
+  def getName(self):
+    """
+    return class name
+    """
+    return self.__class__.__name__
+    
   def setup(self):
     """
     Instantiate and connect widgets
@@ -141,12 +166,12 @@ class NeedleFinderWidget:
     profprint()
     #-----------------------------------------------------------------------------
     # Needle Finder Logic
-    logic = NeedleFinderLogic()
+    logic = self.logic
 
     #Report Frame########################################
     self.__reportFrame = ctk.ctkCollapsibleButton()
     self.__reportFrame.text = "Segmentation Report"
-    self.__reportFrame.collapsed = 1
+    self.__reportFrame.collapsed = 0
     reportFrame = qt.QFormLayout(self.__reportFrame)
 
     # segmentation report
@@ -161,52 +186,42 @@ class NeedleFinderWidget:
     #Segmentation Frame##########################################
     self.__segmentationFrame = ctk.ctkCollapsibleButton()
     self.__segmentationFrame.text = "Segmentation"
-    self.__segmentationFrame.collapsed = 1
+    self.__segmentationFrame.collapsed = 0
     segmentationFrame = qt.QFormLayout(self.__segmentationFrame)
 
-    # give needle tips
+    #1 Define template
+    self.templateSliceButton =  qt.QPushButton('Select Current Axial Slice as Seg. Limit (current: None)')
+    segmentationFrame.addRow(self.templateSliceButton)
+    self.templateSliceButton.connect('clicked()', logic.selectCurrentAxialSlice)
+    self.templateSliceButton.setEnabled(1)
+
+    #2 give needle tips
     self.fiducialButton = qt.QPushButton('Start Giving Needle Tips')
     self.fiducialButton.checkable = True
     segmentationFrame.addRow(self.fiducialButton)
     self.fiducialButton.connect('toggled(bool)', self.onStartStopGivingNeedleTipsToggled)
+    self.fiducialButton.setEnabled(0)
 
-    # Obturator needle tips
-    self.fiducialObturatorButton = qt.QPushButton('Start Giving Obturator Needle Tips')
-    self.fiducialObturatorButton.checkable = True
-    segmentationFrame.addRow(self.fiducialObturatorButton)
-    self.fiducialObturatorButton.connect('toggled(bool)', self.onStartStopGivingObturatorNeedleTipsToggled)
+    #New insertion - create new set of needles with different colors
+    self.newInsertionButton=None
+    #self.newInsertionButton = qt.QPushButton('New Needle Set')
+    #segmentationFrame.addRow(self.newInsertionButton)
+    #self.newInsertionButton.connect('clicked()', logic.newInsertionNeedleSet)
+    #self.newInsertionButton.setEnabled(0)
 
-    # #Segment Needle Button 
-    # self.needleButton = qt.QPushButton('Segment Needles')
-    # segmentationFrame.addRow(self.needleButton)
-    # self.needleButton.connect('clicked()', self.needleSegmentation)
-    # self.needleButton.setEnabled(0)
-
-    #Segment Needle Button 
-    # self.needleButton2 = qt.QPushButton('Segment/Update Needles - Python')
-    # segmentationFrame.addRow(self.needleButton2)
-    # self.needleButton2.connect('clicked()', self.needleDetection)
-
-    #New insertion - create new round of needles with different colors
-    self.newInsertionButton = qt.QPushButton('New Insertion Needle')
-    segmentationFrame.addRow(self.newInsertionButton)
-    self.newInsertionButton.connect('clicked()', logic.newInsertionNeedle)
-
-    #Delete Needles Button 
-    self.deleteNeedleButton = qt.QPushButton('Delete Segmented Needles')
+    #Delete Needle Button 
+    self.deleteNeedleButton = qt.QPushButton('Delete Last Segmented Needle')
     segmentationFrame.addRow(self.deleteNeedleButton)
-    self.deleteNeedleButton.connect('clicked()', logic.deleteSegmentedNeedle)
+    #self.deleteNeedleButton.connect('clicked()', logic.deleteAllNeedlesFromCurrentSet)
+    self.deleteNeedleButton.connect('clicked()', logic.deleteLastNeedle)
+    self.deleteNeedleButton.setEnabled(0)
 
     #Reset Needle Detection Button 
-    self.resetDetectionButton = qt.QPushButton('Reset Needle Detection')
+    self.resetDetectionButton = qt.QPushButton('Reset Needle Detection (Start Over)')
     segmentationFrame.addRow(self.resetDetectionButton)
     self.resetDetectionButton.connect('clicked()', logic.resetNeedleDetection)
+    self.resetDetectionButton.setEnabled(0)
 
-    #Define template
-    self.templateSliceButton =  qt.QPushButton('Select Current Axial Slice as seg. limit (current: None)')
-    segmentationFrame.addRow(self.templateSliceButton)
-    self.templateSliceButton.connect('clicked()', logic.selectCurrentAxialSlice)
-      
     #Validation Frame##########################################
     self.__validationFrame = ctk.ctkCollapsibleButton()
     self.__validationFrame.text = "Validation"
@@ -236,9 +251,9 @@ class NeedleFinderWidget:
     self.startValidationButton.connect('clicked()', logic.startValidation)
 
     #Reset Needle Validation Button 
-    self.resetDetectionButton = qt.QPushButton('Reset Needles from Manual Segmention')
-    validationFrame.addRow(self.resetDetectionButton)
-    self.resetDetectionButton.connect('clicked()', logic.resetNeedleValidation)
+    self.resetValidationButton = qt.QPushButton('Reset Needles from Manual Segmentation')
+    validationFrame.addRow(self.resetValidationButton)
+    self.resetValidationButton.connect('clicked()', logic.resetNeedleValidation)
 
     self.editNeedleTxtBox = qt.QSpinBox()
     self.editNeedleTxtBox.connect("valueChanged(int)",logic.changeValue)
@@ -424,7 +439,23 @@ class NeedleFinderWidget:
     self.__devFrame.text = "R&&D"
     self.__devFrame.collapsed = 1
     devFrame = qt.QFormLayout(self.__devFrame)
-    
+
+    # #Segment Needle Button 
+    # self.needleButton = qt.QPushButton('Segment Needles')
+    # segmentationFrame.addRow(self.needleButton)
+    # self.needleButton.connect('clicked()', self.needleSegmentation)
+    # self.needleButton.setEnabled(0)
+
+    #Segment Needle Button 
+    # self.needleButton2 = qt.QPushButton('Segment/Update Needles - Python')
+    # segmentationFrame.addRow(self.needleButton2)
+    # self.needleButton2.connect('clicked()', self.needleDetection)
+
+    # Obturator needle tips
+    self.fiducialObturatorButton = qt.QPushButton('Start Giving Obturator Needle Tips')
+    self.fiducialObturatorButton.checkable = True
+    self.fiducialObturatorButton.connect('toggled(bool)', self.onStartStopGivingObturatorNeedleTipsToggled)
+
     self.displayFiducialButton = qt.QPushButton('Display Labels On Needles')
     self.displayFiducialButton.connect('clicked()',logic.displayFiducial)
     
@@ -448,14 +479,15 @@ class NeedleFinderWidget:
     self.parSearchButton.setEnabled(1)
     
     # devFrame.addRow(self.displayFiducialButton)
+    devFrame.addRow(self.fiducialObturatorButton)
     devFrame.addRow(self.displayContourButton)
     devFrame.addRow(self.hideContourButton)
     devFrame.addRow(self.filterButton)
     devFrame.addRow(self.parSearchButton)
     
     #put frames on the tab########################################
-    self.layout.addRow(self.__reportFrame)
     self.layout.addRow(self.__segmentationFrame)
+    self.layout.addRow(self.__reportFrame)
     self.layout.addRow(self.__validationFrame)
     self.layout.addRow(self.__parameterFrame)
     self.layout.addRow(self.__devFrame)
@@ -509,6 +541,7 @@ class NeedleFinderWidget:
     """
     #productive
     profprint()
+    widget = slicer.modules.NeedleFinderWidget
     if checked:
       self.startGivingControlPointsButton.checked = 0
       self.fiducialObturatorButton.checked = 0
@@ -517,6 +550,8 @@ class NeedleFinderWidget:
     else:
       self.stop()
       self.fiducialButton.text = "Start Giving Needle Tips"
+      widget.resetDetectionButton.setEnabled(1)
+    widget.deleteNeedleButton.setEnabled(1)
 
   def onStartStopGivingObturatorNeedleTipsToggled(self, checked):
     """
@@ -557,7 +592,7 @@ class NeedleFinderWidget:
     """   
     #productive
     profprint()
-    logic = NeedleFinderLogic()
+    logic = self.logic
     logic.changeCursor(1)
     self.removeObservers()
     # get new slice nodes
@@ -841,19 +876,28 @@ class NeedleFinderLogic:
     self.t0                 = 0
     self.obtuNeedle         = 0
     self.row                = 0
+    self.col                = 0
     self.round              = 1
     self.fiducialNode       = None
     # widget.stepNeedle         = 0
     self.ptNumber           = 0
     self.table              = None
     self.view               = None
+    self.model              = None
     self.contourNode        = None
+    self.lastNeedleNames    = []
 
     self.previousValues         = [[0,0,0]]
     self.tableValueCtrPt        = [[[999,999,999] for i in range(100)] for j in range(100)]
     self.obtuNeedleValueCtrPt   = [[[999,999,999] for i in range(10)] for j in range(10)]
     self.obtuNeedlePt           = [[[999,999,999] for i in range(10)] for j in range(10)]
-   
+  
+  def getName(self):
+    """
+    return class name
+    """
+    return self.__class__.__name__
+
   def hasImageData(self,volumeNode):
     """ Test:
     This is a dummy logic method that
@@ -1012,6 +1056,11 @@ class NeedleFinderLogic:
     if nVisibility:
       displayNode.SliceIntersectionVisibilityOff()
       displayNode.SetVisibility(0)
+      # also turn off yellow slice
+      sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
+      if sYellow ==None :
+        sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
+      sYellow.SetSliceVisible(0)
     else:
       displayNode.SliceIntersectionVisibilityOn()
       displayNode.SetVisibility(1)
@@ -2011,9 +2060,6 @@ class NeedleFinderLogic:
     if not autoStopTip:
       self.addNeedleToScene(self.controlPoints,colorVar)
     
-
-
-
   #------------------------------------------------------------------------------ 
   #
   #
@@ -2446,8 +2492,8 @@ class NeedleFinderLogic:
     profprint()
     # reset report table
     # print "Draw manually segmented needles..."
-    self.table =None
-    self.row=0
+    #self.table =None
+    #self.row=0
     self.initTableView()
     while slicer.util.getNodes('manual-seg*') != {}:
         nodes = slicer.util.getNodes('manual-seg*')
@@ -2491,7 +2537,6 @@ class NeedleFinderLogic:
     'obturator' for an obturator needle
     :return: needle added to the scene
     """
-
     #productive
     profprint()
     """
@@ -2582,6 +2627,8 @@ class NeedleFinderLogic:
       model.SetName('python-catch-round_'+str(self.round)+'-ID-'+str(model.GetID()))
     model.SetAttribute('type',needleType)
     
+    self.lastNeedleNames.append(model.GetName())
+    
     # evaluate and print the processing time
     processingTime = time.clock()-self.t0
     # print processingTime
@@ -2597,14 +2644,14 @@ class NeedleFinderLogic:
       model.SetAttribute("nth",str(nth))
     
     if needleType=='Validation':
-      self.addSegmentedNeedleToTable(int(colorVar),label,'Validation')
+      self.addNeedleToTable(int(colorVar),label,'Validation')
     
     else:
-      self.addSegmentedNeedleToTable(int(model.GetID().strip('vtkMRMLModelNode')),label)
+      self.addNeedleToTable(int(model.GetID().strip('vtkMRMLModelNode')),label)
 
-  def deleteSegmentedNeedle(self):
+  def deleteAllNeedlesFromCurrentSet(self):
     """
-    Delete every segmented needles of the current round
+    Delete every segmented needle of the current set
     """
     #productive #onButton
     profprint()
@@ -2612,19 +2659,72 @@ class NeedleFinderLogic:
       nodes = slicer.util.getNodes('python-catch-round_'+str(self.round)+'*')
       for node in nodes.values():
         slicer.mrmlScene.RemoveNode(node)
+  
+  def deleteAllModelsFromScene(self):
+    """
+    Delete every segmented needle, template slice markers and reset yellow segment
+    """
+    #productive #onButton
+    profprint()
+    while slicer.util.getNodes('python-catch-round_*') != {}:
+      nodes = slicer.util.getNodes('python-catch-round_*')
+      for node in nodes.values():
+        slicer.mrmlScene.RemoveNode(node)
+    while slicer.util.getNodes('manual-seg_*') != {}:
+      nodes = slicer.util.getNodes('manual-seg_*')
+      for node in nodes.values():
+        slicer.mrmlScene.RemoveNode(node)
+    while slicer.util.getNodes('obturator-seg_*') != {}:
+      nodes = slicer.util.getNodes('obturator-seg_*')
+      for node in nodes.values():
+        slicer.mrmlScene.RemoveNode(node)
+    #while slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode') !={}:
+    #  nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
+    #  for node in nodes.values():
+    #    slicer.mrmlScene.RemoveNode(node)
+    while slicer.util.getNodes('template slice position*') != {}:
+      nodes = slicer.util.getNodes('template slice position*')
+      for node in nodes.values():
+        slicer.mrmlScene.RemoveNode(node)
+    sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
+    if sYellow ==None :
+        sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
+    sYellow.SetSliceVisible(0)
+    reformatLogic = slicer.vtkSlicerReformatLogic()
+    reformatLogic.SetSliceNormal(sYellow,1,0,0)
+    sYellow.Modified()
+        
+  def deleteLastNeedle(self):
+    """
+    Delete last segmented needle of the current round
+    """
+    #productive #onButton
+    profprint(self.getName())
+    if self.lastNeedleNames:
+      name=self.lastNeedleNames.pop()
+      print "removing needle with name: ",name
+      while slicer.util.getNodes(name+'*') != {}:
+        nodes = slicer.util.getNodes(name+'*')
+        for node in nodes.values():
+          slicer.mrmlScene.RemoveNode(node)
+      # rebuild report table
+      ID=name.lstrip('python-catch-round_').lstrip('manual-seg_').lstrip('obturator-seg_').lstrip('0123456789').lstrip('-ID-vtkMRMLModelNode')
+      print "needle ID: <%s>"%ID
+      self.deleteNeedleFromTable(int(ID))
 
-  def newInsertionNeedle(self):
+  def newInsertionNeedleSet(self):
     """
     Start a new round
     """
     #productive #onButton
-    profprint()
+    profbox()
     widget      = slicer.modules.NeedleFinderWidget
-    dialog      = qt.QDialog()
-    messageBox  = qt.QMessageBox.information( dialog, 'Information','You are creating a new set of needles')
-    self.round +=1
-    widget.newInsertionButton.setText('Start a new set of needles - Round ' + str(self.round+1)+'?')
-    widget.deleteNeedleButton.setText('Delete Needles from round ' + str(self.round))
+    if widget.newInsertionButton:
+      dialog      = qt.QDialog()
+      messageBox  = qt.QMessageBox.information( dialog, 'Information','You are creating a new set of needles')
+      self.round +=1
+      widget.newInsertionButton.setText('Start a new set of needles - Round ' + str(self.round+1)+'?')
+      widget.deleteNeedleButton.setText('Delete Needles from round ' + str(self.round))
 
   def resetNeedleDetection(self, script=False):
     """
@@ -2642,22 +2742,39 @@ class NeedleFinderLogic:
           It will delete every segmented needles...
           """,qt.QMessageBox.Ok, qt.QMessageBox.Cancel)
     if ret == qt.QMessageBox.Ok or script == True:
-      while slicer.util.getNodes('python-catch*') != {}:
-        nodes = slicer.util.getNodes('python-catch*')
-        for node in nodes.values():
-          slicer.mrmlScene.RemoveNode(node)
+      self.deleteAllModelsFromScene()
       self.previousValues=[[0,0,0]]
       self.round=1
-      widget.newInsertionButton.setText('Start a new set of needles - Round ' + str(self.round+1)+'?')
-      widget.deleteNeedleButton.setText('Delete Needles from round ' + str(self.round))
+      if widget.newInsertionButton:
+        widget.newInsertionButton.setText('Start a new set of needles (' + str(self.round+1)+') ?')
+        widget.deleteNeedleButton.setText('Delete Needles from set (' + str(self.round)+")")
       # reset report table
       self.table =None
       self.row=0
+      self.col=0
+      for i in self.items:
+        item=self.items.pop()
+        del item
+      self.items=None
+      if self.model.rowCount() > 0:
+        for i in range(0,  self.model.rowCount()):
+          ritem = self.model.item(i)
+          del ritem
+        self.model.removeRows(0, self.model.rowCount())
+      self.model.modelReset() #=None
+      self.view.reset() #=None
       self.initTableView()
+      #reset button states
+      widget.templateSliceButton.setEnabled(1)
+      widget.fiducialButton.setEnabled(0)
+      widget.deleteNeedleButton.setEnabled(0)
+      widget.resetDetectionButton.setEnabled(0)
+      self.deleteAllModelsFromScene()
+      widget.templateSliceButton.text = "Select Current Axial Slice as Seg. Limit (current: None)"
 
   def resetNeedleValidation(self):
     """
-    Reset the needle detection to completely start over.
+    Reset the needle validation to completely start over.
     """
     #productive #onButton
     profprint()
@@ -2678,16 +2795,28 @@ class NeedleFinderLogic:
         for node in nodes.values():
           if node.GetAttribute("ValidationNeedle") == "1":
             slicer.mrmlScene.RemoveNode(node)
-
-      # reset report table
-      self.table = None
-      self.row  = 0
+      
+      #while slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode') !={}:
+      #  nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
+      #  for node in nodes:
+      #    slicer.mrmlScene.RemoveNode(node)
+      
+      # delete evaluation needles from report table
       self.initTableView()
+      for name in self.lastNeedleNames:
+        print name
+        ID=name.lstrip('manual-seg_')
+        print "delete validation needle with ID: <%s>"%ID
+        try:
+          ID=int(ID)
+          self.deleteNeedleFromTable(ID)
+        except ValueError:
+          print "skipping"
     
       widget.validationNeedleNumber = 1
       widget.stepNeedle             = 0
       self.tableValueCtrPt        =[[[999,999,999] for i in range(100)] for j in range(100)]
-      print "Manual needle segmentation resetted!" 
+      print "Manual needle segmentation reset!" 
       
   def changeCursor(self,cursorNumber):
     """
@@ -2789,11 +2918,11 @@ class NeedleFinderLogic:
     widget.validationNeedleNumber += 1
     widget.validationNeedleButton.text= "New Validation Needle: ("+str(widget.validationNeedleNumber)+")->("+str(widget.validationNeedleNumber+1)+")"
     # self.tableValueCtrPt.append([])
-    widget.stepNeedle = 0     
+    widget.stepNeedle = 0
 
   def filterWithSITK(self):
     """
-    Demo method for filter with SimpleITK.
+    Demo method to filter image using SimpleITK.
     See https://github.com/Slicer/Slicer/blob/140b36b50877d85703c094a97fe13303dee570b5/Modules/Scripted/EditorLib/WatershedFromMarkerEffect.py
     """
     #research
@@ -2886,31 +3015,35 @@ class NeedleFinderLogic:
       self.labelStats = {}
       self.labelStats['Labels'] = []
       self.items = []
-      self.model = qt.QStandardItemModel()
-      self.model.setColumnCount(6)
-      self.model.setHeaderData(0,1,"")
-      self.model.setHeaderData(1,1,"Label")
-      self.model.setHeaderData(2,1,"R.")
-      self.model.setHeaderData(3,1,"Reliability")
-      self.model.setHeaderData(4,1,"Display")
-      self.model.setHeaderData(5,1,"Reformat")
-      if self.view == None:
-        self.view = qt.QTableView()
-        self.view.setMinimumHeight(300)
-        self.view.sortingEnabled = True
-        self.view.verticalHeader().visible = False
-      # col = 1
-      # for k in self.keys:
-      #   # self.view.setColumnWidth(col,15*len(k))
-      #   # self.model.setHeaderData(col,1,k)
-      #   col += 1 
-      self.view.setModel(self.model)
-      self.view.setColumnWidth(0,18)
-      self.view.setColumnWidth(1,58)
-      self.view.setColumnWidth(2,28)
-      self.table = 1
+      if self.model==None:
+          self.model = qt.QStandardItemModel()
+          self.model.setColumnCount(6)
+          self.model.setHeaderData(0,1,"")
+          self.model.setHeaderData(1,1,"Label")
+          self.model.setHeaderData(2,1,"R.")
+          self.model.setHeaderData(3,1,"Reliability")
+          self.model.setHeaderData(4,1,"Display")
+          self.model.setHeaderData(5,1,"Reformat")
+          if self.view == None:
+            self.view = qt.QTableView()
+            self.view.setMinimumHeight(300)
+            self.view.sortingEnabled = True
+            self.view.verticalHeader().visible = False
+          # col = 1
+          # for k in self.keys:
+          #   # self.view.setColumnWidth(col,15*len(k))
+          #   # self.model.setHeaderData(col,1,k)
+          #   col += 1 
+          self.view.setModel(self.model)
+          self.view.setColumnWidth(0,18)
+          self.view.setColumnWidth(1,58)
+          self.view.setColumnWidth(2,28)
+          self.table = 1
+          self.row=0
+          self.col=0
+          slicer.modules.NeedleFinderWidget.analysisGroupBoxLayout.addRow(self.view)
 
-  def addSegmentedNeedleToTable(self,ID,label=None,needleType=None):
+  def addNeedleToTable(self,ID,label=None,needleType=None):
     """
     Add last segmented needle to the table
     The color icon corresponds to the color of the needle, which corresponds to its label (color code)
@@ -2919,12 +3052,12 @@ class NeedleFinderLogic:
     profprint()
     self.initTableView()
     if label !=None:
-      ref = int(label[0]) % 60
+      ref = int(label[0]) % MAXNEEDLES
       needleLabel = self.option[ref]
       reliability = label[1]
     else:
       needleLabel = str(ID)
-      ref = ID % 60
+      ref = ID % MAXNEEDLES
       reliability = '-'
     # ref = int(modelNode.GetAttribute("nth"))
     
@@ -2937,15 +3070,16 @@ class NeedleFinderLogic:
     color.setRgb(self.color255[ref][0],self.color255[ref][1],self.color255[ref][2])
     item = qt.QStandardItem()
     item.setData(color,1)
+    #self.model.appendRow(item)
     self.model.setItem(self.row,0,item)
     self.items.append(item)
-    col = 1
+    self.col = 1
     for k in self.keys:
       item = qt.QStandardItem()
       item.setText(self.labelStats[ref,k])
-      self.model.setItem(self.row,col,item)
+      self.model.setItem(self.row,self.col,item)
       self.items.append(item)
-      col += 1
+      self.col += 1
     displayButton = qt.QPushButton("Display")
     displayButton.checked = True
     displayButton.checkable = True
@@ -2953,14 +3087,40 @@ class NeedleFinderLogic:
       ID=int(slicer.util.getNode('manual-seg_'+str(ID)).GetID().strip('vtkMRMLModelNode'))
     displayButton.connect("clicked()", lambda who=ID: self.displayNeedleTube(who))
     index = self.model.index(self.row,4)
+    self.items.append(displayButton)
+    self.col += 1
     self.view.setIndexWidget(index,displayButton)
     reformatButton = qt.QPushButton("Reformat")
     reformatButton.connect("clicked()", lambda who=ID: self.reformatSagittalView4Needle(who))
     index2 = self.model.index(self.row,5)
+    self.items.append(reformatButton)
+    self.col += 1
     self.view.setIndexWidget(index2,reformatButton)
     self.row += 1  
   
-    slicer.modules.NeedleFinderWidget.analysisGroupBoxLayout.addRow(self.view)
+  def deleteNeedleFromTable(self,ID):
+    """
+    Delete last needle from model
+    """
+    profprint()
+    #productive #onButton
+    print "len(items): ",len(self.items)
+    if self.row:
+      pos=self.labelStats["Labels"].index(ID)
+      ref = ID % MAXNEEDLES
+      self.labelStats["Labels"].pop(pos)
+      self.labelStats[ref,"Label"] = None
+      self.labelStats[ref,"Round"] = None
+      self.labelStats[ref,"Reliability"] = None 
+      pos+=1
+      for i in range(1,self.col+1):
+        item=self.items.pop(pos*self.col-i)
+        del item
+      pos-=1
+      ritem = self.model.item(pos)
+      del ritem
+      self.model.removeRow(pos)
+      self.row -= 1
 
   #-----------------------------------------------------------
   # Radiation
@@ -3591,10 +3751,12 @@ class NeedleFinderLogic:
     spacing = volumeNode.GetSpacing()
     # chrono starts
     self.t0 = time.clock()
-    for I in xrange(len(tips)):
-      A=tips[I]
-      colorVar = I/(len(tips))
-      self.needleDetectionThread(A, imageData, colorVar,spacing)
+    
+    if 0: # why again detecting needles ???
+      for i in xrange(len(tips)):
+        A=tips[i]
+        colorVar = i/(len(tips))
+        self.needleDetectionThread(A, imageData, colorVar,spacing)
 
     #print tips
     if script == False:
@@ -3618,7 +3780,7 @@ class NeedleFinderLogic:
     s           =   slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetSliceNode()
     offSet      =   s.GetSliceOffset()
     rasVector   =   [0,0,offSet]
-    widget.templateSliceButton.text = "Select Current Axial Slice as seg. limit (current: "+str(offSet)+")"
+    widget.templateSliceButton.text = "Select Current Axial Slice as Seg. Limit (current: "+str(offSet)+")"
 
     widget.axialSegmentationLimit = int(round(self.ras2ijk(rasVector)[2]))
 
@@ -3629,6 +3791,7 @@ class NeedleFinderLogic:
     fd=self.fiducialNode.GetDisplayNode()
     fd.SetVisibility(1)
     fd.SetColor([0,1,0])
+    widget.fiducialButton.setEnabled(1)
 
   def exportEvaluation(self,results,url):
     """ Export evaluation results to a CSV file
@@ -3854,7 +4017,7 @@ class NeedleFinderLogic:
     :return: Euclidian's distance
     """
     #productive #frequent
-    profprint()
+    if frequent: profprint()
     d = ( (  float(pt1[0]) - float(pt2[0])  )**2 + (  float(pt1[1]) - float(pt2[1])  )**2 + (  float(pt1[2]) - float(pt2[2])  )**2 )**0.5
     return d
 
@@ -4499,6 +4662,12 @@ class NeedleFinderTest(unittest.TestCase):
   """
   This is the test case for your scripted module.
   """
+
+  def getName(self):
+    """
+    return class name
+    """
+    return self.__class__.__name__
 
   def delayDisplay(self,message,msec=1000):
     """ Test:
