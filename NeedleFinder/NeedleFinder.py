@@ -2495,6 +2495,7 @@ class NeedleFinderLogic:
     #self.table =None
     #self.row=0
     self.initTableView()
+    self.deleteEvaluationNeedlesFromTable()
     while slicer.util.getNodes('manual-seg*') != {}:
         nodes = slicer.util.getNodes('manual-seg*')
         for node in nodes.values():
@@ -2800,24 +2801,30 @@ class NeedleFinderLogic:
       #  nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
       #  for node in nodes:
       #    slicer.mrmlScene.RemoveNode(node)
-      
-      # delete evaluation needles from report table
-      self.initTableView()
-      for name in self.lastNeedleNames:
-        print name
-        ID=name.lstrip('manual-seg_')
-        print "delete validation needle with ID: <%s>"%ID
-        try:
-          ID=int(ID)
-          self.deleteNeedleFromTable(ID)
-        except ValueError:
-          print "skipping"
-    
+      self.deleteEvaluationNeedlesFromTable()
+          
       widget.validationNeedleNumber = 1
       widget.stepNeedle             = 0
       self.tableValueCtrPt        =[[[999,999,999] for i in range(100)] for j in range(100)]
       print "Manual needle segmentation reset!" 
-      
+
+  def deleteEvaluationNeedlesFromTable(self):
+    """
+    Delete all manually segmented needles from report table.
+    """
+    #productive #onButton
+    profprint()
+    self.initTableView()
+    for name in self.lastNeedleNames:
+      print name
+      ID=name.lstrip('manual-seg_')
+      print "delete validation needle with ID: <%s>"%ID
+      try:
+        ID=int(ID)
+        self.deleteNeedleFromTable(ID)
+      except ValueError:
+        print "skipping invalid ID"
+    
   def changeCursor(self,cursorNumber):
     """
     changes the cursor
