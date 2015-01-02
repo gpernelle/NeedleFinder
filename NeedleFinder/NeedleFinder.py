@@ -22,27 +22,21 @@ Links
   .. [2] https://www.spl.harvard.edu/publications/item/view/2316
 """
 
-import os
 import unittest
-import math,time, functools, operator
+import math, time, operator
 import EditorLib
-import string
 import numpy
 import numpy as np
-import thread
 import random
-import copy
 import csv
 import ConfigParser
 import inspect
 import SimpleITK as sitk
 import sitkUtils
-import csv
-import random
 import os.path
 import time as t
 
-from __main__ import vtk, qt, ctk, slicer
+import vtk, qt, ctk, slicer
 
 def whoami():
     return inspect.stack()[1][3]
@@ -507,6 +501,8 @@ class NeedleFinderWidget:
     """
     #productive
     profprint()
+    self.logic.resetNeedleDetection()
+    self.logic.resetNeedleValidation()
     pass
 
   def onReload(self,moduleName="NeedleFinder"):
@@ -886,6 +882,8 @@ class NeedleFinderLogic:
     self.model              = None
     self.contourNode        = None
     self.lastNeedleNames    = []
+    self.enableScreenshots = 0
+    self.screenshotScaleFactor = 1
 
     self.previousValues         = [[0,0,0]]
     self.tableValueCtrPt        = [[[999,999,999] for i in range(100)] for j in range(100)]
@@ -929,11 +927,12 @@ class NeedleFinderLogic:
     qt.QTimer.singleShot(msec, self.info.close)
     self.info.exec_()
 
-  def takeScreenshot(self,name,description,type=-1):
+  def takeScreenshot(self,name,description,type=-1,annotate=True):
     """
     show the message even if not taking a screen shot
+    ??? used?
     """
-    #framework?
+    #framework? #test
     profbox()
     self.delayDisplay(description)
 
@@ -967,9 +966,10 @@ class NeedleFinderLogic:
     qimage = qpixMap.toImage()
     imageData = vtk.vtkImageData()
     slicer.qMRMLUtils().qImageToVtkImageData(qimage,imageData)
-
-    annotationLogic = slicer.modules.annotations.logic()
-    annotationLogic.CreateSnapShot(name, description, type, self.screenshotScaleFactor, imageData)
+    
+    if annotate==True:
+      annotationLogic = slicer.modules.annotations.logic()
+      annotationLogic.CreateSnapShot(name, description, type, self.screenshotScaleFactor, imageData)
 
   def run(self,inputVolume,outputVolume,enableScreenshots=0,screenshotScaleFactor=1):
     """
@@ -1071,7 +1071,9 @@ class NeedleFinderLogic:
     """
     #productive #onButton #report
     profprint()
-    for i in range(2):  
+    self.andres(ID)
+    #for i in range(2): # i used???
+    if 1:
       modelNode = slicer.util.getNode('vtkMRMLModelNode'+str(ID))
       polyData = modelNode.GetPolyData()
       nb = polyData.GetNumberOfPoints()
@@ -3634,35 +3636,32 @@ class NeedleFinderLogic:
             else:
               self.displayFiducialButton.text = "Display Labels on Needles" 
 
-  def reformatNeedle(self,i):
+  def reformatNeedle(self,ID):
     """
     ??? used? Reformat the sagittal view to be tangent to the needle
     """
     #obsolete?
-    profbox()
-    modelNodes = slicer.util.getNodes('vtkMRMLModelNode*')
-    for i in range(2):  
-      for modelNode in modelNodes.values():
-        if modelNode.GetAttribute("nth")==str(i):
-          polyData = modelNode.GetPolyData()
-          nb = polyData.GetNumberOfPoints()
-          base = [0,0,0]
-          tip = [0,0,0]
-          polyData.GetPoint(nb-1,tip)
-          polyData.GetPoint(0,base)
-          a,b,c = tip[0]-base[0],tip[1]-base[1],tip[2]-base[2]
-          
-          sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
-          if sYellow ==None :
-            sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")        
-          reformatLogic = slicer.vtkSlicerReformatLogic()
-          sYellow.SetSliceVisible(1)
-          reformatLogic.SetSliceNormal(sYellow,1,-a/b,0)
-          m= sYellow.GetSliceToRAS()
-          m.SetElement(0,3,base[0])
-          m.SetElement(1,3,base[1])
-          m.SetElement(2,3,base[2])
-          sYellow.Modified()
+    profprint() 
+    modelNode = slicer.util.getNode('vtkMRMLModelNode'+str(ID))
+    polyData = modelNode.GetPolyData()
+    nb = polyData.GetNumberOfPoints()
+    base = [0,0,0]
+    tip = [0,0,0]
+    polyData.GetPoint(nb-1,tip)
+    polyData.GetPoint(0,base)
+    a,b,c = tip[0]-base[0],tip[1]-base[1],tip[2]-base[2]
+    
+    sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
+    if sYellow ==None :
+      sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")        
+    reformatLogic = slicer.vtkSlicerReformatLogic()
+    sYellow.SetSliceVisible(1)
+    reformatLogic.SetSliceNormal(sYellow,1,-a/b,0)
+    m= sYellow.GetSliceToRAS()
+    m.SetElement(0,3,base[0])
+    m.SetElement(1,3,base[1])
+    m.SetElement(2,3,base[2])
+    sYellow.Modified()
 
   def drawIsoSurfaces0( self ):
     """
