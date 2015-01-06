@@ -44,7 +44,7 @@ def whosdaddy():
     return inspect.stack()[2][3]
 def whosgranny():
     return inspect.stack()[3][3]
-profiling=True
+profiling=False
 frequent=False
 MAXNEEDLES=1000
 
@@ -3022,24 +3022,30 @@ class NeedleFinderLogic:
     #productive
     profprint()
     if self.table==None:
-      self.keys = ("Label","Round" ,"Reliability")
+      # self.keys = ("#")
+      # self.keys = ("#","Round" ,"Reliability")
+      self.keys = ("#")
       self.labelStats = {}
       self.labelStats['Labels'] = []
       self.items = []
       if self.model==None:
           self.model = qt.QStandardItemModel()
-          self.model.setColumnCount(6)
+          self.model.setColumnCount(5)
           self.model.setHeaderData(0,1,"")
-          self.model.setHeaderData(1,1,"Label")
-          self.model.setHeaderData(2,1,"R.")
-          self.model.setHeaderData(3,1,"Reliability")
-          self.model.setHeaderData(4,1,"Display")
-          self.model.setHeaderData(5,1,"Reformat")
+          self.model.setHeaderData(1,1,"#")
+          # self.model.setHeaderData(2,1,"R.")
+          # self.model.setHeaderData(3,1,"Reliability")
+          self.model.setHeaderData(2,1,"Display")
+          self.model.setHeaderData(3,1,"Reformat")
+          self.model.setHeaderData(4,1,"Comments")
+          # self.model.setStrechLastSection(True)
           if self.view == None:
             self.view = qt.QTableView()
             self.view.setMinimumHeight(300)
             self.view.sortingEnabled = True
             self.view.verticalHeader().visible = False
+            self.view.horizontalHeader().setStretchLastSection(True)
+
           # col = 1
           # for k in self.keys:
           #   # self.view.setColumnWidth(col,15*len(k))
@@ -3048,7 +3054,7 @@ class NeedleFinderLogic:
           self.view.setModel(self.model)
           self.view.setColumnWidth(0,18)
           self.view.setColumnWidth(1,58)
-          self.view.setColumnWidth(2,28)
+          self.view.setColumnWidth(2,58)
           self.table = 1
           self.row=0
           self.col=0
@@ -3065,18 +3071,20 @@ class NeedleFinderLogic:
     if label !=None:
       ref = int(label[0]) % MAXNEEDLES
       needleLabel = self.option[ref]
-      reliability = label[1]
+      # reliability = label[1]
     else:
       needleLabel = str(ID)
       ref = ID % MAXNEEDLES
-      reliability = '-'
+      # reliability = '-'
     # ref = int(modelNode.GetAttribute("nth"))
     
     self.labelStats["Labels"].append(ref)
-    self.labelStats[ref,"Label"] = needleLabel
-    self.labelStats[ref,"Round"] = str(self.round)
-    self.labelStats[ref,"Reliability"] = str(reliability) 
-      
+    self.labelStats[ref,"#"] = needleLabel
+    # self.labelStats[ref,"Round"] = str(self.round)
+    # self.labelStats[ref,"Reliability"] = str(reliability)
+
+    ################################################
+    # Column 0
     color = qt.QColor()
     color.setRgb(self.color255[ref][0],self.color255[ref][1],self.color255[ref][2])
     item = qt.QStandardItem()
@@ -3084,6 +3092,8 @@ class NeedleFinderLogic:
     #self.model.appendRow(item)
     self.model.setItem(self.row,0,item)
     self.items.append(item)
+    ################################################
+    # Column 1
     self.col = 1
     for k in self.keys:
       item = qt.QStandardItem()
@@ -3091,22 +3101,35 @@ class NeedleFinderLogic:
       self.model.setItem(self.row,self.col,item)
       self.items.append(item)
       self.col += 1
+    ################################################
+    # Column 2
     displayButton = qt.QPushButton("Display")
     displayButton.checked = True
     displayButton.checkable = True
     if needleType=='Validation':
       ID=int(slicer.util.getNode('manual-seg_'+str(ID)).GetID().strip('vtkMRMLModelNode'))
     displayButton.connect("clicked()", lambda who=ID: self.displayNeedleTube(who))
-    index = self.model.index(self.row,4)
+    index = self.model.index(self.row,2)
+
     self.items.append(displayButton)
     self.col += 1
     self.view.setIndexWidget(index,displayButton)
+    ################################################
+    # Column 3
     reformatButton = qt.QPushButton("Reformat")
     reformatButton.connect("clicked()", lambda who=ID: self.reformatSagittalView4Needle(who))
-    index2 = self.model.index(self.row,5)
+    index = self.model.index(self.row,3)
     self.items.append(reformatButton)
     self.col += 1
-    self.view.setIndexWidget(index2,reformatButton)
+    self.view.setIndexWidget(index,reformatButton)
+    ################################################
+    # Column 4
+    editField =  qt.QTextEdit("")
+    index = self.model.index(self.row,4)
+    self.items.append(editField)
+    self.col += 1
+    self.view.setIndexWidget(index,editField)
+
     self.row += 1  
   
   def deleteNeedleFromTable(self,ID):
@@ -3121,8 +3144,8 @@ class NeedleFinderLogic:
       ref = ID % MAXNEEDLES
       self.labelStats["Labels"].pop(pos)
       self.labelStats[ref,"Label"] = None
-      self.labelStats[ref,"Round"] = None
-      self.labelStats[ref,"Reliability"] = None 
+      # self.labelStats[ref,"Round"] = None
+      # self.labelStats[ref,"Reliability"] = None
       pos+=1
       for i in range(1,self.col+1):
         item=self.items.pop(pos*self.col-i)
@@ -3229,7 +3252,7 @@ class NeedleFinderLogic:
   """
   #----------------------------------------------------------------------------------------------
   
-  def needleSegmentation(self):
+  def needleSegmentationCLIDEMO(self):
     """
     ??? used?
     """
