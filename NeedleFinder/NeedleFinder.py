@@ -190,7 +190,7 @@ class NeedleFinderWidget:
     self.templateSliceButton.setEnabled(1)
 
     #2 give needle tips
-    self.fiducialButton = qt.QPushButton('Start Giving Needle Tips')
+    self.fiducialButton = qt.QPushButton('2. Start Giving Needle Tips [CTRL + ENTER]')
     self.fiducialButton.checkable = True
     segmentationFrame.addRow(self.fiducialButton)
     self.fiducialButton.connect('toggled(bool)', self.onStartStopGivingNeedleTipsToggled)
@@ -260,7 +260,7 @@ class NeedleFinderWidget:
 
     # Needle detection parameters#################################
     self.__parameterFrame = ctk.ctkCollapsibleButton()
-    self.__parameterFrame.text = "Needle Detection Parameters"
+    self.__parameterFrame.text = "Needle Detection Parameters (Developers)"
     self.__parameterFrame.collapsed = 1
     parameterFrame = qt.QFormLayout(self.__parameterFrame)
     
@@ -430,7 +430,7 @@ class NeedleFinderWidget:
     
     # Research/dev. area#################################
     self.__devFrame = ctk.ctkCollapsibleButton()
-    self.__devFrame.text = "R&&D"
+    self.__devFrame.text = "R&&D (Developers)"
     self.__devFrame.collapsed = 1
     devFrame = qt.QFormLayout(self.__devFrame)
 
@@ -542,10 +542,10 @@ class NeedleFinderWidget:
       self.startGivingControlPointsButton.checked = 0
       self.fiducialObturatorButton.checked = 0
       self.start()
-      self.fiducialButton.text = "Stop Giving Tips"  
+      self.fiducialButton.text = "2. Stop Giving Tips"
     else:
       self.stop()
-      self.fiducialButton.text = "Start Giving Needle Tips"
+      self.fiducialButton.text = "2. Start Giving Needle Tips"
       widget.resetDetectionButton.setEnabled(1)
     widget.deleteNeedleButton.setEnabled(1)
 
@@ -1061,6 +1061,9 @@ class NeedleFinderLogic:
       if sYellow ==None :
         sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
       sYellow.SetSliceVisible(0)
+      reformatLogic = slicer.vtkSlicerReformatLogic()
+      reformatLogic.SetSliceNormal(sYellow,1,0,0)
+      sYellow.Modified()
     else:
       displayNode.SliceIntersectionVisibilityOn()
       displayNode.SetVisibility(1)
@@ -1071,9 +1074,7 @@ class NeedleFinderLogic:
     """
     #productive #onButton #report
     profprint()
-    self.andres(ID)
-    #for i in range(2): # i used???
-    if 1:
+    for i in range(2): #workaround update problem
       modelNode = slicer.util.getNode('vtkMRMLModelNode'+str(ID))
       polyData = modelNode.GetPolyData()
       nb = polyData.GetNumberOfPoints()
@@ -1082,10 +1083,10 @@ class NeedleFinderLogic:
       polyData.GetPoint(nb-1,tip)
       polyData.GetPoint(0,base)
       a,b,c = tip[0]-base[0],tip[1]-base[1],tip[2]-base[2]
-      
+      #print a,b,c
       sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
       if sYellow ==None :
-        sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")        
+        sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
       reformatLogic = slicer.vtkSlicerReformatLogic()
       sYellow.SetSliceVisible(1)
       reformatLogic.SetSliceNormal(sYellow,1,-a/b,0)
@@ -1094,6 +1095,7 @@ class NeedleFinderLogic:
       m.SetElement(1,3,base[1])
       m.SetElement(2,3,base[2])
       sYellow.Modified()
+
                  
   def findLabelNeedleID(self,ID):
     print "findLabelNeedleID"
@@ -2773,7 +2775,7 @@ class NeedleFinderLogic:
       widget.deleteNeedleButton.setEnabled(0)
       widget.resetDetectionButton.setEnabled(0)
       self.deleteAllModelsFromScene()
-      widget.templateSliceButton.text = "Select Current Axial Slice as Seg. Limit (current: None)"
+      widget.templateSliceButton.text = "1. Select Current Axial Slice as Seg. Limit (current: None)"
 
   def resetNeedleValidation(self):
     """
@@ -3786,7 +3788,7 @@ class NeedleFinderLogic:
     s           =   slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetSliceNode()
     offSet      =   s.GetSliceOffset()
     rasVector   =   [0,0,offSet]
-    widget.templateSliceButton.text = "Select Current Axial Slice as Seg. Limit (current: "+str(offSet)+")"
+    widget.templateSliceButton.text = "1. Select Current Axial Slice as Seg. Limit (current: "+str(offSet)+")"
 
     widget.axialSegmentationLimit = int(round(self.ras2ijk(rasVector)[2]))
 
