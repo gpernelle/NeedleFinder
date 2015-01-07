@@ -28,8 +28,8 @@
       <file leaf-file-name="NeedleFinder.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/NeedleFinder.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.4429448" vertical-offset="10124" max-vertical-offset="72540">
-              <caret line="699" column="48" selection-start-line="699" selection-start-column="48" selection-end-line="699" selection-end-column="48" />
+            <state vertical-scroll-proportion="0.59018403" vertical-offset="8759" max-vertical-offset="73650">
+              <caret line="616" column="42" selection-start-line="616" selection-start-column="42" selection-end-line="616" selection-end-column="42" />
               <folding>
                 <element signature="e#716#731#0" expanded="true" />
               </folding>
@@ -341,14 +341,16 @@
     </option>
   </component>
   <component name="XDebuggerManager">
-    <breakpoint-manager />
+    <breakpoint-manager>
+      <option name="time" value="2" />
+    </breakpoint-manager>
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/NeedleFinder.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.4429448" vertical-offset="10124" max-vertical-offset="72540">
-          <caret line="699" column="48" selection-start-line="699" selection-start-column="48" selection-end-line="699" selection-end-column="48" />
+        <state vertical-scroll-proportion="0.59018403" vertical-offset="8759" max-vertical-offset="73650">
+          <caret line="616" column="42" selection-start-line="616" selection-start-column="42" selection-end-line="616" selection-end-column="42" />
           <folding>
             <element signature="e#716#731#0" expanded="true" />
           </folding>

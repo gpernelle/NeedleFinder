@@ -78,13 +78,17 @@ class NeedleFinder:
     parent.contributors = ["Guillaume Pernelle",  "Alireza Mehrtash", "Lauren Barber", "Nabgha Fahrat", "Sandy Wells", "Yi Gao", "Antonio Damato", "Tina Kapur", "Akila Viswanathan"]
     parent.helpText = "https://github.com/gpernelle/NeedleFinder/wiki";
     parent.acknowledgementText = " Version : " + "NeedleFinder v1.0."
-    
+    self.NeedleFinderWidget = 0
     self.parent = parent
     try:
       slicer.selfTests
     except AttributeError:
       slicer.selfTests = {}
     slicer.selfTests['NeedleFinder'] = self.runTest
+
+  def __del__(self):
+    if self.NeedleFinderWidget:
+      self.NeedleFinderWidget.removeObservers()
 
   def getName(self):
     """
@@ -146,6 +150,22 @@ class NeedleFinderWidget:
     self.addManualTipClicks=2
     self.obturatorNeedleTipClicks=3
 
+    # keep list of pairs: [observee,tag] so they can be removed easily
+    self.styleObserverTags = []
+    # keep a map of interactor styles to sliceWidgets so we can easily get sliceLogic
+    self.sliceWidgetsPerStyle = {}
+    self.refreshObservers()
+
+    self.CrosshairNode = None
+    self.CrosshairNodeObserverTag = None
+
+    # crosshairnode use to get mouse position
+    self.CrosshairNode = slicer.mrmlScene.GetNthNodeByClass(0, 'vtkMRMLCrosshairNode')
+    if self.CrosshairNode:
+      self.CrosshairNodeObserverTag = self.CrosshairNode.AddObserver(slicer.vtkMRMLCrosshairNode.CursorPositionModifiedEvent, self.processEvent)
+
+  def __del__(self):
+    self.removeObservers()
 
   def getName(self):
     """
@@ -528,6 +548,32 @@ class NeedleFinderWidget:
     self.logic.resetNeedleValidation()
     pass
 
+  def refreshObservers(self):
+    """ When the layout changes, drop the observers from
+    all the old widgets and create new observers for the
+    newly created widgets"""
+    profprint()
+    self.removeObservers()
+    # get new slice nodes
+    layoutManager = slicer.app.layoutManager()
+    sliceNodeCount = slicer.mrmlScene.GetNumberOfNodesByClass('vtkMRMLSliceNode')
+    for nodeIndex in xrange(sliceNodeCount):
+      # find the widget for each node in scene
+      sliceNode = slicer.mrmlScene.GetNthNodeByClass(nodeIndex, 'vtkMRMLSliceNode')
+      sliceWidget = layoutManager.sliceWidget(sliceNode.GetLayoutName())
+      if sliceWidget:
+        # add obserservers and keep track of tags
+        style = sliceWidget.sliceView().interactorStyle()
+        self.sliceWidgetsPerStyle[style] = sliceWidget
+        # events = ("MouseMoveEvent", "EnterEvent", "LeaveEvent")
+        events = ("LeftButtonPressEvent", "RightButtonPressEvent" "KeyPressEvent", "KeyReleaseEvent")
+        for event in events:
+          tag = style.AddObserver(event, self.processEvent)
+          self.styleObserverTags.append([style,tag])
+      # TODO: also observe the slice nodes
+
+
+
   def onReload(self,moduleName="NeedleFinder"):
     """
     Generic reload method for any scripted module.
@@ -567,6 +613,11 @@ class NeedleFinderWidget:
       self.fiducialObturatorButton.checked = 0
       self.start()
       self.fiducialButton.text = "2. Stop Giving Tips"
+      tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
+      for i in range(tempFidNodes.GetNumberOfItems()):
+        node = tempFidNodes.GetItemAsObject(i)
+        if node:
+          slicer.mrmlScene.RemoveNode(node)
     else:
       self.fiducialButton.checked = 0
       self.stop()
@@ -627,7 +678,7 @@ class NeedleFinderWidget:
         # add obserservers and keep track of tags
         style = sliceWidget.sliceView().interactorStyle()
         self.sliceWidgetsPerStyle[style] = sliceWidget
-        events = ("LeftButtonPressEvent","LeftButtonReleaseEvent", "EnterEvent", "LeaveEvent","KeyPressEvent","KeyReleaseEvent")
+        events = ("LeftButtonPressEvent","RightButtonPressEvent", "EnterEvent", "LeaveEvent","KeyPressEvent","KeyReleaseEvent")
         for event in events:
           if process==self.needleValidationClicks:
             tag = style.AddObserver(event, self.processEventNeedleValidation)
@@ -668,65 +719,91 @@ class NeedleFinderWidget:
 
   def processEvent(self,observee,event=None):
     """
-    Get the mouse clicks and create a fiducial node at this position. Used later for the fiducial registration
+    Observe events in the needle segmentation mode:
+    - a mouse click starts a needle segmentation from the position of the cursor
+    - if shift is released, a temporary fiducial node is created at the position of the cursor
+    - if shift is pressed, all the temporary fiducial node named 'Temp' are removed from the MRML scence
     """
     #productive #frequent #event-handler
     if frequent: profprint();
 
     # GET mouse position
-    # print "left button pressed"
-    sliceWidget = self.sliceWidgetsPerStyle[observee]
-    # sliceLogic = sliceWidget.sliceLogic()
-    # sliceNode = sliceWidget.mrmlSliceNode()
-    interactor = observee.GetInteractor()
-    xy = interactor.GetEventPosition()
-    xyz = sliceWidget.sliceView().convertDeviceToXYZ(xy);
-    ras = sliceWidget.sliceView().convertXYZToRAS(xyz)
+    insideView = False
+    ras = [0.0,0.0,0.0]
+    xyz = [0.0,0.0,0.0]
+    sliceNode = None
+    if self.CrosshairNode:
+      insideView = self.CrosshairNode.GetCursorPositionRAS(ras)
+      sliceNode = self.CrosshairNode.GetCursorPositionXYZ(xyz)
 
-    colorVar    = random.randrange(50,100,1)/(100)
-    volumeNode  = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
-    imageData   = volumeNode.GetImageData()
-    spacing     = volumeNode.GetSpacing()
-    ijk         = self.logic.ras2ijk(ras)
-    sliceWidget = self.sliceWidgetsPerStyle[observee]
-    style = sliceWidget.sliceView().interactorStyle()
-    key = style.GetInteractor().GetKeySym()
+    if self.sliceWidgetsPerStyle.has_key(observee):
+      sliceWidget = self.sliceWidgetsPerStyle[observee]
+      sliceLogic = sliceWidget.sliceLogic()
+      sliceNode = sliceWidget.mrmlSliceNode()
+      interactor = observee.GetInteractor()
+      key = interactor.GetKeySym()
+      print "Event : ", event
+      if 0:
+        if event == "KeyPressEvent":   # shift pressed
+          print 'key pressed: ', key
+          if key == 'Shift_L' or key == 'Shift_R':
+            tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
+            for i in range(tempFidNodes.GetNumberOfItems()):
+              node = tempFidNodes.GetItemAsObject(i)
+              if node:
+                slicer.mrmlScene.RemoveNode(node)
 
-    if self.sliceWidgetsPerStyle.has_key(observee) and event == "KeyPressEvent":
+        elif event == "KeyReleaseEvent":  # shift release
+          print 'key released: ', key
+          if key == 'Shift_L' or key == 'Shift_R':
+            # widget = slicer.modules.NeedleFinderWidget
+            fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+            fiducial.SetName('Temp')
+            fiducial.Initialize(slicer.mrmlScene)
+            fiducial.SetFiducialCoordinates(ras)
+            fiducial.SetAttribute('TemporaryFiducial','1')
 
-      print 'key: ', key
-      if key == 'o':
-        self.numberOfPointsPerNeedle.setValue(3)
-      elif key == 'Shift_L' or key == 'Shift_R':
-        fidNodes = slicer.util.getNodes('vtkMRMLAnnotationFiducialNode*')
-        for node in fidNodes:
-          if node.GetName()=='Temp':
-            slicer.mrmlScene.removeNode(node)
-    if self.sliceWidgetsPerStyle.has_key(observee) and event == "KeyReleaseEvent":
-      # self.numberOfPointsPerNeedle.setValue(6)
-      print 'key: ', key
-      if key == 'Shift_L' or key == 'Shift_R':
-        # widget = slicer.modules.NeedleFinderWidget
-        fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
-        fiducial.SetName('Temp')
-        fiducial.Initialize(slicer.mrmlScene)
-        fiducial.SetFiducialCoordinates(ras)
-        fiducial.SetAttribute('TemporaryFiducial','1')
+            displayNode=fiducial.GetDisplayNode()
+            displayNode.SetGlyphScale(2)
+            displayNode.SetColor(1,1,0)
+            textNode=fiducial.GetAnnotationTextDisplayNode()
+            textNode.SetTextScale(4)
+            textNode.SetColor(1,1,0)
 
-        displayNode=fiducial.GetDisplayNode()
-        displayNode.SetGlyphScale(2)
-        displayNode.SetColor(1,1,0)
-        textNode=fiducial.GetAnnotationTextDisplayNode()
-        textNode.SetTextScale(4)
-        textNode.SetColor(1,1,0)
+      if event == "KeyReleaseEvent" and key == 'Shift_L' or key == 'Shift_R':
+        print event
+        tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
+        if tempFidNodes.GetNumberOfItems()>0:  # if fiducial exists, move it to new location
+          for i in range(tempFidNodes.GetNumberOfItems()):
+                node = tempFidNodes.GetItemAsObject(i)
+                if node:
+                  node.SetFiducialCoordinates(ras)
+        else: # create temp fiducial
+          fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+          fiducial.SetName('Temp')
+          fiducial.Initialize(slicer.mrmlScene)
+          fiducial.SetFiducialCoordinates(ras)
+          fiducial.SetAttribute('TemporaryFiducial','1')
 
-    if self.sliceWidgetsPerStyle.has_key(observee) and event == "LeftButtonPressEvent":
+          displayNode=fiducial.GetDisplayNode()
+          displayNode.SetGlyphScale(2)
+          displayNode.SetColor(1,1,0)
+          textNode=fiducial.GetAnnotationTextDisplayNode()
+          textNode.SetTextScale(4)
+          textNode.SetColor(1,1,0)
 
-      
-      self.logic.t0     = time.clock()
-      self.logic.needleDetectionThread(ijk, imageData, colorVar,spacing)
-      if self.autoStopTip.isChecked():
-        self.logic.needleDetectionUPThread(ijk, imageData, colorVar,spacing)
+
+      elif event == "LeftButtonPressEvent": # mouse click
+        print event
+        self.logic.t0     = time.clock()
+        colorVar    = random.randrange(50,100,1)/(100)
+        volumeNode  = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
+        imageData   = volumeNode.GetImageData()
+        spacing     = volumeNode.GetSpacing()
+        ijk         = self.logic.ras2ijk(ras)
+        self.logic.needleDetectionThread(ijk, imageData, colorVar,spacing)
+        if self.autoStopTip.isChecked():
+          self.logic.needleDetectionUPThread(ijk, imageData, colorVar,spacing)
       
 
   def processEventNeedleValidation(self,observee,event=None):
@@ -2125,11 +2202,8 @@ class NeedleFinderLogic:
     The height of the new conic region (stepsize) is increased as well as its base diameter (rMax) and its normal is collinear to the previous computed segment. (cf. C0) 
     NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
     From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
-    ??? used, is this a threaded function
     """
     #research
-    print whoami()
-    msgbox(whoami())
 
     widget = slicer.modules.NeedleFinderWidget
 
