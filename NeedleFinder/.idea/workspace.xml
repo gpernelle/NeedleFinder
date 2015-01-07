@@ -28,8 +28,8 @@
       <file leaf-file-name="NeedleFinder.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/NeedleFinder.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.6453988" vertical-offset="46379" max-vertical-offset="71805">
-              <caret line="3127" column="40" selection-start-line="3127" selection-start-column="40" selection-end-line="3127" selection-end-column="40" />
+            <state vertical-scroll-proportion="0.4429448" vertical-offset="10124" max-vertical-offset="72540">
+              <caret line="699" column="48" selection-start-line="699" selection-start-column="48" selection-end-line="699" selection-end-column="48" />
               <folding>
                 <element signature="e#716#731#0" expanded="true" />
               </folding>
@@ -347,8 +347,8 @@
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/NeedleFinder.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.6453988" vertical-offset="46379" max-vertical-offset="71805">
-          <caret line="3127" column="40" selection-start-line="3127" selection-start-column="40" selection-end-line="3127" selection-end-column="40" />
+        <state vertical-scroll-proportion="0.4429448" vertical-offset="10124" max-vertical-offset="72540">
+          <caret line="699" column="48" selection-start-line="699" selection-start-column="48" selection-end-line="699" selection-end-column="48" />
           <folding>
             <element signature="e#716#731#0" expanded="true" />
           </folding>
