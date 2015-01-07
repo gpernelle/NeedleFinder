@@ -613,16 +613,16 @@ class NeedleFinderWidget:
       self.fiducialObturatorButton.checked = 0
       self.start()
       self.fiducialButton.text = "2. Stop Giving Tips"
-      tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
-      for i in range(tempFidNodes.GetNumberOfItems()):
-        node = tempFidNodes.GetItemAsObject(i)
-        if node:
-          slicer.mrmlScene.RemoveNode(node)
     else:
       self.fiducialButton.checked = 0
       self.stop()
       self.fiducialButton.text = "2. Start Giving Needle Tips"
       widget.resetDetectionButton.setEnabled(1)
+      tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
+      for i in range(tempFidNodes.GetNumberOfItems()):
+        node = tempFidNodes.GetItemAsObject(i)
+        if node:
+          slicer.mrmlScene.RemoveNode(node)
     widget.deleteNeedleButton.setEnabled(1)
 
   def onStartStopGivingObturatorNeedleTipsToggled(self, checked):
@@ -762,6 +762,7 @@ class NeedleFinderWidget:
             fiducial.Initialize(slicer.mrmlScene)
             fiducial.SetFiducialCoordinates(ras)
             fiducial.SetAttribute('TemporaryFiducial','1')
+            fiducial.SetLocked(True)
 
             displayNode=fiducial.GetDisplayNode()
             displayNode.SetGlyphScale(2)
@@ -784,6 +785,7 @@ class NeedleFinderWidget:
           fiducial.Initialize(slicer.mrmlScene)
           fiducial.SetFiducialCoordinates(ras)
           fiducial.SetAttribute('TemporaryFiducial','1')
+          fiducial.SetLocked(True)
 
           displayNode=fiducial.GetDisplayNode()
           displayNode.SetGlyphScale(2)
@@ -2816,6 +2818,11 @@ class NeedleFinderLogic:
     sYellow.SetSliceVisible(0)
     reformatLogic = slicer.vtkSlicerReformatLogic()
     reformatLogic.SetSliceNormal(sYellow,1,0,0)
+    tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
+    for i in range(tempFidNodes.GetNumberOfItems()):
+      node = tempFidNodes.GetItemAsObject(i)
+      if node:
+        slicer.mrmlScene.RemoveNode(node)
     sYellow.Modified()
         
   def deleteLastNeedle(self):
