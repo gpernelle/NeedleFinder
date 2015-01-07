@@ -154,7 +154,7 @@ class NeedleFinderWidget:
     self.styleObserverTags = []
     # keep a map of interactor styles to sliceWidgets so we can easily get sliceLogic
     self.sliceWidgetsPerStyle = {}
-    self.refreshObservers()
+    # self.refreshObservers()
 
     self.CrosshairNode = None
     self.CrosshairNodeObserverTag = None
@@ -1708,11 +1708,10 @@ class NeedleFinderLogic:
 
   def objectiveFunction(self,imageData, ijk, radiusNeedleParameter, spacing, gradientPonderation):
     """
-    ??? used?
+    used by needleDetectionUPThread
     """
-    #obsolete
-    print "objectiveFunction"
-    msgbox(whoami())
+    #research #frequent
+    if frequent: profprint()
     radiusNeedle        = int(round(radiusNeedleParameter/float(spacing[0])))
     radiusNeedleCorner  = int(round((radiusNeedleParameter/float(spacing[0])/1.414)))
     ijk[0]=int(round(ijk[0]))
@@ -1868,7 +1867,7 @@ class NeedleFinderLogic:
     The height of the new conic region (stepsize) is increased as well as its base diameter (rMax) and its normal is collinear to the previous computed segment. (cf. C0) 
     NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
     From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
-    ??? is this a threaded function -> no it is not yet unfortunately, but the idea was to do it
+    Is this a threaded function? No it is not yet unfortunately, but the idea was to do it!
 
     :param A: RAS coordinates of the needle tip
     :param imageData: volumeNode.GetImageData()
@@ -2643,13 +2642,10 @@ class NeedleFinderLogic:
 
     for i in range(len(self.tableValueCtrPt)):
       if self.tableValueCtrPt[i][1]!=[999,999,999]:
-        print 'suite2' #???
         colorVar = random.randrange(50,100,1)/float(100)
         controlPointsUnsorted = [val for val in self.tableValueCtrPt[i] if val !=[999,999,999]]
         controlPoints=self.sortTable(controlPointsUnsorted,(2,1,0))
-        print "unsorted" #???
-        print controlPointsUnsorted
-        self.addNeedleToScene(controlPoints,i,'Validation') 
+        self.addNeedleToScene(controlPoints,i,'Validation')
       else:
         # print i
         pass
@@ -2860,7 +2856,6 @@ class NeedleFinderLogic:
   def resetNeedleDetection(self, script=False):
     """
     Reset the needle detection to completely start over.
-    ??? this fx does not delete the obtu' needles from the scene
     """
     #productive #onButton
     profprint()
@@ -3380,8 +3375,9 @@ class NeedleFinderLogic:
   
   def needleSegmentationCLIDEMO(self):
     """
-    ??? used?
+    Function used for the CLI module from Yi Gao using hessian filter (C++)
     """
+    #research
     profbox()
     widget = slicer.modules.NeedleFinderWidget
     scene = slicer.mrmlScene
@@ -3494,8 +3490,8 @@ class NeedleFinderLogic:
     self.addButtons()
   
   def addButtons(self):
-    """Buttons for the reporting widget, displaying information of the segmented needles
-    ??? used?
+    """Buttons for the reporting widget, displaying information of the segmented needles.
+    Used in conjunction with Yi Gaos CLI stuff.
     """
     profbox()
     if self.buttonsGroupBox != None:
@@ -3532,7 +3528,7 @@ class NeedleFinderLogic:
   
   def displayBentNeedle(self,i):
     """
-    ??? not used anymore. works with Yi Gao CLI module for straight needle detection + bending post-computed
+    not actively used anymore. works with Yi Gao CLI module for straight needle detection + bending post-computed
     """
     profbox()
     #obsolete
