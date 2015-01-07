@@ -205,7 +205,7 @@ class NeedleFinderWidget:
     segmentationFrame = qt.QFormLayout(self.__segmentationFrame)
 
     #1 Define template
-    self.templateSliceButton =  qt.QPushButton('Select Current Axial Slice as Seg. Limit (current: None)')
+    self.templateSliceButton =  qt.QPushButton('1. Select Current Axial Slice as Seg. Limit (current: None)')
     segmentationFrame.addRow(self.templateSliceButton)
     self.templateSliceButton.connect('clicked()', logic.selectCurrentAxialSlice)
     self.templateSliceButton.setEnabled(1)
