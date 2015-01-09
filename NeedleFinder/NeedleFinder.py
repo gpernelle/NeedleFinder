@@ -22,6 +22,12 @@ Links
   .. [2] https://www.spl.harvard.edu/publications/item/view/2316
 """
 
+"""
+TODO: gaussianAttenuation in NeedleDetectionThread is missing 1/(sigma*(2pi)**0.5)
+meaning the integral of the gaussian is not always 1 - we could see the impact of adding the scaling effect by
+redoing the parameter search with it.
+"""
+
 import unittest
 import math, time, operator
 import EditorLib
@@ -520,6 +526,10 @@ class NeedleFinderWidget:
     self.onReset()
     self.setupShortcuts()
 
+  def keyPressEvent(self,event):
+
+	print "You Pressed: "+event.text()
+
   def setupShortcuts(self):
     """Set up hot keys for various development scenarios"""
 
@@ -742,7 +752,7 @@ class NeedleFinderWidget:
       sliceNode = sliceWidget.mrmlSliceNode()
       interactor = observee.GetInteractor()
       key = interactor.GetKeySym()
-      print "Event : ", event
+      # print "Event : ", event
       if 0:
         if event == "KeyPressEvent":   # shift pressed
           print 'key pressed: ', key
@@ -772,7 +782,7 @@ class NeedleFinderWidget:
             textNode.SetColor(1,1,0)
 
       if event == "KeyReleaseEvent" and key == 'Shift_L' or key == 'Shift_R':
-        print event
+        # print event
         tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
         if tempFidNodes.GetNumberOfItems()>0:  # if fiducial exists, move it to new location
           for i in range(tempFidNodes.GetNumberOfItems()):
@@ -796,7 +806,7 @@ class NeedleFinderWidget:
 
 
       elif event == "LeftButtonPressEvent": # mouse click
-        print event
+        # print event
         self.logic.t0     = time.clock()
         colorVar    = random.randrange(50,100,1)/(100)
         volumeNode  = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
@@ -1859,7 +1869,7 @@ class NeedleFinderLogic:
   #------------------------------------------------------------------------------
 
 
-  def needleDetectionThread(self,A, imageData,colorVar,spacing):
+  def needleDetectionThread(self,A, imageData,colorVar,spacing, script=False):
     """
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
     The second extremity of this segment is saved as a control point (in controlPoints), used later. 
@@ -1890,7 +1900,7 @@ class NeedleFinderLogic:
     distanceMax                 = widget.distanceMax.value
     gradientPonderation         = widget.gradientPonderation.value
     sigmaValue                  = widget.sigmaValue.value
-    stepsize                    = widget.stepsize.value
+    # stepsize                    = widget.stepsize.value
     gaussianAttenuationChecked  = widget.gaussianAttenuationButton.isChecked()
     lookNeighborhood            = widget.gradient.isChecked()
     numberOfPointsPerNeedle     = max(1,widget.numberOfPointsPerNeedle.value-1)
@@ -2185,7 +2195,7 @@ class NeedleFinderLogic:
         break
     
     if not autoStopTip:
-      self.addNeedleToScene(self.controlPoints,colorVar)
+      self.addNeedleToScene(self.controlPoints,colorVar, 'Detection', script)
     
   #------------------------------------------------------------------------------ 
   #
@@ -2650,7 +2660,7 @@ class NeedleFinderLogic:
         # print i
         pass
 
-  def addNeedleToScene(self,controlPoint,colorVar, needleType='Detection'): 
+  def addNeedleToScene(self,controlPoint,colorVar, needleType='Detection', script=False):
     """Computes the Bezier's curve and adds visual representation of a needle to the scene
 
     :param controlPoint: array of RAS coordinates of points of a needle (used as control point for the Bezier's curve
@@ -2768,7 +2778,7 @@ class NeedleFinderLogic:
     if needleType=='Validation':
       self.addNeedleToTable(int(colorVar),label,'Validation')
     
-    else:
+    elif not script:
       self.addNeedleToTable(int(model.GetID().strip('vtkMRMLModelNode')),label)
 
   def deleteAllNeedlesFromCurrentSet(self):
@@ -2878,18 +2888,19 @@ class NeedleFinderLogic:
       self.table =None
       self.row=0
       self.col=0
-      for i in self.items:
-        item=self.items.pop()
-        del item
-      self.items=None
-      if self.model.rowCount() > 0:
-        for i in range(0,  self.model.rowCount()):
-          ritem = self.model.item(i)
-          del ritem
-        self.model.removeRows(0, self.model.rowCount())
-      self.model.modelReset() #=None
-      self.view.reset() #=None
-      self.initTableView()
+      if not script:
+        for i in self.items:
+          item=self.items.pop()
+          del item
+        self.items=None
+        if self.model.rowCount() > 0:
+          for i in range(0,  self.model.rowCount()):
+            ritem = self.model.item(i)
+            del ritem
+          self.model.removeRows(0, self.model.rowCount())
+        self.model.modelReset() #=None
+        self.view.reset() #=None
+        self.initTableView()
       #reset button states
       widget.templateSliceButton.setEnabled(1)
       widget.fiducialButton.setEnabled(0)
@@ -3904,12 +3915,12 @@ class NeedleFinderLogic:
     spacing = volumeNode.GetSpacing()
     # chrono starts
     self.t0 = time.clock()
-    
-    if 0: # why again detecting needles ???
-      for i in xrange(len(tips)):
-        A=tips[i]
-        colorVar = i/(len(tips))
-        self.needleDetectionThread(A, imageData, colorVar,spacing)
+
+
+    for i in range(len(tips)):
+      A=tips[i]
+      colorVar = i/(len(tips))
+      self.needleDetectionThread(A, imageData, colorVar,spacing, script)
 
     #print tips
     if script == False:
@@ -4079,6 +4090,7 @@ class NeedleFinderLogic:
                             widget.nbRotatingIterations.value,
                             widget.stepsize.value,
                             widget.gradientPonderation.value,
+                            widget.exponent.value,
                             widget.gaussianAttenuationButton.isChecked()*1,
                             widget.sigmaValue.value]
 
