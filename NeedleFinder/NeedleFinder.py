@@ -2901,6 +2901,12 @@ class NeedleFinderLogic:
         self.model.modelReset() #=None
         self.view.reset() #=None
         self.initTableView()
+
+      ### Leave the needle detection mode
+      widget.fiducialButton.checked = 0
+      widget.stop()
+      widget.fiducialButton.text = "2. Start Giving Needle Tips"
+
       #reset button states
       widget.templateSliceButton.setEnabled(1)
       widget.fiducialButton.setEnabled(0)
@@ -2908,6 +2914,8 @@ class NeedleFinderLogic:
       widget.resetDetectionButton.setEnabled(0)
       self.deleteAllModelsFromScene()
       widget.templateSliceButton.text = "1. Select Current Axial Slice as Seg. Limit (current: None)"
+
+
 
   def resetNeedleValidation(self):
     """
