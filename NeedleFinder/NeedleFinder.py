@@ -21,10 +21,14 @@ Links
   .. [1] https://www.spl.harvard.edu/publications/item/view/2459
   .. [2] https://www.spl.harvard.edu/publications/item/view/2316
 """
+"""
+TODO: gaussianAttenuation in NeedleDetectionThread is missing 1/(sigma*(2pi)**0.5)
+meaning the integral of the gaussian is not always 1 - we could see the impact of adding the scaling effect by
+redoing the parameter search with it.
+"""
 
 import unittest
 import math, time, operator
-import EditorLib
 import numpy
 import numpy as np
 import random
@@ -44,7 +48,7 @@ def whosdaddy():
     return inspect.stack()[2][3]
 def whosgranny():
     return inspect.stack()[3][3]
-profiling=True
+profiling=False
 frequent=False
 MAXNEEDLES=1000
 
@@ -78,13 +82,17 @@ class NeedleFinder:
     parent.contributors = ["Guillaume Pernelle",  "Alireza Mehrtash", "Lauren Barber", "Nabgha Fahrat", "Sandy Wells", "Yi Gao", "Antonio Damato", "Tina Kapur", "Akila Viswanathan"]
     parent.helpText = "https://github.com/gpernelle/NeedleFinder/wiki";
     parent.acknowledgementText = " Version : " + "NeedleFinder v1.0."
-    
+    self.NeedleFinderWidget = 0
     self.parent = parent
     try:
       slicer.selfTests
     except AttributeError:
       slicer.selfTests = {}
     slicer.selfTests['NeedleFinder'] = self.runTest
+
+  def __del__(self):
+    if self.NeedleFinderWidget:
+      self.NeedleFinderWidget.removeObservers()
 
   def getName(self):
     """
@@ -146,6 +154,23 @@ class NeedleFinderWidget:
     self.addManualTipClicks=2
     self.obturatorNeedleTipClicks=3
 
+    # keep list of pairs: [observee,tag] so they can be removed easily
+    self.styleObserverTags = []
+    # keep a map of interactor styles to sliceWidgets so we can easily get sliceLogic
+    self.sliceWidgetsPerStyle = {}
+    # self.refreshObservers()
+
+    self.CrosshairNode = None
+    self.CrosshairNodeObserverTag = None
+
+    # crosshairnode use to get mouse position
+    self.CrosshairNode = slicer.mrmlScene.GetNthNodeByClass(0, 'vtkMRMLCrosshairNode')
+    if self.CrosshairNode:
+      self.CrosshairNodeObserverTag = self.CrosshairNode.AddObserver(slicer.vtkMRMLCrosshairNode.CursorPositionModifiedEvent, self.processEvent)
+
+  def __del__(self):
+    self.removeObservers()
+
   def getName(self):
     """
     return class name
@@ -184,13 +209,13 @@ class NeedleFinderWidget:
     segmentationFrame = qt.QFormLayout(self.__segmentationFrame)
 
     #1 Define template
-    self.templateSliceButton =  qt.QPushButton('Select Current Axial Slice as Seg. Limit (current: None)')
+    self.templateSliceButton =  qt.QPushButton('1. Select Current Axial Slice as Seg. Limit (current: None)')
     segmentationFrame.addRow(self.templateSliceButton)
     self.templateSliceButton.connect('clicked()', logic.selectCurrentAxialSlice)
     self.templateSliceButton.setEnabled(1)
 
     #2 give needle tips
-    self.fiducialButton = qt.QPushButton('Start Giving Needle Tips')
+    self.fiducialButton = qt.QPushButton('2. Start Giving Needle Tips [CTRL + ENTER]')
     self.fiducialButton.checkable = True
     segmentationFrame.addRow(self.fiducialButton)
     self.fiducialButton.connect('toggled(bool)', self.onStartStopGivingNeedleTipsToggled)
@@ -260,7 +285,7 @@ class NeedleFinderWidget:
 
     # Needle detection parameters#################################
     self.__parameterFrame = ctk.ctkCollapsibleButton()
-    self.__parameterFrame.text = "Needle Detection Parameters"
+    self.__parameterFrame.text = "Needle Detection Parameters (Developers)"
     self.__parameterFrame.collapsed = 1
     parameterFrame = qt.QFormLayout(self.__parameterFrame)
     
@@ -430,7 +455,7 @@ class NeedleFinderWidget:
     
     # Research/dev. area#################################
     self.__devFrame = ctk.ctkCollapsibleButton()
-    self.__devFrame.text = "R&&D"
+    self.__devFrame.text = "R&&D (Developers)"
     self.__devFrame.collapsed = 1
     devFrame = qt.QFormLayout(self.__devFrame)
 
@@ -493,7 +518,38 @@ class NeedleFinderWidget:
     self.widget.setLayout(self.layout)
     self.layout2.addWidget(self.widget)
 
+    # init table report
+    logic.initTableView() # init the report table
+
     self.onReset()
+    self.setupShortcuts()
+
+  def keyPressEvent(self,event):
+    print "You Pressed: "+event.text()
+
+  def setupShortcuts(self):
+    """Set up hot keys for various development scenarios"""
+
+    macros = (
+      ("Ctrl+Return", self.segmentNeedle),
+      ("Ctrl+z", self.logic.deleteLastNeedle),
+      )
+
+    for keys,f in macros:
+      k = qt.QKeySequence(keys)
+      s = qt.QShortcut(k,slicer.util.mainWindow())
+      s.connect('activated()', f)
+      s.connect('activatedAmbiguously()', f)
+      print "SlicerRC - '%s' -> '%s'" % (keys, f.__name__)
+
+  def segmentNeedle(self):
+      """
+      helper function for Ctrl+Enter
+      """
+      #productive #event
+      profprint()
+      print "new checked state: ",not self.fiducialButton.checked
+      self.onStartStopGivingNeedleTipsToggled(not self.fiducialButton.checked)
 
   def cleanup(self):
     """
@@ -504,6 +560,32 @@ class NeedleFinderWidget:
     self.logic.resetNeedleDetection()
     self.logic.resetNeedleValidation()
     pass
+
+  def refreshObservers(self):
+    """ When the layout changes, drop the observers from
+    all the old widgets and create new observers for the
+    newly created widgets"""
+    profprint()
+    self.removeObservers()
+    # get new slice nodes
+    layoutManager = slicer.app.layoutManager()
+    sliceNodeCount = slicer.mrmlScene.GetNumberOfNodesByClass('vtkMRMLSliceNode')
+    for nodeIndex in xrange(sliceNodeCount):
+      # find the widget for each node in scene
+      sliceNode = slicer.mrmlScene.GetNthNodeByClass(nodeIndex, 'vtkMRMLSliceNode')
+      sliceWidget = layoutManager.sliceWidget(sliceNode.GetLayoutName())
+      if sliceWidget:
+        # add obserservers and keep track of tags
+        style = sliceWidget.sliceView().interactorStyle()
+        self.sliceWidgetsPerStyle[style] = sliceWidget
+        # events = ("MouseMoveEvent", "EnterEvent", "LeaveEvent")
+        events = ("LeftButtonPressEvent", "RightButtonPressEvent" "KeyPressEvent", "KeyReleaseEvent")
+        for event in events:
+          tag = style.AddObserver(event, self.processEvent)
+          self.styleObserverTags.append([style,tag])
+      # TODO: also observe the slice nodes
+
+
 
   def onReload(self,moduleName="NeedleFinder"):
     """
@@ -531,22 +613,28 @@ class NeedleFinderWidget:
       qt.QMessageBox.warning(slicer.util.mainWindow(),
           "Reload and Test", 'Exception!\n\n' + str(e) + "\n\nSee Python Console for Stack Trace")
 
-  def onStartStopGivingNeedleTipsToggled(self, checked):
+  def onStartStopGivingNeedleTipsToggled(self, checked = True):
     """
     Start/stop giving needle tips
     """
     #productive
     profprint()
     widget = slicer.modules.NeedleFinderWidget
+    self.fiducialButton.checked = checked
     if checked:
       self.startGivingControlPointsButton.checked = 0
       self.fiducialObturatorButton.checked = 0
       self.start()
-      self.fiducialButton.text = "Stop Giving Tips"  
+      self.fiducialButton.text = "2. Stop Giving Needle Tips [CTRL + ENTER]"
     else:
       self.stop()
-      self.fiducialButton.text = "Start Giving Needle Tips"
+      self.fiducialButton.text = "2. Start Giving Needle Tips [CTRL + ENTER]"
       widget.resetDetectionButton.setEnabled(1)
+      tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
+      for i in range(tempFidNodes.GetNumberOfItems()):
+        node = tempFidNodes.GetItemAsObject(i)
+        if node:
+          slicer.mrmlScene.RemoveNode(node)
     widget.deleteNeedleButton.setEnabled(1)
 
   def onStartStopGivingObturatorNeedleTipsToggled(self, checked):
@@ -557,7 +645,7 @@ class NeedleFinderWidget:
     profprint()
     if checked:
       self.fiducialButton.checked = 0
-      self.fiducialButton.text = "Start Giving Needle Tips"
+      self.fiducialButton.text = "2. Start Giving Needle Tips [CTRL + ENTER]"
       self.startGivingControlPointsButton.checked = 0
       self.start(self.obturatorNeedleTipClicks)
       self.fiducialObturatorButton.text = "Stop Giving Obturator Needle Tips"  
@@ -575,7 +663,7 @@ class NeedleFinderWidget:
     if checked:
       self.fiducialObturatorButton.checked = 0
       self.fiducialButton.checked = 0
-      self.fiducialButton.text = "Start Giving Needle Tips"
+      self.fiducialButton.text = "2. Start Giving Needle Tips [CTRL + ENTER]"
       self.start(self.needleValidationClicks)
       self.startGivingControlPointsButton.text = "Stop Giving Control Points"  
     else:
@@ -602,7 +690,7 @@ class NeedleFinderWidget:
         # add obserservers and keep track of tags
         style = sliceWidget.sliceView().interactorStyle()
         self.sliceWidgetsPerStyle[style] = sliceWidget
-        events = ("LeftButtonPressEvent","LeftButtonReleaseEvent", "EnterEvent", "LeaveEvent","KeyPressEvent","KeyReleaseEvent")
+        events = ("LeftButtonPressEvent","RightButtonPressEvent", "EnterEvent", "LeaveEvent","KeyPressEvent","KeyReleaseEvent")
         for event in events:
           if process==self.needleValidationClicks:
             tag = style.AddObserver(event, self.processEventNeedleValidation)
@@ -643,46 +731,93 @@ class NeedleFinderWidget:
 
   def processEvent(self,observee,event=None):
     """
-    Get the mouse clicks and create a fiducial node at this position. Used later for the fiducial registration
+    Observe events in the needle segmentation mode:
+    - a mouse click starts a needle segmentation from the position of the cursor
+    - if shift is released, a temporary fiducial node is created at the position of the cursor
+    - if shift is pressed, all the temporary fiducial node named 'Temp' are removed from the MRML scence
     """
     #productive #frequent #event-handler
     if frequent: profprint();
-    if self.sliceWidgetsPerStyle.has_key(observee) and event == "KeyPressEvent":
-      sliceWidget = self.sliceWidgetsPerStyle[observee]
-      style = sliceWidget.sliceView().interactorStyle()
-      key = style.GetInteractor().GetKeySym()
-      if key == 'o':
-        self.numberOfPointsPerNeedle.setValue(3)
-    if self.sliceWidgetsPerStyle.has_key(observee) and event == "KeyReleaseEvent":
-      self.numberOfPointsPerNeedle.setValue(6)
 
-    if self.sliceWidgetsPerStyle.has_key(observee) and event == "LeftButtonPressEvent":
-      if slicer.app.repositoryRevision<= 21022:
-        sliceWidget = self.sliceWidgetsPerStyle[observee]
-        style = sliceWidget.sliceView().interactorStyle()          
-        xy = style.GetInteractor().GetEventPosition()
-        xyz = sliceWidget.convertDeviceToXYZ(xy)
-        ras = sliceWidget.convertXYZToRAS(xyz)
-      else:
-        sliceWidget = self.sliceWidgetsPerStyle[observee]
-        sliceLogic = sliceWidget.sliceLogic()
-        sliceNode = sliceWidget.mrmlSliceNode()
-        interactor = observee.GetInteractor()
-        xy = interactor.GetEventPosition()
-        xyz = sliceWidget.sliceView().convertDeviceToXYZ(xy);
-        ras = sliceWidget.sliceView().convertXYZToRAS(xyz)
-      
-      colorVar    = random.randrange(50,100,1)/(100)
-      volumeNode  = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
-      imageData   = volumeNode.GetImageData()
-      spacing     = volumeNode.GetSpacing()
-      ijk         = self.logic.ras2ijk(ras)
-      
-      self.logic.t0     = time.clock()
-      self.logic.needleDetectionThread(ijk, imageData, colorVar,spacing)
-      if self.autoStopTip.isChecked():
-        self.logic.needleDetectionUPThread(ijk, imageData, colorVar,spacing)
-      
+    # GET mouse position
+    insideView = False
+    ras = [0.0,0.0,0.0]
+    xyz = [0.0,0.0,0.0]
+    sliceNode = None
+    if self.CrosshairNode:
+      insideView = self.CrosshairNode.GetCursorPositionRAS(ras)
+      sliceNode = self.CrosshairNode.GetCursorPositionXYZ(xyz)
+
+    if self.sliceWidgetsPerStyle.has_key(observee):
+      sliceWidget = self.sliceWidgetsPerStyle[observee]
+      sliceLogic = sliceWidget.sliceLogic()
+      sliceNode = sliceWidget.mrmlSliceNode()
+      interactor = observee.GetInteractor()
+      key = interactor.GetKeySym()
+      # print "Event : ", event
+      if 0:
+        if event == "KeyPressEvent":   # shift pressed
+          print 'key pressed: ', key
+          if key == 'Shift_L' or key == 'Shift_R':
+            tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
+            for i in range(tempFidNodes.GetNumberOfItems()):
+              node = tempFidNodes.GetItemAsObject(i)
+              if node:
+                slicer.mrmlScene.RemoveNode(node)
+
+        elif event == "KeyReleaseEvent":  # shift release
+          print 'key released: ', key
+          if key == 'Shift_L' or key == 'Shift_R':
+            # widget = slicer.modules.NeedleFinderWidget
+            fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+            fiducial.SetName('Temp')
+            fiducial.Initialize(slicer.mrmlScene)
+            fiducial.SetFiducialCoordinates(ras)
+            fiducial.SetAttribute('TemporaryFiducial','1')
+            fiducial.SetLocked(True)
+
+            displayNode=fiducial.GetDisplayNode()
+            displayNode.SetGlyphScale(2)
+            displayNode.SetColor(1,1,0)
+            textNode=fiducial.GetAnnotationTextDisplayNode()
+            textNode.SetTextScale(4)
+            textNode.SetColor(1,1,0)
+
+      if event == "KeyReleaseEvent" and key == 'Shift_L' or key == 'Shift_R':
+        # print event
+        tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
+        # if fiducial exists, move it to new location
+        if tempFidNodes.GetNumberOfItems()>0:
+          for i in range(tempFidNodes.GetNumberOfItems()):
+                node = tempFidNodes.GetItemAsObject(i)
+                if node:
+                  node.SetFiducialCoordinates(ras)
+        else: # create temp fiducial
+          fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+          fiducial.SetName('Temp')
+          fiducial.Initialize(slicer.mrmlScene)
+          fiducial.SetFiducialCoordinates(ras)
+          fiducial.SetAttribute('TemporaryFiducial','1')
+          fiducial.SetLocked(True)
+
+          displayNode=fiducial.GetDisplayNode()
+          displayNode.SetGlyphScale(2)
+          displayNode.SetColor(1,1,0)
+          textNode=fiducial.GetAnnotationTextDisplayNode()
+          textNode.SetTextScale(4)
+          textNode.SetColor(1,1,0)
+
+      elif event == "LeftButtonPressEvent": # mouse click
+        # print event
+        self.logic.t0     = time.clock()
+        colorVar    = random.randrange(50,100,1)/(100)
+        volumeNode  = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
+        imageData   = volumeNode.GetImageData()
+        spacing     = volumeNode.GetSpacing()
+        ijk         = self.logic.ras2ijk(ras)
+        self.logic.needleDetectionThread(ijk, imageData, colorVar,spacing)
+        if self.autoStopTip.isChecked():
+          self.logic.needleDetectionUPThread(ijk, imageData, colorVar,spacing)
 
   def processEventNeedleValidation(self,observee,event=None):
     """
@@ -1061,6 +1196,9 @@ class NeedleFinderLogic:
       if sYellow ==None :
         sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
       sYellow.SetSliceVisible(0)
+      reformatLogic = slicer.vtkSlicerReformatLogic()
+      reformatLogic.SetSliceNormal(sYellow,1,0,0)
+      sYellow.Modified()
     else:
       displayNode.SliceIntersectionVisibilityOn()
       displayNode.SetVisibility(1)
@@ -1071,9 +1209,10 @@ class NeedleFinderLogic:
     """
     #productive #onButton #report
     profprint()
-    self.andres(ID)
-    #for i in range(2): # i used???
-    if 1:
+    #############################
+    self.andres(ID) #go to andres experiment
+    #############################
+    for i in range(2): #workaround for update problem
       modelNode = slicer.util.getNode('vtkMRMLModelNode'+str(ID))
       polyData = modelNode.GetPolyData()
       nb = polyData.GetNumberOfPoints()
@@ -1082,10 +1221,10 @@ class NeedleFinderLogic:
       polyData.GetPoint(nb-1,tip)
       polyData.GetPoint(0,base)
       a,b,c = tip[0]-base[0],tip[1]-base[1],tip[2]-base[2]
-      
+      #print a,b,c
       sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
       if sYellow ==None :
-        sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")        
+        sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
       reformatLogic = slicer.vtkSlicerReformatLogic()
       sYellow.SetSliceVisible(1)
       reformatLogic.SetSliceNormal(sYellow,1,-a/b,0)
@@ -1094,6 +1233,7 @@ class NeedleFinderLogic:
       m.SetElement(1,3,base[1])
       m.SetElement(2,3,base[2])
       sYellow.Modified()
+
                  
   def findLabelNeedleID(self,ID):
     print "findLabelNeedleID"
@@ -1582,11 +1722,10 @@ class NeedleFinderLogic:
 
   def objectiveFunction(self,imageData, ijk, radiusNeedleParameter, spacing, gradientPonderation):
     """
-    ??? used?
+    used by needleDetectionUPThread
     """
-    #obsolete
-    print "objectiveFunction"
-    msgbox(whoami())
+    #research #frequent
+    if frequent: profprint()
     radiusNeedle        = int(round(radiusNeedleParameter/float(spacing[0])))
     radiusNeedleCorner  = int(round((radiusNeedleParameter/float(spacing[0])/1.414)))
     ijk[0]=int(round(ijk[0]))
@@ -1734,7 +1873,7 @@ class NeedleFinderLogic:
   #------------------------------------------------------------------------------
 
 
-  def needleDetectionThread(self,A, imageData,colorVar,spacing):
+  def needleDetectionThread(self,A, imageData,colorVar,spacing, script=False):
     """
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
     The second extremity of this segment is saved as a control point (in controlPoints), used later. 
@@ -1742,7 +1881,7 @@ class NeedleFinderLogic:
     The height of the new conic region (stepsize) is increased as well as its base diameter (rMax) and its normal is collinear to the previous computed segment. (cf. C0) 
     NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
     From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
-    ??? is this a threaded function -> no it is not yet unfortunately, but the idea was to do it
+    Is this a threaded function? No it is not yet unfortunately, but the idea was to do it!
 
     :param A: RAS coordinates of the needle tip
     :param imageData: volumeNode.GetImageData()
@@ -1765,7 +1904,7 @@ class NeedleFinderLogic:
     distanceMax                 = widget.distanceMax.value
     gradientPonderation         = widget.gradientPonderation.value
     sigmaValue                  = widget.sigmaValue.value
-    stepsize                    = widget.stepsize.value
+    # stepsize                    = widget.stepsize.value
     gaussianAttenuationChecked  = widget.gaussianAttenuationButton.isChecked()
     lookNeighborhood            = widget.gradient.isChecked()
     numberOfPointsPerNeedle     = max(1,widget.numberOfPointsPerNeedle.value-1)
@@ -2060,7 +2199,7 @@ class NeedleFinderLogic:
         break
     
     if not autoStopTip:
-      self.addNeedleToScene(self.controlPoints,colorVar)
+      self.addNeedleToScene(self.controlPoints,colorVar, 'Detection', script)
     
   #------------------------------------------------------------------------------ 
   #
@@ -2078,11 +2217,8 @@ class NeedleFinderLogic:
     The height of the new conic region (stepsize) is increased as well as its base diameter (rMax) and its normal is collinear to the previous computed segment. (cf. C0) 
     NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
     From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
-    ??? used, is this a threaded function
     """
     #research
-    print whoami()
-    msgbox(whoami())
 
     widget = slicer.modules.NeedleFinderWidget
 
@@ -2520,18 +2656,15 @@ class NeedleFinderLogic:
 
     for i in range(len(self.tableValueCtrPt)):
       if self.tableValueCtrPt[i][1]!=[999,999,999]:
-        print 'suite2' #???
         colorVar = random.randrange(50,100,1)/float(100)
         controlPointsUnsorted = [val for val in self.tableValueCtrPt[i] if val !=[999,999,999]]
         controlPoints=self.sortTable(controlPointsUnsorted,(2,1,0))
-        print "unsorted" #???
-        print controlPointsUnsorted
-        self.addNeedleToScene(controlPoints,i,'Validation') 
+        self.addNeedleToScene(controlPoints,i,'Validation')
       else:
         # print i
         pass
 
-  def addNeedleToScene(self,controlPoint,colorVar, needleType='Detection'): 
+  def addNeedleToScene(self,controlPoint,colorVar, needleType='Detection', script=False):
     """Computes the Bezier's curve and adds visual representation of a needle to the scene
 
     :param controlPoint: array of RAS coordinates of points of a needle (used as control point for the Bezier's curve
@@ -2649,7 +2782,7 @@ class NeedleFinderLogic:
     if needleType=='Validation':
       self.addNeedleToTable(int(colorVar),label,'Validation')
     
-    else:
+    elif not script:
       self.addNeedleToTable(int(model.GetID().strip('vtkMRMLModelNode')),label)
 
   def deleteAllNeedlesFromCurrentSet(self):
@@ -2695,6 +2828,11 @@ class NeedleFinderLogic:
     sYellow.SetSliceVisible(0)
     reformatLogic = slicer.vtkSlicerReformatLogic()
     reformatLogic.SetSliceNormal(sYellow,1,0,0)
+    tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
+    for i in range(tempFidNodes.GetNumberOfItems()):
+      node = tempFidNodes.GetItemAsObject(i)
+      if node:
+        slicer.mrmlScene.RemoveNode(node)
     sYellow.Modified()
         
   def deleteLastNeedle(self):
@@ -2732,7 +2870,6 @@ class NeedleFinderLogic:
   def resetNeedleDetection(self, script=False):
     """
     Reset the needle detection to completely start over.
-    ??? this fx does not delete the obtu' needles from the scene
     """
     #productive #onButton
     profprint()
@@ -2755,25 +2892,34 @@ class NeedleFinderLogic:
       self.table =None
       self.row=0
       self.col=0
-      for i in self.items:
-        item=self.items.pop()
-        del item
-      self.items=None
-      if self.model.rowCount() > 0:
-        for i in range(0,  self.model.rowCount()):
-          ritem = self.model.item(i)
-          del ritem
-        self.model.removeRows(0, self.model.rowCount())
-      self.model.modelReset() #=None
-      self.view.reset() #=None
-      self.initTableView()
+      if not script:
+        for i in self.items:
+          item=self.items.pop()
+          del item
+        self.items=None
+        if self.model.rowCount() > 0:
+          for i in range(0,  self.model.rowCount()):
+            ritem = self.model.item(i)
+            del ritem
+          self.model.removeRows(0, self.model.rowCount())
+        self.model.modelReset() #=None
+        self.view.reset() #=None
+        self.initTableView()
+
+      ### Leave the needle detection mode
+      widget.fiducialButton.checked = 0
+      widget.stop()
+      widget.fiducialButton.text = "2. Start Giving Needle Tips"
+
       #reset button states
       widget.templateSliceButton.setEnabled(1)
       widget.fiducialButton.setEnabled(0)
       widget.deleteNeedleButton.setEnabled(0)
       widget.resetDetectionButton.setEnabled(0)
       self.deleteAllModelsFromScene()
-      widget.templateSliceButton.text = "Select Current Axial Slice as Seg. Limit (current: None)"
+      widget.templateSliceButton.text = "1. Select Current Axial Slice as Seg. Limit (current: None)"
+
+
 
   def resetNeedleValidation(self):
     """
@@ -3050,24 +3196,30 @@ class NeedleFinderLogic:
     #productive
     profprint()
     if self.table==None:
-      self.keys = ("Label","Round" ,"Reliability")
+      # self.keys = ("#")
+      # self.keys = ("#","Round" ,"Reliability")
+      self.keys = ("#")
       self.labelStats = {}
       self.labelStats['Labels'] = []
       self.items = []
       if self.model==None:
           self.model = qt.QStandardItemModel()
-          self.model.setColumnCount(6)
+          self.model.setColumnCount(5)
           self.model.setHeaderData(0,1,"")
-          self.model.setHeaderData(1,1,"Label")
-          self.model.setHeaderData(2,1,"R.")
-          self.model.setHeaderData(3,1,"Reliability")
-          self.model.setHeaderData(4,1,"Display")
-          self.model.setHeaderData(5,1,"Reformat")
+          self.model.setHeaderData(1,1,"#")
+          # self.model.setHeaderData(2,1,"R.")
+          # self.model.setHeaderData(3,1,"Reliability")
+          self.model.setHeaderData(2,1,"Display")
+          self.model.setHeaderData(3,1,"Reformat")
+          self.model.setHeaderData(4,1,"Comments")
+          # self.model.setStrechLastSection(True)
           if self.view == None:
             self.view = qt.QTableView()
             self.view.setMinimumHeight(300)
             self.view.sortingEnabled = True
             self.view.verticalHeader().visible = False
+            self.view.horizontalHeader().setStretchLastSection(True)
+
           # col = 1
           # for k in self.keys:
           #   # self.view.setColumnWidth(col,15*len(k))
@@ -3076,7 +3228,7 @@ class NeedleFinderLogic:
           self.view.setModel(self.model)
           self.view.setColumnWidth(0,18)
           self.view.setColumnWidth(1,58)
-          self.view.setColumnWidth(2,28)
+          self.view.setColumnWidth(2,58)
           self.table = 1
           self.row=0
           self.col=0
@@ -3093,18 +3245,20 @@ class NeedleFinderLogic:
     if label !=None:
       ref = int(label[0]) % MAXNEEDLES
       needleLabel = self.option[ref]
-      reliability = label[1]
+      # reliability = label[1]
     else:
       needleLabel = str(ID)
       ref = ID % MAXNEEDLES
-      reliability = '-'
+      # reliability = '-'
     # ref = int(modelNode.GetAttribute("nth"))
     
     self.labelStats["Labels"].append(ref)
-    self.labelStats[ref,"Label"] = needleLabel
-    self.labelStats[ref,"Round"] = str(self.round)
-    self.labelStats[ref,"Reliability"] = str(reliability) 
-      
+    self.labelStats[ref,"#"] = needleLabel
+    # self.labelStats[ref,"Round"] = str(self.round)
+    # self.labelStats[ref,"Reliability"] = str(reliability)
+
+    ################################################
+    # Column 0
     color = qt.QColor()
     color.setRgb(self.color255[ref][0],self.color255[ref][1],self.color255[ref][2])
     item = qt.QStandardItem()
@@ -3112,6 +3266,8 @@ class NeedleFinderLogic:
     #self.model.appendRow(item)
     self.model.setItem(self.row,0,item)
     self.items.append(item)
+    ################################################
+    # Column 1
     self.col = 1
     for k in self.keys:
       item = qt.QStandardItem()
@@ -3119,22 +3275,35 @@ class NeedleFinderLogic:
       self.model.setItem(self.row,self.col,item)
       self.items.append(item)
       self.col += 1
+    ################################################
+    # Column 2
     displayButton = qt.QPushButton("Display")
     displayButton.checked = True
     displayButton.checkable = True
     if needleType=='Validation':
       ID=int(slicer.util.getNode('manual-seg_'+str(ID)).GetID().strip('vtkMRMLModelNode'))
     displayButton.connect("clicked()", lambda who=ID: self.displayNeedleTube(who))
-    index = self.model.index(self.row,4)
+    index = self.model.index(self.row,2)
+
     self.items.append(displayButton)
     self.col += 1
     self.view.setIndexWidget(index,displayButton)
+    ################################################
+    # Column 3
     reformatButton = qt.QPushButton("Reformat")
     reformatButton.connect("clicked()", lambda who=ID: self.reformatSagittalView4Needle(who))
-    index2 = self.model.index(self.row,5)
+    index = self.model.index(self.row,3)
     self.items.append(reformatButton)
     self.col += 1
-    self.view.setIndexWidget(index2,reformatButton)
+    self.view.setIndexWidget(index,reformatButton)
+    ################################################
+    # Column 4
+    editField =  qt.QTextEdit("")
+    index = self.model.index(self.row,4)
+    self.items.append(editField)
+    self.col += 1
+    self.view.setIndexWidget(index,editField)
+
     self.row += 1  
   
   def deleteNeedleFromTable(self,ID):
@@ -3149,8 +3318,8 @@ class NeedleFinderLogic:
       ref = ID % MAXNEEDLES
       self.labelStats["Labels"].pop(pos)
       self.labelStats[ref,"Label"] = None
-      self.labelStats[ref,"Round"] = None
-      self.labelStats[ref,"Reliability"] = None 
+      # self.labelStats[ref,"Round"] = None
+      # self.labelStats[ref,"Reliability"] = None
       pos+=1
       for i in range(1,self.col+1):
         item=self.items.pop(pos*self.col-i)
@@ -3257,10 +3426,11 @@ class NeedleFinderLogic:
   """
   #----------------------------------------------------------------------------------------------
   
-  def needleSegmentation(self):
+  def needleSegmentationCLIDEMO(self):
     """
-    ??? used?
+    Function used for the CLI module from Yi Gao using hessian filter (C++)
     """
+    #research
     profbox()
     widget = slicer.modules.NeedleFinderWidget
     scene = slicer.mrmlScene
@@ -3373,8 +3543,8 @@ class NeedleFinderLogic:
     self.addButtons()
   
   def addButtons(self):
-    """Buttons for the reporting widget, displaying information of the segmented needles
-    ??? used?
+    """Buttons for the reporting widget, displaying information of the segmented needles.
+    Used in conjunction with Yi Gaos CLI stuff.
     """
     profbox()
     if self.buttonsGroupBox != None:
@@ -3411,7 +3581,7 @@ class NeedleFinderLogic:
   
   def displayBentNeedle(self,i):
     """
-    ??? not used anymore. works with Yi Gao CLI module for straight needle detection + bending post-computed
+    not actively used anymore. works with Yi Gao CLI module for straight needle detection + bending post-computed
     """
     profbox()
     #obsolete
@@ -3787,12 +3957,12 @@ class NeedleFinderLogic:
     spacing = volumeNode.GetSpacing()
     # chrono starts
     self.t0 = time.clock()
-    
-    if 0: # why again detecting needles ???
-      for i in xrange(len(tips)):
-        A=tips[i]
-        colorVar = i/(len(tips))
-        self.needleDetectionThread(A, imageData, colorVar,spacing)
+
+
+    for i in range(len(tips)):
+      A=tips[i]
+      colorVar = i/(len(tips))
+      self.needleDetectionThread(A, imageData, colorVar,spacing, script)
 
     #print tips
     if script == False:
@@ -3816,7 +3986,7 @@ class NeedleFinderLogic:
     s           =   slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetSliceNode()
     offSet      =   s.GetSliceOffset()
     rasVector   =   [0,0,offSet]
-    widget.templateSliceButton.text = "Select Current Axial Slice as Seg. Limit (current: "+str(offSet)+")"
+    widget.templateSliceButton.text = "1. Select Current Axial Slice as Seg. Limit (current: "+str(offSet)+")"
 
     widget.axialSegmentationLimit = int(round(self.ras2ijk(rasVector)[2]))
 
@@ -3828,6 +3998,10 @@ class NeedleFinderLogic:
     fd.SetVisibility(1)
     fd.SetColor([0,1,0])
     widget.fiducialButton.setEnabled(1)
+
+    ### Add crosshair
+    crosshairNode = slicer.util.getNode("Crosshair")
+    crosshairNode.SetCrosshairMode(slicer.vtkMRMLCrosshairNode().ShowIntersection)
 
   def exportEvaluation(self,results,url):
     """ Export evaluation results to a CSV file
@@ -3958,6 +4132,7 @@ class NeedleFinderLogic:
                             widget.nbRotatingIterations.value,
                             widget.stepsize.value,
                             widget.gradientPonderation.value,
+                            widget.exponent.value,
                             widget.gaussianAttenuationButton.isChecked()*1,
                             widget.sigmaValue.value]
 
