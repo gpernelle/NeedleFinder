@@ -229,7 +229,7 @@ class NeedleFinderWidget:
     #self.newInsertionButton.setEnabled(0)
 
     #Delete Needle Button 
-    self.deleteNeedleButton = qt.QPushButton('Delete Last Segmented Needle')
+    self.deleteNeedleButton = qt.QPushButton('Delete Last Segmented Needle [Ctrl + Z]')
     segmentationFrame.addRow(self.deleteNeedleButton)
     #self.deleteNeedleButton.connect('clicked()', logic.deleteAllNeedlesFromCurrentSet)
     self.deleteNeedleButton.connect('clicked()', logic.deleteLastNeedle)
@@ -548,8 +548,9 @@ class NeedleFinderWidget:
       """
       #productive #event
       profprint()
-      print "new checked state: ",not self.fiducialButton.checked
-      self.onStartStopGivingNeedleTipsToggled(not self.fiducialButton.checked)
+      if self.fiducialButton.isEnabled():
+        print "new checked state: ",not self.fiducialButton.checked
+        self.onStartStopGivingNeedleTipsToggled(not self.fiducialButton.checked)
 
   def cleanup(self):
     """
@@ -818,6 +819,13 @@ class NeedleFinderWidget:
         self.logic.needleDetectionThread(ijk, imageData, colorVar,spacing)
         if self.autoStopTip.isChecked():
           self.logic.needleDetectionUPThread(ijk, imageData, colorVar,spacing)
+        # change requested by Lauren: remove temp marker after detection
+        print "delete temp marker"
+        tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
+        for i in range(tempFidNodes.GetNumberOfItems()):
+          node = tempFidNodes.GetItemAsObject(i)
+          if node:
+            slicer.mrmlScene.RemoveNode(node)
 
   def processEventNeedleValidation(self,observee,event=None):
     """
@@ -1590,8 +1598,8 @@ class NeedleFinderLogic:
     Start a detection for each island (self.needleDetectionThread)
     TODO: multi-processing
     """
-    print "needleDetection"
-    msgbox(whoami())
+    #research #obsolete
+    profbox(whoami())
     # Apply Island Effect
     editUtil = EditorLib.EditUtil.EditUtil()
     parameterNode = editUtil.getParameterNode()
@@ -2841,7 +2849,8 @@ class NeedleFinderLogic:
     """
     #productive #onButton
     profprint(self.getName())
-    if self.lastNeedleNames:
+    widget      = slicer.modules.NeedleFinderWidget
+    if widget.deleteNeedleButton.isEnabled() and self.lastNeedleNames:
       name=self.lastNeedleNames.pop()
       print "removing needle with name: ",name
       while slicer.util.getNodes(name+'*') != {}:
@@ -2902,8 +2911,13 @@ class NeedleFinderLogic:
             ritem = self.model.item(i)
             del ritem
           self.model.removeRows(0, self.model.rowCount())
-        self.model.modelReset() #=None
-        self.view.reset() #=None
+        self.model.modelReset()
+        del self.model
+        self.model=None
+        self.view.reset()
+        slicer.modules.NeedleFinderWidget.analysisGroupBoxLayout.removeWidget(self.view)
+        del self.view
+        self.view=None
         self.initTableView()
 
       ### Leave the needle detection mode
