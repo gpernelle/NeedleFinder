@@ -30,7 +30,6 @@ redoing the parameter search with it.
 
 import unittest
 import math, time, operator
-import EditorLib
 import numpy
 import numpy as np
 import random
@@ -527,8 +526,7 @@ class NeedleFinderWidget:
     self.setupShortcuts()
 
   def keyPressEvent(self,event):
-
-	print "You Pressed: "+event.text()
+    print "You Pressed: "+event.text()
 
   def setupShortcuts(self):
     """Set up hot keys for various development scenarios"""
@@ -546,7 +544,13 @@ class NeedleFinderWidget:
       print "SlicerRC - '%s' -> '%s'" % (keys, f.__name__)
 
   def segmentNeedle(self):
-      self.onStartStopGivingNeedleTipsToggled()
+      """
+      helper function for Ctrl+Enter
+      """
+      #productive #event
+      profprint()
+      print "new checked state: ",not self.fiducialButton.checked
+      self.onStartStopGivingNeedleTipsToggled(not self.fiducialButton.checked)
 
   def cleanup(self):
     """
@@ -617,16 +621,15 @@ class NeedleFinderWidget:
     #productive
     profprint()
     widget = slicer.modules.NeedleFinderWidget
+    self.fiducialButton.checked = checked
     if checked:
-      self.fiducialButton.checked = 1
       self.startGivingControlPointsButton.checked = 0
       self.fiducialObturatorButton.checked = 0
       self.start()
-      self.fiducialButton.text = "2. Stop Giving Tips"
+      self.fiducialButton.text = "2. Stop Giving Needle Tips [CTRL + ENTER]"
     else:
-      self.fiducialButton.checked = 0
       self.stop()
-      self.fiducialButton.text = "2. Start Giving Needle Tips"
+      self.fiducialButton.text = "2. Start Giving Needle Tips [CTRL + ENTER]"
       widget.resetDetectionButton.setEnabled(1)
       tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
       for i in range(tempFidNodes.GetNumberOfItems()):
@@ -643,7 +646,7 @@ class NeedleFinderWidget:
     profprint()
     if checked:
       self.fiducialButton.checked = 0
-      self.fiducialButton.text = "Start Giving Needle Tips"
+      self.fiducialButton.text = "2. Start Giving Needle Tips [CTRL + ENTER]"
       self.startGivingControlPointsButton.checked = 0
       self.start(self.obturatorNeedleTipClicks)
       self.fiducialObturatorButton.text = "Stop Giving Obturator Needle Tips"  
@@ -661,7 +664,7 @@ class NeedleFinderWidget:
     if checked:
       self.fiducialObturatorButton.checked = 0
       self.fiducialButton.checked = 0
-      self.fiducialButton.text = "Start Giving Needle Tips"
+      self.fiducialButton.text = "2. Start Giving Needle Tips [CTRL + ENTER]"
       self.start(self.needleValidationClicks)
       self.startGivingControlPointsButton.text = "Stop Giving Control Points"  
     else:
@@ -784,7 +787,8 @@ class NeedleFinderWidget:
       if event == "KeyReleaseEvent" and key == 'Shift_L' or key == 'Shift_R':
         # print event
         tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
-        if tempFidNodes.GetNumberOfItems()>0:  # if fiducial exists, move it to new location
+        # if fiducial exists, move it to new location
+        if tempFidNodes.GetNumberOfItems()>0:
           for i in range(tempFidNodes.GetNumberOfItems()):
                 node = tempFidNodes.GetItemAsObject(i)
                 if node:
@@ -804,7 +808,6 @@ class NeedleFinderWidget:
           textNode.SetTextScale(4)
           textNode.SetColor(1,1,0)
 
-
       elif event == "LeftButtonPressEvent": # mouse click
         # print event
         self.logic.t0     = time.clock()
@@ -816,7 +819,6 @@ class NeedleFinderWidget:
         self.logic.needleDetectionThread(ijk, imageData, colorVar,spacing)
         if self.autoStopTip.isChecked():
           self.logic.needleDetectionUPThread(ijk, imageData, colorVar,spacing)
-      
 
   def processEventNeedleValidation(self,observee,event=None):
     """
