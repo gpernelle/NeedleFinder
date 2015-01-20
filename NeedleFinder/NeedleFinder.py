@@ -79,9 +79,9 @@ class NeedleFinder:
     parent.title = "NeedleFinder"
     parent.categories = ["IGT"]
     parent.dependencies = []
-    parent.contributors = ["Guillaume Pernelle",  "Alireza Mehrtash", "Lauren Barber", "Nabgha Fahrat", "Sandy Wells", "Yi Gao", "Antonio Damato", "Tina Kapur", "Akila Viswanathan"]
+    parent.contributors = ["Guillaume Pernelle","Andre Mastmeyer",  "Alireza Mehrtash", "Lauren Barber", "Nabgha Fahrat", "Sandy Wells", "Yi Gao", "Antonio Damato", "Tina Kapur", "Akila Viswanathan"]
     parent.helpText = "https://github.com/gpernelle/NeedleFinder/wiki";
-    parent.acknowledgementText = " Version : " + "NeedleFinder v1.0."
+    parent.acknowledgementText = " Version : " + "NeedleFinder 2015 v1.0."
     self.NeedleFinderWidget = 0
     self.parent = parent
     try:
@@ -211,7 +211,7 @@ class NeedleFinderWidget:
     #1 Define template
     self.templateSliceButton =  qt.QPushButton('1. Select Current Axial Slice as Seg. Limit (current: None)')
     segmentationFrame.addRow(self.templateSliceButton)
-    self.templateSliceButton.connect('clicked()', logic.selectCurrentAxialSlice)
+    self.templateSliceButton.connect('clicked()', logic.placeAxialLimitMarker)
     self.templateSliceButton.setEnabled(1)
 
     #2 give needle tips
@@ -857,7 +857,7 @@ class NeedleFinderWidget:
       
       self.logic.t0         = time.clock()
       slicer.modules.NeedleFinderWidget.stepNeedle += 1
-      self.logic.needleValidation(ijk, imageData, colorVar,spacing)
+      self.logic.placeNeedleShaftEvalMarker(ijk, imageData, colorVar,spacing)
 
     # if self.sliceWidgetsPerStyle.has_key(observee) and event == "LeaveEvent":
       # self.stop()
@@ -1629,7 +1629,7 @@ class NeedleFinderLogic:
       if slicer.modules.NeedleFinderWidget.autoStopTip.isChecked():
         self.needleDetectionUPThread(A, imageData, colorVar,spacing)
 
-  def needleValidation(self,A, imageData,colorVar,spacing):
+  def placeNeedleShaftEvalMarker(self,A, imageData,colorVar,spacing):
     """
     Add a fiducial point to the vtkMRMLScence, where the mouse click was triggered. The fiducial points reprents a control
     point for a manually segmented needle (validation needle)
@@ -1918,7 +1918,16 @@ class NeedleFinderLogic:
     numberOfPointsPerNeedle     = max(1,widget.numberOfPointsPerNeedle.value-1)
     nbRotatingIterations        = widget.nbRotatingIterations.value
     radiusNeedleParameter       = widget.radiusNeedleParameter.value
-    axialSegmentationLimit      = widget.axialSegmentationLimit
+    asl                         = widget.axialSegmentationLimit
+    try:
+      nodes = slicer.util.getNodes('template slice position*')
+      polyData=nodes.values()[0].GetPolyData()
+      asl=self.ras2ijk(polyData.GetPoint(0))[2]
+      print "limit marker found in scene, z-limit: ",asl
+    except:
+      print "/!\ no z-limit marker in scene (required)!"
+      msgbox("/!\ no z-limit marker in scene (required)!")
+    axialSegmentationLimit      = asl
     lenghtNeedleParameter       = widget.lenghtNeedleParameter.value/(spacing[2])
     autoCorrectTip              = widget.autoCorrectTip.isChecked()
     exponent                    = widget.exponent.value
@@ -3927,8 +3936,8 @@ class NeedleFinderLogic:
   """
   #----------------------------------------------------------------------------------------------
   
-  def returnTips(self):
-    """ Returns the IJK coordinates of the tips of manually segmented needles
+  def returnTipsFromNeedleModels(self):
+    """ Returns the IJK coordinates of the tips of manually segmented needle polygon models
 
     :return: array of IJK coordinates of validation needle tips
     """
@@ -3943,7 +3952,7 @@ class NeedleFinderLogic:
         if node.GetAttribute('type')=='Validation':
             polydata = node.GetPolyData()
             p,pbis=[0,0,0],[0,0,0]
-            if polydata.GetNumberOfPoints()>100:
+            if polydata.GetNumberOfPoints()>100: #??? this is risky when u have other models in the scene (not only neeedles(
                 polydata.GetPoint(0,p)
                 polydata.GetPoint(int(polydata.GetNumberOfPoints()-1),pbis)
                 if pbis[2]>p[2]:
@@ -3954,7 +3963,7 @@ class NeedleFinderLogic:
 
   def startValidation(self, script=False):
     """Start the evaluation process:
-    * Calls returnTips() to build an array of the tip of manually segmented needles
+    * Calls returnTipsFromNeedleModels() to build an array of the tip of manually segmented needles
     * Use theses tips to generate auto segmented needles
     * Calls evaluate() to compute the Hausdorff's distance between every pair of needles
 
@@ -3962,7 +3971,9 @@ class NeedleFinderLogic:
     """
     #productive #button
     profprint()
-    tips= self.returnTips()
+    tips= self.returnTipsFromNeedleModels()
+    # delete old needles as they will be recalculated
+    self.deleteAllNeedlesFromCurrentSet()
     # select the image node from the Red slice viewer
     m=vtk.vtkMatrix4x4()
     volumeNode = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
@@ -3971,7 +3982,6 @@ class NeedleFinderLogic:
     spacing = volumeNode.GetSpacing()
     # chrono starts
     self.t0 = time.clock()
-
 
     for i in range(len(tips)):
       A=tips[i]
@@ -3986,7 +3996,7 @@ class NeedleFinderLogic:
         for i in range(len(t)):
             print t[i][0]
 
-  def selectCurrentAxialSlice(self):
+  def placeAxialLimitMarker(self):
     """
     Get the K (of IJK) value of the current axial slice. 
     Used to define the slice containing the template
