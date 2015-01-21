@@ -231,7 +231,7 @@ class NeedleFinderWidget:
     #Delete Needle Button 
     self.deleteNeedleButton = qt.QPushButton('Delete Last Segmented Needle [Ctrl + Z]')
     segmentationFrame.addRow(self.deleteNeedleButton)
-    #self.deleteNeedleButton.connect('clicked()', logic.deleteAllNeedlesFromCurrentSet)
+    #self.deleteNeedleButton.connect('clicked()', logic.deleteAllNeedlesFromScene)
     self.deleteNeedleButton.connect('clicked()', logic.deleteLastNeedle)
     self.deleteNeedleButton.setEnabled(0)
 
@@ -1921,9 +1921,15 @@ class NeedleFinderLogic:
     asl                         = widget.axialSegmentationLimit
     try:
       nodes = slicer.util.getNodes('template slice position*')
-      polyData=nodes.values()[0].GetPolyData()
-      asl=self.ras2ijk(polyData.GetPoint(0))[2]
-      print "limit marker found in scene, z-limit: ",asl
+      found=False
+      for node in nodes.values():
+        coord       = [0,0,0]
+        node.GetFiducialCoordinates(coord)
+        asl=int(round(self.ras2ijk(coord)[2]))
+        print "limit marker found in scene, z-limit [ras]: ",coord[2]
+        if found:
+          print "/!\ there should be only one limit marker!"
+        found = True
     except:
       print "/!\ no z-limit marker in scene (required)!"
       msgbox("/!\ no z-limit marker in scene (required)!")
@@ -2802,7 +2808,7 @@ class NeedleFinderLogic:
     elif not script:
       self.addNeedleToTable(int(model.GetID().strip('vtkMRMLModelNode')),label)
 
-  def deleteAllNeedlesFromCurrentSet(self):
+  def deleteAllNeedlesFromScene(self):
     """
     Delete every segmented needle of the current set
     """
@@ -3973,7 +3979,7 @@ class NeedleFinderLogic:
     profprint()
     tips= self.returnTipsFromNeedleModels()
     # delete old needles as they will be recalculated
-    self.deleteAllNeedlesFromCurrentSet()
+    self.deleteAllNeedlesFromScene()
     # select the image node from the Red slice viewer
     m=vtk.vtkMatrix4x4()
     volumeNode = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
