@@ -40,8 +40,8 @@ import SimpleITK as sitk
 import sitkUtils
 import os.path
 import time as t
-
 import vtk, qt, ctk, slicer
+import EditorLib
 
 def whoami():
     return inspect.stack()[1][3]
@@ -2264,8 +2264,10 @@ class NeedleFinderLogic:
       self.addNeedleToScene(self.controlPoints,colorVar, 'Detection', script)
   
   def needleDetectionThread13_1(self,A, imageData,colorVar,spacing,script=False):
-    '''MICCAI2013 version variant 1
+    '''MICCAI2013 version variant 1, 3/11/13
+    iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
     https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
+    
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
     The second extremity of this segment is saved as a control point (in controlPoints), used later. 
     Then, this step is iterated, replacing the needle tip by the latest control point. 
@@ -2470,8 +2472,10 @@ class NeedleFinderLogic:
       self.addNeedleToScene(controlPoints,colorVar, 'Detection', script)
   
   def needleDetectionThread13_2(self,A, imageData,colorVar,spacing,script=False):
-    '''MICCAI13 Variant2
+    '''MICCAI13 Variant2 2/27/13
+    iGyne_old 4450bbcb543e7432122f06c1905aab4eb8b446e6
     https://github.com/gpernelle/iGyne_old/commit/4450bbcb543e7432122f06c1905aab4eb8b446e6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
+    
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
     The second extremity of this segment is saved as a control point (in controlPoints), used later. 
     Then, this step is iterated, replacing the needle tip by the latest control point. 
@@ -3385,15 +3389,14 @@ class NeedleFinderLogic:
       widget.stop()
       widget.fiducialButton.text = "2. Start Giving Needle Tips"
 
-      #reset button states
+      #reset button and parameter states
       widget.templateSliceButton.setEnabled(1)
       widget.fiducialButton.setEnabled(0)
       widget.deleteNeedleButton.setEnabled(0)
       widget.resetDetectionButton.setEnabled(0)
       self.deleteAllModelsFromScene()
       widget.templateSliceButton.text = "1. Select Current Axial Slice as Seg. Limit (current: None)"
-
-
+      widget.onReset()
 
   def resetNeedleValidation(self):
     """
@@ -4412,8 +4415,8 @@ class NeedleFinderLogic:
     #print tips
     if script == False:
         t = self.evaluate()
-        print '#######################'
-        print 'New Validation Results:'
+        print '###############################'
+        print 'New HD Validation Results [mm]:'
         for i in range(len(t)):
             print t[i][0]
 
@@ -4485,9 +4488,6 @@ class NeedleFinderLogic:
            :align: center
 
     .. [HD] http://en.wikipedia.org/wiki/Hausdorff_distance
-
-
-
     """
     #productive #math
     profprint()
@@ -4556,6 +4556,73 @@ class NeedleFinderLogic:
           minima.append(0)
     hausdorff21 = max(minima)
     return max(hausdorff12,hausdorff21)
+  
+  def hausdorffDistance13(self,id1,id2):
+    """MICCAI13 Version
+    iGyne_old 4450bbcb543e7432122f06c1905aab4eb8b446e6
+    """
+    #productive #math
+    profprint()
+    node1 = slicer.mrmlScene.GetNodeByID(id1)
+    polydata1=node1.GetPolyData()
+    node2 = slicer.mrmlScene.GetNodeByID(id2)
+    polydata2=node2.GetPolyData()
+    nb1 = polydata1.GetNumberOfPoints()
+    nb2 = polydata2.GetNumberOfPoints()
+    minimum=None
+    maximum=None
+    JJ,jj=None,None
+    II,ii=None,None
+    pt1=[0,0,0]
+    pt2=[0,0,0]
+    polydata1.GetPoint(1,pt1)
+    polydata1.GetPoint(nb1-1,pt2)
+    minVal1=min(pt1[2],pt2[2])
+    maxVal1=max(pt1[2],pt2[2])
+    pt1=[0,0,0]
+    pt2=[0,0,0]
+    pt1b,pt2b=None,None
+    polydata2.GetPoint(1,pt1)
+    polydata2.GetPoint(nb2-1,pt2)
+    minVal2 = min(pt1[2],pt2[2])
+    maxVal2 = max(pt1[2],pt2[2])
+    valueBase=max(minVal1,minVal2)
+    valueTip=min(maxVal1,maxVal2)
+    cellId=vtk.mutable(1)
+    subid=vtk.mutable(1)
+    dist=vtk.mutable(1)
+    cl2=vtk.vtkCellLocator()
+    cl2.SetDataSet(polydata2)
+    cl2.BuildLocator()
+    # Hausforff 1 -> 2
+    minima=[]
+    for i in range(int(nb1/float(100))):
+      pt=[0,0,0]
+      polydata1.GetPoint(100*i,pt)
+      closest=[0,0,0]
+      cl2.FindClosestPoint(pt,closest,cellId,subid,dist)
+      if abs(closest[2]-pt[2])<=1:
+        minima.append(self.distance(pt,closest))
+      else:
+          minima.append(0)
+    hausdorff12 = max(minima)
+    
+    # Hausforff 2 -> 1
+    minima=[]
+    cl1=vtk.vtkCellLocator()
+    cl1.SetDataSet(polydata1)
+    cl1.BuildLocator()
+    for i in range(int(nb2/float(10))):
+      pt=[0,0,0]
+      polydata2.GetPoint(10*i,pt)
+      closest=[0,0,0]
+      cl1.FindClosestPoint(pt,closest,cellId,subid,dist)
+      if abs(closest[2]-pt[2])<=1:
+        minima.append(self.distance(pt,closest))
+      else:
+          minima.append(0)
+    hausdorff21 = max(minima)
+    return max(hausdorff12,hausdorff21)
 
   def evaluate(self, script = False):
     """
@@ -4582,7 +4649,10 @@ class NeedleFinderLogic:
                             widget.sigmaValue.value]
 
     for i in range(len(result)):
-      val=self.hausdorffDistance(result[i][1],result[i][2])
+      if widget.algoVersParameter.value == 1:
+        val=self.hausdorffDistance(result[i][1],result[i][2])
+      else:
+        val=self.hausdorffDistance13(result[i][1],result[i][2])
       if script == True:
         results = [float(val),int(result[i][1].strip('vtkMRMLModelNode')),int(result[i][2].strip('vtkMRMLModelNode'))] + self.valuesExperience
       else:
@@ -5306,7 +5376,7 @@ class NeedleFinderLogic:
     widget.lenghtNeedleParameter.value    = lenghtNeedleParameter
     widget.radiusNeedleParameter.value    = radiusNeedleParameter
     widget.algoVersParameter.value        = algoVersParameter
-
+    print "algoVers: ",algoVersParameter
     print "Parameters successfully loaded!"
     
 """
