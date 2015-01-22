@@ -315,7 +315,7 @@ class NeedleFinderWidget:
     # Auto correct tip position?
     self.autoCorrectTip = qt.QCheckBox('Auto correct tip position?')
     parameterFrame.addRow(self.autoCorrectTip)
-    self.autoCorrectTip.setChecked(1)
+    self.autoCorrectTip.setChecked(0)
 
     # Look for needles in CT?
     self.invertedContrast = qt.QCheckBox('Search for bright needles (CT)?')
@@ -452,6 +452,14 @@ class NeedleFinderWidget:
     self.radiusNeedleParameter.setValue(2)
     radiusLabel = qt.QLabel("Radius of the needles (mm): ")
     parameterFrame.addRow( radiusLabel, self.radiusNeedleParameter)
+    
+    #algo
+    self.algoVersParameter = qt.QSpinBox()
+    self.algoVersParameter.setMinimum(1)
+    self.algoVersParameter.setMaximum(3)
+    self.algoVersParameter.setValue(1)
+    algoLabel = qt.QLabel("Needle detection version: ")
+    parameterFrame.addRow( algoLabel, self.algoVersParameter)
     
     # Research/dev. area#################################
     self.__devFrame = ctk.ctkCollapsibleButton()
@@ -1513,7 +1521,17 @@ class NeedleFinderLogic:
     F = self.Fibonacci(l)
     s =F[k+1]/float(sum(self.Fibonacci(l)))
     return s
-
+  
+  def stepSize13(self,k,l):
+    '''MICCAI13 version
+    The size of the step depends on:
+    - the length of the needle
+    - how many control points per needle 
+    '''
+    F = self.Fibonacci(l+1)
+    s =(sum(self.Fibonacci(k+1),-1)+F[k+1])/float(sum(self.Fibonacci(l+1),-1))
+    return s
+  
   def sortTable(self, table, cols):
     """ 
     sort a table by multiple columns
@@ -1880,8 +1898,46 @@ class NeedleFinderLogic:
   #
   #------------------------------------------------------------------------------
 
-
+  def findAxialSegmentationLimitFromMarker(self):
+    """
+    Find the limit marker in the scene and return its z-coord.
+    """
+    #productive 
+    profprint()
+    asl=0
+    try:
+      nodes = slicer.util.getNodes('template slice position*')
+      found=False
+      for node in nodes.values():
+        coord       = [0,0,0]
+        node.GetFiducialCoordinates(coord)
+        asl=int(round(self.ras2ijk(coord)[2]))
+        print "limit marker found in scene, z-limit [ras]: ",coord[2]
+        if found:
+          print "/!\ there should be only one limit marker!"
+        found = True
+    except:
+      print "/!\ no z-limit marker in scene (required)!"
+      msgbox("/!\ no z-limit marker in scene (required)!")
+    return asl
+    
   def needleDetectionThread(self,A, imageData,colorVar,spacing, script=False):
+    """
+    Switches between the versions of the algorithm. For comparison tests.
+    """
+    #productive #onbutton
+    profprint()
+    widget = slicer.modules.NeedleFinderWidget
+    widget.axialSegmentationLimit=self.findAxialSegmentationLimitFromMarker()
+    # select algo version
+    if widget.algoVersParameter.value == 1:
+      self.needleDetectionThreadCurrentDev(A, imageData,colorVar,spacing, script)
+    if widget.algoVersParameter.value == 2:
+      self.needleDetectionThread13_1(A, imageData,colorVar,spacing, script)
+    if widget.algoVersParameter.value == 3:
+      self.needleDetectionThread13_2(A, imageData,colorVar,spacing, script)
+      
+  def needleDetectionThreadCurrentDev(self,A, imageData,colorVar,spacing, script=False):
     """
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
     The second extremity of this segment is saved as a control point (in controlPoints), used later. 
@@ -1918,22 +1974,7 @@ class NeedleFinderLogic:
     numberOfPointsPerNeedle     = max(1,widget.numberOfPointsPerNeedle.value-1)
     nbRotatingIterations        = widget.nbRotatingIterations.value
     radiusNeedleParameter       = widget.radiusNeedleParameter.value
-    asl                         = widget.axialSegmentationLimit
-    try:
-      nodes = slicer.util.getNodes('template slice position*')
-      found=False
-      for node in nodes.values():
-        coord       = [0,0,0]
-        node.GetFiducialCoordinates(coord)
-        asl=int(round(self.ras2ijk(coord)[2]))
-        print "limit marker found in scene, z-limit [ras]: ",coord[2]
-        if found:
-          print "/!\ there should be only one limit marker!"
-        found = True
-    except:
-      print "/!\ no z-limit marker in scene (required)!"
-      msgbox("/!\ no z-limit marker in scene (required)!")
-    axialSegmentationLimit      = asl
+    axialSegmentationLimit      = widget.axialSegmentationLimit
     lenghtNeedleParameter       = widget.lenghtNeedleParameter.value/(spacing[2])
     autoCorrectTip              = widget.autoCorrectTip.isChecked()
     exponent                    = widget.exponent.value
@@ -2223,7 +2264,413 @@ class NeedleFinderLogic:
     
     if not autoStopTip:
       self.addNeedleToScene(self.controlPoints,colorVar, 'Detection', script)
+  
+  def needleDetectionThread13_1(self,A, imageData,colorVar,spacing,script=False):
+    '''MICCAI2013 version variant 1
+    https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
+    From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
+    The second extremity of this segment is saved as a control point (in controlPoints), used later. 
+    Then, this step is iterated, replacing the needle tip by the latest control point. 
+    The height of the new conic region (stepsize) is increased as well as its base diameter (rMax) and its normal is collinear to the previous computed segment. (cf. C0) 
+    NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
+    From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
+    '''
     
+    ### initialisation of the parameters
+    ijk         = [0,0,0]
+    bestPoint   = [0,0,0]
+    widget = slicer.modules.NeedleFinderWidget
+
+    ### load parameters from GUI
+    distanceMax                 = widget.distanceMax.value
+    gradientPonderation         = widget.gradientPonderation.value
+    sigmaValue                  = widget.sigmaValue.value
+    stepsize                    = widget.stepsize.value
+    gaussianAttenuationChecked  = widget.gaussianAttenuationButton.isChecked()
+    lookNeighborhood            = widget.gradient.isChecked()
+    numberOfPointsPerNeedle     = widget.numberOfPointsPerNeedle.value
+    nbRotatingIterations        = widget.nbRotatingIterations.value
+    radiusNeedleParameter       = widget.radiusNeedleParameter.value
+    axialSegmentationLimit      = widget.axialSegmentationLimit
+    autoStopTip                 = widget.autoStopTip.isChecked()
+
+    ### length needle = distance Aijk[2]*0.9
+    # lenghtNeedle = abs(self.ijk2ras(A)[2]*0.9)
+
+    if axialSegmentationLimit!=None:
+      lenghtNeedle = abs(A[2] - axialSegmentationLimit)*1.15*spacing[2]
+    else:
+      lenghtNeedle = A[2]*0.9*spacing[2]
+    
+    rMax            = distanceMax/float(spacing[0])
+    NbStepsNeedle   = numberOfPointsPerNeedle - 1
+    nbRotatingStep  = nbRotatingIterations
+
+    dims            =[0,0,0]
+    imageData.GetDimensions(dims)
+    pixelValue      = numpy.zeros(shape=(dims[0],dims[1],dims[2]))
+    
+    A0              = A
+    print A0
+    
+    controlPoints       = []
+    controlPointsIJK    = []
+    bestControlPoints   = []
+
+    controlPoints.append(self.ijk2ras(A))
+    controlPointsIJK.append(A)
+    bestControlPoints.append(self.ijk2ras(A))
+
+    for step in range(0,NbStepsNeedle+2):
+      print "length", lenghtNeedle
+      #step 0
+      #------------------------------------------------------------------------------
+      if step==0:
+
+        L       = self.stepSize13(step+1,NbStepsNeedle+1)*lenghtNeedle
+        C0      = [A[0],A[1],A[2]- L]
+        rMax    = distanceMax/float(spacing[0])
+        rIter   = int(round(rMax))
+        tIter   = max(1,int(round(L)))
+
+      #step 1,2,...
+      #------------------------------------------------------------------------------
+      else:
+
+        stepSize = self.stepSize13(step+1,NbStepsNeedle+1)*lenghtNeedle
+        print stepSize
+
+        C0      = [ 2*A[0]-tip0[0],
+                    2*A[1]-tip0[1],
+                    A[2]-stepSize   ]
+
+        rMax    = max(stepSize,distanceMax/float(spacing[0]))
+        rIter   = max(15,min(20,int(rMax/float(spacing[0]))))
+        tIter   = max(1,int(round(stepSize)))
+        
+      estimator     = 0
+      minEstimator  = 0  
+
+      #radius variation
+      for R in range(rIter+1):
+
+        r=R*(rMax/float(rIter))
+        
+        ### angle variation from 0 to 360
+        for thetaStep in xrange(nbRotatingStep ):
+          
+          angleInDegree = (thetaStep*360)/float(nbRotatingStep)
+          theta         = math.radians(angleInDegree)
+
+          C             = [ C0[0]+r*(math.cos(theta)),
+                            C0[1]+r*(math.sin(theta)),
+                            C0[2]]
+
+          total     = 0
+          M         = [[0,0,0] for i in xrange(tIter+1)]
+          
+         
+          # calculates tIter = number of points per segment 
+          for t in xrange(tIter+1):
+
+            tt  = t/float(tIter)
+            
+            # x,y,z coordinates
+            for i in range(3):
+              
+              M[t][i]   = (1-tt)*A[i] + tt*C[i]
+              ijk[i]    = int(round(M[t][i]))
+              
+            # first, test if points are in the image space 
+            if ijk[0]<dims[0] and ijk[0]>0 and  ijk[1]<dims[1] and ijk[1]>0 and ijk[2]<dims[2] and ijk[2]>0:
+              
+              center    = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
+              total     += center
+              if lookNeighborhood ==1 :
+
+                radiusNeedle        = int(round(radiusNeedleParameter/float(spacing[0])))
+                radiusNeedleCorner  = int(round((radiusNeedleParameter/float(spacing[0])/1.414)))
+                
+                g1 = imageData.GetScalarComponentAsDouble(ijk[0]+radiusNeedle, ijk[1], ijk[2], 0)
+                g2 = imageData.GetScalarComponentAsDouble(ijk[0]-radiusNeedle, ijk[1], ijk[2], 0)
+                g3 = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1]+radiusNeedle, ijk[2], 0)
+                g4 = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1]-radiusNeedle, ijk[2], 0)
+                g5 = imageData.GetScalarComponentAsDouble(ijk[0]+radiusNeedleCorner, ijk[1]+radiusNeedleCorner, ijk[2], 0)                    
+                g6 = imageData.GetScalarComponentAsDouble(ijk[0]-radiusNeedleCorner, ijk[1]-radiusNeedleCorner, ijk[2], 0)
+                g7 = imageData.GetScalarComponentAsDouble(ijk[0]-radiusNeedleCorner, ijk[1]+radiusNeedleCorner, ijk[2], 0)
+                g8 = imageData.GetScalarComponentAsDouble(ijk[0]+radiusNeedleCorner, ijk[1]-radiusNeedleCorner, ijk[2], 0)
+                
+                total += 8*center - ((g1+g2+g3+g4+g5+g6+g7+g8)/8)*gradientPonderation
+              
+          if R==0:
+            
+            initialIntensity    = total
+            estimator           = total
+            
+          if gaussianAttenuationChecked==1 and step>=2 :
+            
+            if tip0[2]-A[2]!=0:
+            
+                stepSize    =(A[2] - C0[2])
+                K           =stepSize/float(tip0[2]-A[2])
+
+                X           = [ A[0] + K * (A[0]-tip0[0]),
+                                A[1] + K * (A[1]-tip0[1]),
+                                A[2] + K * (A[2]-tip0[2]) ]
+
+                rgauss      = (  (C[0]-X[0])**2 
+                                +(C[1]-X[1])**2
+                                +(C[2]-X[2])**2 )**0.5
+
+                gaussianAttenuation = math.exp(-(rgauss/float(rMax))**2/float((2*(sigmaValue/float(10))**2)))   # 1 for x=0, 0.2 for x=5
+                estimator           = (total)*gaussianAttenuation
+            else:
+                estimator = total
+
+
+          else:
+            estimator = (total)
+       
+          if estimator<initialIntensity:
+
+            if estimator<minEstimator or minEstimator == 0:
+              minEstimator  = estimator
+              if minEstimator!=0:  
+                bestPoint   = C
+        
+           
+      tip0  = A
+      if bestPoint==[0,0,0]:
+        A   = C0
+      elif bestPoint!=tip0: 
+        A   = bestPoint
+ 
+
+      if A[2]<axialSegmentationLimit and A!=A0:
+        
+        asl = axialSegmentationLimit
+        l   = (A[2]-asl)/float(tip0[2]-A[2])
+
+        A   =[  A[0] - l*(tip0[0]-A[0]),
+                A[1] - l*(tip0[1]-A[1]),
+                A[2] - l*(tip0[2]-A[2])]
+
+      controlPoints.append(self.ijk2ras(A))
+      controlPointsIJK.append(A)
+
+      if widget.drawFiducialPoints.isChecked():
+        fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+        fiducial.Initialize(slicer.mrmlScene)
+        fiducial.SetName('.')
+        fiducial.SetFiducialCoordinates(controlPoints[step+1])
+
+      if A[2]<=axialSegmentationLimit and A!=A0:
+        break
+    
+    #self.addNeedleToScene(controlPoints,colorVar)  
+    if not autoStopTip:
+      self.addNeedleToScene(controlPoints,colorVar, 'Detection', script)
+  
+  def needleDetectionThread13_2(self,A, imageData,colorVar,spacing,script=False):
+    '''MICCAI13 Variant2
+    https://github.com/gpernelle/iGyne_old/commit/4450bbcb543e7432122f06c1905aab4eb8b446e6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
+    From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
+    The second extremity of this segment is saved as a control point (in controlPoints), used later. 
+    Then, this step is iterated, replacing the needle tip by the latest control point. 
+    The height of the new conic region (stepsize) is increased as well as its base diameter (rMax) and its normal is collinear to the previous computed segment. (cf. C0) 
+    NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
+    From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
+    '''
+    
+    ### initialisation of the parameters
+    ijk         = [0,0,0]
+    bestPoint   = [0,0,0]
+    widget = slicer.modules.NeedleFinderWidget
+
+    ### load parameters from GUI
+    distanceMax                 = widget.distanceMax.value
+    gradientPonderation         = widget.gradientPonderation.value
+    sigmaValue                  = widget.sigmaValue.value
+    stepsize                    = widget.stepsize.value
+    gaussianAttenuationChecked  = widget.gaussianAttenuationButton.isChecked()
+    lookNeighborhood            = widget.gradient.isChecked()
+    numberOfPointsPerNeedle     = widget.numberOfPointsPerNeedle.value
+    nbRotatingIterations        = widget.nbRotatingIterations.value
+    radiusNeedleParameter       = widget.radiusNeedleParameter.value
+    axialSegmentationLimit      = widget.axialSegmentationLimit
+    autoStopTip                 = widget.autoStopTip.isChecked()
+
+    ### length needle = distance Aijk[2]*0.9
+    lenghtNeedle = self.ijk2ras(A)[2]*0.9
+    
+    rMax            = distanceMax/float(spacing[0])
+    NbStepsNeedle   = numberOfPointsPerNeedle - 1
+    nbRotatingStep  = nbRotatingIterations
+
+    dims            =[0,0,0]
+    imageData.GetDimensions(dims)
+    pixelValue      = numpy.zeros(shape=(dims[0],dims[1],dims[2]))
+    
+    A0              = A
+    print A0
+    
+    controlPoints       = []
+    controlPointsIJK    = []
+    bestControlPoints   = []
+
+    controlPoints.append(self.ijk2ras(A))
+    controlPointsIJK.append(A)
+    bestControlPoints.append(self.ijk2ras(A))
+
+    for step in range(0,NbStepsNeedle+2):
+      
+      #step 0
+      #------------------------------------------------------------------------------
+      if step==0:
+
+        L       = 20/float(spacing[2])
+        C0      = [A[0],A[1],A[2]- L]
+        rMax    = distanceMax/float(spacing[0])
+        rIter   = max(1,int(round(rMax)))
+        tIter   = max(1,int(round(L)))
+
+      #step 1,2,...
+      #------------------------------------------------------------------------------
+      else:
+
+        stepSize = max(self.stepSize13(step,NbStepsNeedle+1)*lenghtNeedle,stepsize/float(spacing[2]))
+
+        C0      = [ 2*A[0]-tip0[0],
+                    2*A[1]-tip0[1],
+                    A[2]-stepSize   ]
+
+        rMax    = max(stepSize,distanceMax/float(spacing[0]))
+        rIter   = max(15,min(20,int(rMax/float(spacing[0]))))
+        #tIter   = stepSize
+        tIter = max(1,int(round(stepSize)))
+        
+      estimator     = 0
+      minEstimator  = 0  
+
+      #radius variation
+      for R in range(rIter+1):
+
+        r=R*(rMax/float(rIter))
+        
+        ### angle variation from 0 to 360
+        for thetaStep in xrange(nbRotatingStep ):
+          
+          angleInDegree = (thetaStep*360)/float(nbRotatingStep)
+          theta         = math.radians(angleInDegree)
+
+          C             = [ C0[0]+r*(math.cos(theta)),
+                            C0[1]+r*(math.sin(theta)),
+                            C0[2]]
+
+          total     = 0
+          M         = [[0,0,0] for i in xrange(tIter+1)]
+          
+         
+          # calculates tIter = number of points per segment 
+          for t in xrange(tIter+1):
+
+            tt  = t/float(tIter)
+            
+            # x,y,z coordinates
+            for i in range(3):
+              
+              M[t][i]   = (1-tt)*A[i] + tt*C[i]
+              ijk[i]    = int(round(M[t][i]))
+              
+            # first, test if points are in the image space 
+            if ijk[0]<dims[0] and ijk[0]>0 and  ijk[1]<dims[1] and ijk[1]>0 and ijk[2]<dims[2] and ijk[2]>0:
+              
+              center    = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
+              total     += center
+              if lookNeighborhood ==1 :
+
+                radiusNeedle        = int(round(radiusNeedleParameter/float(spacing[0])))
+                radiusNeedleCorner  = int(round((radiusNeedleParameter/float(spacing[0])/1.414)))
+                
+                g1 = imageData.GetScalarComponentAsDouble(ijk[0]+radiusNeedle, ijk[1], ijk[2], 0)
+                g2 = imageData.GetScalarComponentAsDouble(ijk[0]-radiusNeedle, ijk[1], ijk[2], 0)
+                g3 = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1]+radiusNeedle, ijk[2], 0)
+                g4 = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1]-radiusNeedle, ijk[2], 0)
+                g5 = imageData.GetScalarComponentAsDouble(ijk[0]+radiusNeedleCorner, ijk[1]+radiusNeedleCorner, ijk[2], 0)                    
+                g6 = imageData.GetScalarComponentAsDouble(ijk[0]-radiusNeedleCorner, ijk[1]-radiusNeedleCorner, ijk[2], 0)
+                g7 = imageData.GetScalarComponentAsDouble(ijk[0]-radiusNeedleCorner, ijk[1]+radiusNeedleCorner, ijk[2], 0)
+                g8 = imageData.GetScalarComponentAsDouble(ijk[0]+radiusNeedleCorner, ijk[1]-radiusNeedleCorner, ijk[2], 0)
+                
+                total += 8*center - ((g1+g2+g3+g4+g5+g6+g7+g8)/8)*gradientPonderation
+              
+          if R==0:
+            
+            initialIntensity    = total
+            estimator           = total
+            
+          if gaussianAttenuationChecked==1 and step>=2 :
+            
+            if tip0[2]-A[2]!=0:
+            
+                stepSize    =(A[2] - C0[2])
+                K           =stepSize/float(tip0[2]-A[2])
+
+                X           = [ A[0] + K * (A[0]-tip0[0]),
+                                A[1] + K * (A[1]-tip0[1]),
+                                A[2] + K * (A[2]-tip0[2]) ]
+
+                rgauss      = (  (C[0]-X[0])**2 
+                                +(C[1]-X[1])**2
+                                +(C[2]-X[2])**2 )**0.5
+
+                gaussianAttenuation = math.exp(-(rgauss/float(rMax))**2/float((2*(sigmaValue/float(10))**2)))   # 1 for x=0, 0.2 for x=5
+                estimator           = (total)*gaussianAttenuation
+            else:
+                estimator = total
+
+
+          else:
+            estimator = (total)
+       
+          if estimator<initialIntensity:
+
+            if estimator<minEstimator or minEstimator == 0:
+              minEstimator  = estimator
+              if minEstimator!=0:  
+                bestPoint   = C
+        
+           
+      tip0  = A
+      if bestPoint==[0,0,0]:
+        A   = C0
+      elif bestPoint!=tip0: 
+        A   = bestPoint
+ 
+      if A[2]<axialSegmentationLimit:
+        
+        asl = axialSegmentationLimit
+        l   = (A[2]-asl)/float(tip0[2]-A[2])
+
+        A   =[  A[0] - l*(tip0[0]-A[0]),
+                A[1] - l*(tip0[1]-A[1]),
+                A[2] - l*(tip0[2]-A[2])]
+
+      controlPoints.append(self.ijk2ras(A))
+      controlPointsIJK.append(A)
+
+      if widget.drawFiducialPoints.isChecked():
+        fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+        fiducial.Initialize(slicer.mrmlScene)
+        fiducial.SetName('.')
+        fiducial.SetFiducialCoordinates(controlPoints[step+1])
+
+      if A[2]<=axialSegmentationLimit:
+        break
+    
+    #self.addNeedleToScene(controlPoints,colorVar)
+    if not autoStopTip:
+      self.addNeedleToScene(controlPoints,colorVar, 'Detection', script)
+      
   #------------------------------------------------------------------------------ 
   #
   #
@@ -4834,6 +5281,7 @@ class NeedleFinderLogic:
     config.set('IntegerSection', 'numberOfPointsPerNeedle', widget.numberOfPointsPerNeedle.value)
     config.set('IntegerSection', 'lenghtNeedleParameter', widget.lenghtNeedleParameter.value)
     config.set('IntegerSection', 'radiusNeedleParameter', widget.radiusNeedleParameter.value)
+    config.set('IntegerSection', 'algoVersParameter', widget.algoVersParameter.value)
 
     # Writing our configuration file to 'example.cfg'
     with open(filePath, 'wb') as configfile:
@@ -4868,6 +5316,7 @@ class NeedleFinderLogic:
     numberOfPointsPerNeedle   = config.getint('IntegerSection', 'numberOfPointsPerNeedle')
     lenghtNeedleParameter     = config.getint('IntegerSection', 'lenghtNeedleParameter')
     radiusNeedleParameter     = config.getint('IntegerSection', 'radiusNeedleParameter')
+    algoVersParameter         = config.getint('IntegerSection', 'algoVersParameter')
     
     widget.autoCorrectTip.checked       = autoCorrectTip
     widget.invertedContrast.checked     = invertedContrast
@@ -4888,6 +5337,7 @@ class NeedleFinderLogic:
     widget.numberOfPointsPerNeedle.value  = numberOfPointsPerNeedle
     widget.lenghtNeedleParameter.value    = lenghtNeedleParameter
     widget.radiusNeedleParameter.value    = radiusNeedleParameter
+    widget.algoVersParameter.value        = algoVersParameter
 
     print "Parameters successfully loaded!"
     
