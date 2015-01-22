@@ -21,6 +21,7 @@ Links
   .. [1] https://www.spl.harvard.edu/publications/item/view/2459
   .. [2] https://www.spl.harvard.edu/publications/item/view/2316
 """
+
 """
 TODO: gaussianAttenuation in NeedleDetectionThread is missing 1/(sigma*(2pi)**0.5)
 meaning the integral of the gaussian is not always 1 - we could see the impact of adding the scaling effect by
@@ -473,6 +474,11 @@ class NeedleFinderWidget:
     # self.needleButton.connect('clicked()', self.needleSegmentation)
     # self.needleButton.setEnabled(0)
 
+    #Segment Needle Button 
+    # self.needleButton2 = qt.QPushButton('Segment/Update Needles - Python')
+    # segmentationFrame.addRow(self.needleButton2)
+    # self.needleButton2.connect('clicked()', self.needleDetection)
+
     # Obturator needle tips
     self.fiducialObturatorButton = qt.QPushButton('Start Giving Obturator Needle Tips')
     self.fiducialObturatorButton.checkable = True
@@ -500,17 +506,12 @@ class NeedleFinderWidget:
     self.parSearchButton.connect('clicked()',logic.parSearch)
     self.parSearchButton.setEnabled(1)
     
-    # Andre's button 
-    self.andres = qt.QPushButton('Andre\'s Button')
-    self.andres.connect('clicked()', logic.andres)
-    
     # devFrame.addRow(self.displayFiducialButton)
     devFrame.addRow(self.fiducialObturatorButton)
     devFrame.addRow(self.displayContourButton)
     devFrame.addRow(self.hideContourButton)
     devFrame.addRow(self.filterButton)
     devFrame.addRow(self.parSearchButton)
-    devFrame.addRow(self.andres)
     
     #put frames on the tab########################################
     self.layout.addRow(self.__segmentationFrame)
@@ -1225,10 +1226,7 @@ class NeedleFinderLogic:
     """
     #productive #onButton #report
     profprint()
-    #############################
-    self.andres(ID) #go to andres experiment
-    #############################
-    for i in range(2): #workaround for update problem
+    for i in range(2): #workaround update problem
       modelNode = slicer.util.getNode('vtkMRMLModelNode'+str(ID))
       polyData = modelNode.GetPolyData()
       nb = polyData.GetNumberOfPoints()
@@ -3630,36 +3628,6 @@ class NeedleFinderLogic:
           # print 'processing time: ', end-start
           # start = time.time()
 
-  #def andres(self,ID):
-  #  pass
-  def andres(self,ID):
-    profprint()
-    volumeNode = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
-    m=vtk.vtkMatrix4x4()
-    volumeNode.GetIJKToRASMatrix(m)
-    imageData = volumeNode.GetImageData()
-    spacing = volumeNode.GetSpacing()
-    dims=imageData.GetDimensions()
-    oldScrSh=self.enableScreenshots
-    self.enableScreenshots=True
-    for i in range(3):
-      self.reformatNeedle(ID)
-      #img=self.takeScreenshot("Andre","Searching...", slicer.qMRMLScreenShotDialog().Yellow,False)    
-      # move tip up a little
-      modelNode = slicer.util.getNode('vtkMRMLModelNode'+str(ID))
-      polyData = modelNode.GetPolyData()
-      nb = polyData.GetNumberOfPoints()
-      base = [0,0,0]
-      tip = [0,0,0]
-      polyData.GetPoint(nb-1,tip)
-      polyData.GetPoint(0,base)
-      a,b,c = tip[0]-base[0],tip[1]-base[1],tip[2]-base[2]
-      print a,b,c
-      tipNew=[tip[0]+a/dims[0], tip[1]+b/dims[1], tip[2]+c/dims[2]]
-      polyData.GetPoints().SetPoint(nb-1,tipNew)
-      polyData.Modified()
-      #self.needleDetectionThread(tipNew, imageData, 1,spacing)
-    self.enableScreenshots=oldScrSh
   #----------------------------------------------------------------------------------------------
   """ Needle segmentation report"""
   #---------------------------------------------------------------------------------------------- 
