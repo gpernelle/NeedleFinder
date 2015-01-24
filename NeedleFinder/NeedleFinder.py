@@ -41,7 +41,8 @@ import sitkUtils
 import os.path
 import time as t
 import vtk, qt, ctk, slicer
-import EditorLib
+
+import EditorLib #<<<<<<<<<<<<<<<<
 
 def whoami():
     return inspect.stack()[1][3]
@@ -168,7 +169,14 @@ class NeedleFinderWidget:
     self.CrosshairNode = slicer.mrmlScene.GetNthNodeByClass(0, 'vtkMRMLCrosshairNode')
     if self.CrosshairNode:
       self.CrosshairNodeObserverTag = self.CrosshairNode.AddObserver(slicer.vtkMRMLCrosshairNode.CursorPositionModifiedEvent, self.processEvent)
-
+    #>>>>>>>>>>>>>>>>>
+    self.editorWidget=None
+    self.editUtil=None
+    self.undoRedo=None
+    self.wandLogics={}
+    self.labelMapNode=None
+    #<<<<<<<<<<<<<<<<<
+    
   def __del__(self):
     self.removeObservers()
 
@@ -748,7 +756,7 @@ class NeedleFinderWidget:
     """
     #productive #frequent #event-handler
     if frequent: profprint();
-
+    #print event
     # GET mouse position
     insideView = False
     ras = [0.0,0.0,0.0]
@@ -785,7 +793,6 @@ class NeedleFinderWidget:
             fiducial.SetFiducialCoordinates(ras)
             fiducial.SetAttribute('TemporaryFiducial','1')
             fiducial.SetLocked(True)
-
             displayNode=fiducial.GetDisplayNode()
             displayNode.SetGlyphScale(2)
             displayNode.SetColor(1,1,0)
@@ -802,6 +809,52 @@ class NeedleFinderWidget:
                 node = tempFidNodes.GetItemAsObject(i)
                 if node:
                   node.SetFiducialCoordinates(ras)
+                #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                from Editor import EditorWidget
+                if not self.wandLogics.has_key(sliceLogic):
+                  print "Creating segmentation editor environment..."
+                  if not self.editorWidget:
+                    print "creating 1st.."
+                    editorWidgetParent = slicer.qMRMLWidget()
+                    editorWidgetParent.setLayout(qt.QVBoxLayout())
+                    editorWidgetParent.setMRMLScene(slicer.mrmlScene)
+                    editorWidgetParent.hide()
+                    self.editorWidget = EditorWidget(editorWidgetParent, False)
+                    self.editorWidget.setup()
+                    self.editorWidget.editLabelMapsFrame.setText("Edit Segmentation")
+                    #self.editorWidget.editLabelMapsFrame.connect('contentsCollapsed(bool)', self.onEditorCollapsed)
+                    editorWidgetParent.show()
+                    self.editUtil = EditorLib.EditUtil.EditUtil()
+                    parameterNode = self.editUtil.getParameterNode()
+                    parameterNode.SetParameter("WandEffect,tolerance",'20')
+                    parameterNode.SetParameter("WandEffect,maxPixels",'500')
+                    parameterNode.SetParameter("WandEffect,fillMode","Volume")
+                    #sliceLogic = self.editUtil.getSliceLogic()
+                    wandOpt=EditorLib.WandEffectOptions()
+                    wandOpt.setMRMLDefaults()
+                    wandOpt.__del__()
+                    #create label map
+                    volLogic = slicer.modules.volumes.logic()
+                    #sliceLogic =slicer.app.layoutManager().sliceWidget("Red").sliceLogic()
+                    vn = sliceLogic.GetBackgroundLayer().GetVolumeNode()
+                    self.labelMapNode=volLogic.CreateAndAddLabelVolume(slicer.mrmlScene,vn,vn.GetName()+"-label")
+                    wl=EditorLib.WandEffectLogic(sliceLogic)
+                    wl.undoRedo=self.undoRedo=self.editorWidget.toolsBox.undoRedo
+                    #EditorLib.EditUtil.UndoRedo()
+                  else:
+                    print "creating other.."
+                    wl=EditorLib.WandEffectLogic(sliceLogic)
+                    wl.undoRedo=self.undoRedo
+                  self.wandLogics[sliceLogic]=wl
+                  # select label volume
+                  selectionNode = slicer.app.applicationLogic().GetSelectionNode()
+                  selectionNode.SetReferenceActiveLabelVolumeID( self.labelMapNode.GetID() )
+                  slicer.app.applicationLogic().PropagateVolumeSelection(0)
+                print "Wanding..."
+                xy = interactor.GetEventPosition()
+                print "xy: ",xy
+                self.wandLogics[sliceLogic].apply(xy)
+                #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         else: # create temp fiducial
           fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
           fiducial.SetName('Temp')
@@ -809,7 +862,6 @@ class NeedleFinderWidget:
           fiducial.SetFiducialCoordinates(ras)
           fiducial.SetAttribute('TemporaryFiducial','1')
           fiducial.SetLocked(True)
-
           displayNode=fiducial.GetDisplayNode()
           displayNode.SetGlyphScale(2)
           displayNode.SetColor(1,1,0)
