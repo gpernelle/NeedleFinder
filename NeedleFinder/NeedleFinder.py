@@ -177,8 +177,8 @@ class NeedleFinderWidget:
     self.undoRedo=None
     self.wandLogics={}
     self.labelMapNode=None
-    self.currentLabel=1
-    self.tempPointList=[]
+    self.currentLabel=None
+    self.tempPointList=[[]]
     
   def __del__(self):
     self.removeObservers()
@@ -529,10 +529,10 @@ class NeedleFinderWidget:
     editorWidgetParent.show()
     self.editUtil = EditorLib.EditUtil.EditUtil()
     parameterNode = self.editUtil.getParameterNode()
-    parameterNode.SetParameter("WandEffect,tolerance",'20')
-    parameterNode.SetParameter("WandEffect,maxPixels",'500')
+    # set options 
+    parameterNode.SetParameter("WandEffect,tolerance","20")
+    parameterNode.SetParameter("WandEffect,maxPixels","500")
     parameterNode.SetParameter("WandEffect,fillMode","Volume")
-    #sliceLogic = self.editUtil.getSliceLogic()
     wandOpt=EditorLib.WandEffectOptions()
     wandOpt.setMRMLDefaults()
     wandOpt.__del__()
@@ -540,12 +540,12 @@ class NeedleFinderWidget:
     self.currentLabel=self.editUtil.getLabel()
   
     # devFrame.addRow(self.displayFiducialButton)
+    devFrame.addWidget(editorWidgetParent)
     devFrame.addRow(self.fiducialObturatorButton)
     devFrame.addRow(self.displayContourButton)
     devFrame.addRow(self.hideContourButton)
     devFrame.addRow(self.filterButton)
     devFrame.addRow(self.parSearchButton)
-    devFrame.addWidget(editorWidgetParent)
     
     #put frames on the tab########################################
     self.layout.addRow(self.__segmentationFrame)
@@ -853,6 +853,7 @@ class NeedleFinderWidget:
                   print "creating new segment logic"
                   wl=EditorLib.WandEffectLogic(sliceLogic)
                   wl.undoRedo=self.undoRedo
+                  wl.editUtil=self.editUtil
                   self.wandLogics[sliceLogic]=wl
                 print "Wanding"
                 wl=self.wandLogics[sliceLogic]
@@ -1997,7 +1998,10 @@ class NeedleFinderLogic:
     if widget.algoVersParameter.value == 3:
       self.needleDetectionThread13_2(A, imageData,colorVar,spacing, script)
     if widget.algoVersParameter.value == 4:
-      self.needleDetectionThread13_3(A, imageData,widget.labelMapNode.GetImageData(),widget.tempPointList,colorVar,spacing, script)
+      if widget.labelMapNode:
+        self.needleDetectionThread13_3(A, imageData,widget.labelMapNode.GetImageData(),widget.tempPointList,colorVar,spacing, script)
+      else:
+        self.needleDetectionThread13_3(A, imageData,None,widget.tempPointList,colorVar,spacing, script)
       
   def needleDetectionThreadCurrentDev(self,A, imageData,colorVar,spacing, script=False):
     """
@@ -2942,7 +2946,11 @@ class NeedleFinderLogic:
 
       if A[2]<=axialSegmentationLimit and A!=A0:
         break
-    
+    #>>>>>>>> use additional info from temp markers
+    for pt in tempPoints:
+      if pt[2]>axialSegmentationLimit:
+        controlPoints.append(pt)
+    #<<<<<<<<<
     #self.addNeedleToScene(controlPoints,colorVar)  
     if not autoStopTip:
       self.addNeedleToScene(controlPoints,colorVar, 'Detection', script)
