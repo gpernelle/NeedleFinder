@@ -51,7 +51,7 @@ def whosdaddy():
     return inspect.stack()[2][3]
 def whosgranny():
     return inspect.stack()[3][3]
-profiling=False
+profiling=True
 frequent=False
 MAXNEEDLES=1000
 
@@ -178,7 +178,7 @@ class NeedleFinderWidget:
     self.wandLogics={}
     self.labelMapNode=None
     self.currentLabel=None
-    self.tempPointList=[[]]
+    self.tempPointList=[]
     
   def __del__(self):
     self.removeObservers()
@@ -319,7 +319,7 @@ class NeedleFinderWidget:
     self.resetParametersButton.checkable = False
     self.resetParametersButton.text = "Reset Default Parameters"
     self.resetParametersButton.toolTip = "Click to reset the default parameters from default.cfg"
-    self.resetParametersButton.connect('clicked()',self.onReset)
+    self.resetParametersButton.connect('clicked()',self.onResetParameters)
     self.configFrame.layout().addWidget( self.loadButton )
     self.configFrame.layout().addWidget( self.saveButton )
     self.configFrame.layout().addWidget( self.resetParametersButton )
@@ -517,27 +517,29 @@ class NeedleFinderWidget:
     self.parSearchButton.connect('clicked()',logic.parSearch)
     self.parSearchButton.setEnabled(1)
     
-    print "Creating segmentation editor environment..."
+    ### create segmentation editor environment:
     editorWidgetParent = slicer.qMRMLWidget()
     editorWidgetParent.setLayout(qt.QVBoxLayout())
     editorWidgetParent.setMRMLScene(slicer.mrmlScene)
     editorWidgetParent.hide()
+    self.editorWidget=None
+    # The order of statements is important here for resetNeedleDetection to work!!
     self.editorWidget = EditorWidget(editorWidgetParent, False)
+    self.editUtil=None
+    self.editUtil = self.editorWidget.editUtil #EditorLib.EditUtil.EditUtil()
+    self.currentLabel=None
+    self.setWandEffectOptions() # has to be done before setup():
+    self.editUtil.setCurrentEffect("WandEffect")
     self.editorWidget.setup()
+    # invisible dummy button
+    self.editorWidget.toolsBox.actions["NeedleFinder"]=qt.QAction(0)
+    self.undoRedo=None
+    self.undoRedo=self.editorWidget.toolsBox.undoRedo
+    self.currentLabel=self.editUtil.getLabel()
     self.editorWidget.editLabelMapsFrame.setText("Edit Segmentation")
     #self.editorWidget.editLabelMapsFrame.connect('contentsCollapsed(bool)', self.onEditorCollapsed)
     editorWidgetParent.show()
-    self.editUtil = EditorLib.EditUtil.EditUtil()
-    parameterNode = self.editUtil.getParameterNode()
-    # set options 
-    parameterNode.SetParameter("WandEffect,tolerance","20")
-    parameterNode.SetParameter("WandEffect,maxPixels","500")
-    parameterNode.SetParameter("WandEffect,fillMode","Volume")
-    wandOpt=EditorLib.WandEffectOptions()
-    wandOpt.setMRMLDefaults()
-    wandOpt.__del__()
-    self.undoRedo=self.editorWidget.toolsBox.undoRedo
-    self.currentLabel=self.editUtil.getLabel()
+    self.editUtil.setCurrentEffect("NeedleFinder")
   
     # devFrame.addRow(self.displayFiducialButton)
     devFrame.addWidget(editorWidgetParent)
@@ -564,15 +566,33 @@ class NeedleFinderWidget:
     # init table report
     logic.initTableView() # init the report table
 
-    self.onReset()
+    self.onResetParameters()
     self.setupShortcuts()
-
+    
+  def setWandEffectOptions(self,tolerance=20,maxPixels=500,fillMode="Volume"):
+    """
+    Set the wand logic parameters in parameter node
+    """
+    #research
+    profprint()
+    parameterNode = self.editUtil.getParameterNode()
+    # set options 
+    parameterNode.SetParameter("WandEffect,tolerance",str(tolerance))
+    parameterNode.SetParameter("WandEffect,maxPixels",str(maxPixels))
+    parameterNode.SetParameter("WandEffect,fillMode",fillMode)
+    wandOpt=EditorLib.WandEffectOptions()
+    wandOpt.setMRMLDefaults()
+    wandOpt.__del__()
+    
   def keyPressEvent(self,event):
     print "You Pressed: "+event.text()
 
   def setupShortcuts(self):
-    """Set up hot keys for various development scenarios"""
-
+    """
+    Set up hot keys for various actions.
+    """
+    #productive
+    profprint()
     macros = (
       ("Ctrl+Return", self.segmentNeedle),
       ("Ctrl+z", self.logic.deleteLastNeedle),
@@ -628,8 +648,6 @@ class NeedleFinderWidget:
           tag = style.AddObserver(event, self.processEvent)
           self.styleObserverTags.append([style,tag])
       # TODO: also observe the slice nodes
-
-
 
   def onReload(self,moduleName="NeedleFinder"):
     """
@@ -813,7 +831,6 @@ class NeedleFinderWidget:
         elif event == "KeyReleaseEvent":  # shift release
           print 'key released: ', key
           if key == 'Shift_L' or key == 'Shift_R':
-            # widget = slicer.modules.NeedleFinderWidget
             fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
             fiducial.SetName('Temp')
             fiducial.Initialize(slicer.mrmlScene)
@@ -836,8 +853,8 @@ class NeedleFinderWidget:
                 node = tempFidNodes.GetItemAsObject(i)
                 if node:
                   node.SetFiducialCoordinates(ras)
-                  widget.tempPointList.append(ras) #[0],ras[1],ras[2])
-                  print "tempPointList: ",widget.tempPointList
+                  self.tempPointList.append(ras) #[0],ras[1],ras[2])
+                  print "tempPointList: ",self.tempPointList
                 if not self.wandLogics.has_key(sliceLogic):
                   if not self.labelMapNode:
                     print "creating label map for working intensity volume"
@@ -855,7 +872,8 @@ class NeedleFinderWidget:
                   wl.undoRedo=self.undoRedo
                   wl.editUtil=self.editUtil
                   self.wandLogics[sliceLogic]=wl
-                print "Wanding"
+                print "wanding"
+                self.setWandEffectOptions() #/!\ the parameter node can be altered/deleted from outside so re-create/reset option node
                 wl=self.wandLogics[sliceLogic]
                 xy = interactor.GetEventPosition()
                 print "xy: ",xy
@@ -892,13 +910,22 @@ class NeedleFinderWidget:
         if self.autoStopTip.isChecked():
           self.logic.needleDetectionUPThread(ijk, imageData, colorVar,spacing)
         # change requested by Lauren: remove temp marker after detection
-        print "delete temp marker"
+        print "deleting temp marker and segmentation"
         tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
         for i in range(tempFidNodes.GetNumberOfItems()):
           node = tempFidNodes.GetItemAsObject(i)
           if node:
             slicer.mrmlScene.RemoveNode(node)
-        widget.tempPointList=[]
+        self.tempPointList=[]
+        #self.labelMapNode=None
+        # clear label image
+        if self.labelMapNode:
+          print "clearing label map"
+          labelImage=self.labelMapNode.GetImageData()
+          shape=list(labelImage.GetDimensions()).reverse()
+          labelArray = vtk.util.numpy_support.vtk_to_numpy(labelImage.GetPointData().GetScalars()).reshape(shape)
+          labelArray[:]=0
+          self.editUtil.markVolumeNodeAsModified(widget.labelMapNode)
 
   def processEventNeedleValidation(self,observee,event=None):
     """
@@ -934,7 +961,6 @@ class NeedleFinderWidget:
 
     # if self.sliceWidgetsPerStyle.has_key(observee) and event == "LeaveEvent":
       # self.stop()
-
 
   def processEventAddObturatorNeedleTips(self,observee,event=None):
     """
@@ -1043,18 +1069,18 @@ class NeedleFinderWidget:
     """
     load parameters
     """
-    #productive #callback
+    #productive #button
     profprint()
     self.logic.loadParameters(fileName)
 
-  def onReset(self):
+  def onResetParameters(self):
     """
     load default parameter file
     """
-    #productive
+    #productive #button
     profprint()
     fileName = pathToScene = slicer.modules.needlefinder.path.replace("NeedleFinder.py","Config/default.cfg")
-    self.logic.loadParameters(fileName)
+    self.logic.loadParameters(fileName)    
 
 """
 
@@ -1501,8 +1527,7 @@ class NeedleFinderLogic:
     Used if needle tips input is given trough a labelmap.
     Extract the coordinates of each labels (after IslandEffect)
     """
-    print "array2"
-    msgbox(whoami())
+    profbox(whoami())
     #research
     inputLabelID = self.__needleLabelSelector.currentNode().GetID()
     labelnode=slicer.mrmlScene.GetNodeByID(inputLabelID)
@@ -2019,8 +2044,7 @@ class NeedleFinderLogic:
     :param spacing: volumneNode.GetSpacing()
     :return: a needle in 3D!!
     """
-
-    #productive
+    #research
     profprint()
     ### initialisation of the parameters
     ijk         = [0,0,0]
@@ -2343,7 +2367,8 @@ class NeedleFinderLogic:
     NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
     From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
     '''
-    
+    #productive
+    profprint()
     ### initialisation of the parameters
     ijk         = [0,0,0]
     bestPoint   = [0,0,0]
@@ -2551,7 +2576,8 @@ class NeedleFinderLogic:
     NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
     From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
     '''
-    
+    #research
+    profprint()
     ### initialisation of the parameters
     ijk         = [0,0,0]
     bestPoint   = [0,0,0]
@@ -2755,7 +2781,8 @@ class NeedleFinderLogic:
     NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
     From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
     '''
-    
+    profprint()
+    #research
     ### initialisation of the parameters
     ijk         = [0,0,0]
     bestPoint   = [0,0,0]
@@ -2947,8 +2974,11 @@ class NeedleFinderLogic:
       if A[2]<=axialSegmentationLimit and A!=A0:
         break
     #>>>>>>>> use additional info from temp markers
+    print "using additional points:"
     for pt in tempPoints:
+      print pt
       if pt[2]>axialSegmentationLimit:
+        print "^^ using"
         controlPoints.append(pt)
     #<<<<<<<<<
     #self.addNeedleToScene(controlPoints,colorVar)  
@@ -3142,7 +3172,6 @@ class NeedleFinderLogic:
                       2*A[1]-tip0[1],
                       A[2]+stepSize   ]
           """
-
 
           """
           coeffSize   = abs(stepSize)
@@ -3679,7 +3708,7 @@ class NeedleFinderLogic:
         del self.view
         self.view=None
         self.initTableView()
-
+        
       ### Leave the needle detection mode
       widget.fiducialButton.checked = 0
       widget.stop()
@@ -3694,7 +3723,7 @@ class NeedleFinderLogic:
       widget.labelMapNode=None
       widget.tempPointList=[]
       widget.templateSliceButton.text = "1. Select Current Axial Slice as Seg. Limit (current: None)"
-      widget.onReset()
+      widget.onResetParameters()
 
   def resetNeedleValidation(self):
     """
@@ -4989,7 +5018,6 @@ class NeedleFinderLogic:
           p2=p2bis
         axialDistance.append((( p2[0]-p[0] )**2 +  ( p2[1]-p[1] )**2 + (p2[2]-p[2])**2)**0.5)
     return min(axialDistance)
-
 
   def needleMatching(self):
     """This functions associates manually segmented needles to their automatically segmented version. To do so,
