@@ -2005,7 +2005,7 @@ class NeedleFinderLogic:
     except:
       print "/!\ no z-limit marker in scene (required)!"
       msgbox("/!\ no z-limit marker in scene (required)!")
-    return asl
+    return asl,coord[2]
     
   def needleDetectionThread(self,A, imageData,colorVar,spacing, script=False):
     """
@@ -2014,7 +2014,7 @@ class NeedleFinderLogic:
     #productive #onbutton
     profprint()
     widget = slicer.modules.NeedleFinderWidget
-    widget.axialSegmentationLimit=self.findAxialSegmentationLimitFromMarker()
+    widget.axialSegmentationLimit,widget.axialSegmentationLimitRAS=self.findAxialSegmentationLimitFromMarker()
     # select algo version
     if widget.algoVersParameter.value == 1:
       self.needleDetectionThreadCurrentDev(A, imageData,colorVar,spacing, script)
@@ -2974,10 +2974,11 @@ class NeedleFinderLogic:
       if A[2]<=axialSegmentationLimit and A!=A0:
         break
     #>>>>>>>> use additional info from temp markers
+    aslRAS=widget.axialSegmentationLimitRAS
     print "using additional points:"
     for pt in tempPoints:
       print pt
-      if pt[2]>axialSegmentationLimit:
+      if pt[2]>aslRAS:
         print "^^ using"
         controlPoints.append(pt)
     #<<<<<<<<<
