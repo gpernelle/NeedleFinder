@@ -207,7 +207,20 @@ class NeedleFinderWidget:
     selectionNode = slicer.app.applicationLogic().GetSelectionNode()
     selectionNode.SetReferenceActiveLabelVolumeID( self.labelMapNode.GetID() )
     slicer.app.applicationLogic().PropagateVolumeSelection(0)
+    self.editorWidget.setMasterNode(vn)
+    self.editorWidget.setMergeNode(self.labelMapNode) 
   
+  def onEditorCollapsed(self, collapsed):
+    """
+    When segmentation editor is used before needle finder, prepare a a label volume.
+    """
+    #productive
+    profprint()
+    if collapsed:
+      pass
+    else:
+      self.createAddOrSelectLabelMapNode()
+
   def setup(self):
     """
     Instantiate and connect widgets
@@ -548,7 +561,6 @@ class NeedleFinderWidget:
     self.editUtil = self.editorWidget.editUtil #EditorLib.EditUtil.EditUtil()
     self.currentLabel=None
     self.setWandEffectOptions() # has to be done before setup():
-    #self.editUtil.setCurrentEffect("WandEffect")
     self.editUtil.setCurrentEffect("DefaultTool")
     self.editorWidget.setup()
     # invisible dummy button
@@ -557,7 +569,7 @@ class NeedleFinderWidget:
     self.undoRedo=self.editorWidget.toolsBox.undoRedo
     self.currentLabel=self.editUtil.getLabel()
     self.editorWidget.editLabelMapsFrame.setText("Edit Segmentation")
-    #self.editorWidget.editLabelMapsFrame.connect('contentsCollapsed(bool)', self.onEditorCollapsed)
+    self.editorWidget.editLabelMapsFrame.connect('contentsCollapsed(bool)', self.onEditorCollapsed)
     editorWidgetParent.show()
     self.editUtil.setCurrentEffect("NeedleFinder")
   
@@ -708,11 +720,11 @@ class NeedleFinderWidget:
       self.fiducialObturatorButton.checked = 0
       self.start()
       self.fiducialButton.text = "2. Stop Giving Needle Tips [CTRL + ENTER]"
-      # here we are set and can create a first label volume from volume data
-      widget.createAddOrSelectLabelMapNode()
+      widget.editUtil.setCurrentEffect("NeedleFinder")
     else:
       self.stop()
       self.fiducialButton.text = "2. Start Giving Needle Tips [CTRL + ENTER]"
+      widget.editUtil.setCurrentEffect("DefaultTool")
       widget.resetDetectionButton.setEnabled(1)
       tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
       for i in range(tempFidNodes.GetNumberOfItems()):
@@ -725,7 +737,7 @@ class NeedleFinderWidget:
     """
     Start/stop giving obturator needle tips
     """
-    #productive
+    #deprecated
     profprint()
     if checked:
       self.fiducialButton.checked = 0
@@ -3645,9 +3657,9 @@ class NeedleFinderLogic:
       for node in nodes.values():
         slicer.mrmlScene.RemoveNode(node)
     #while slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode') !={}:
-    #  nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
-    #  for node in nodes.values():
-    #    slicer.mrmlScene.RemoveNode(node)
+      #nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
+      #for node in nodes.values():
+        #slicer.mrmlScene.RemoveNode(node)
     while slicer.util.getNodes('template slice position*') != {}:
       nodes = slicer.util.getNodes('template slice position*')
       for node in nodes.values():
@@ -3782,10 +3794,10 @@ class NeedleFinderLogic:
           if node.GetAttribute("ValidationNeedle") == "1":
             slicer.mrmlScene.RemoveNode(node)
       
-      #while slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode') !={}:
-      #  nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
-      #  for node in nodes:
-      #    slicer.mrmlScene.RemoveNode(node)
+      while slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode') !={}:
+        nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
+        for node in nodes:
+          slicer.mrmlScene.RemoveNode(node)
       self.deleteEvaluationNeedlesFromTable()
           
       widget.validationNeedleNumber = 1
@@ -4803,6 +4815,8 @@ class NeedleFinderLogic:
     fd.SetVisibility(1)
     fd.SetColor([0,1,0])
     widget.fiducialButton.setEnabled(1)
+    # here we are set and can create a first label volume from volume data
+    widget.createAddOrSelectLabelMapNode()
 
     ### Add crosshair
     crosshairNode = slicer.util.getNode("Crosshair")
