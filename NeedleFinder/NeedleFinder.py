@@ -188,7 +188,26 @@ class NeedleFinderWidget:
     return class name
     """
     return self.__class__.__name__
-    
+  
+  def createAddOrSelectLabelMapNode(self):
+    """
+    Create label map node for Segmentation editor and needle finder.
+    """
+    #productive
+    profprint()
+    print "creating label map for working intensity volume"
+    #create, select label map
+    volLogic = slicer.modules.volumes.logic()
+    sliceLogic =slicer.app.layoutManager().sliceWidget("Red").sliceLogic()
+    vn = sliceLogic.GetBackgroundLayer().GetVolumeNode()
+    self.labelMapNode=slicer.util.getNode(vn.GetName()+"-label")
+    if not self.labelMapNode:
+      self.labelMapNode=volLogic.CreateAndAddLabelVolume(slicer.mrmlScene,vn,vn.GetName()+"-label")
+    # select label volume
+    selectionNode = slicer.app.applicationLogic().GetSelectionNode()
+    selectionNode.SetReferenceActiveLabelVolumeID( self.labelMapNode.GetID() )
+    slicer.app.applicationLogic().PropagateVolumeSelection(0)
+  
   def setup(self):
     """
     Instantiate and connect widgets
@@ -243,7 +262,7 @@ class NeedleFinderWidget:
     #Delete Needle Button 
     self.deleteNeedleButton = qt.QPushButton('Delete Last Segmented Needle [Ctrl + Z]')
     segmentationFrame.addRow(self.deleteNeedleButton)
-    #self.deleteNeedleButton.connect('clicked()', logic.deleteAllNeedlesFromScene)
+    #self.deleteNeedleButton.connect('clicked()', logic.deleteAllAutoNeedlesFromScene)
     self.deleteNeedleButton.connect('clicked()', logic.deleteLastNeedle)
     self.deleteNeedleButton.setEnabled(0)
 
@@ -529,7 +548,8 @@ class NeedleFinderWidget:
     self.editUtil = self.editorWidget.editUtil #EditorLib.EditUtil.EditUtil()
     self.currentLabel=None
     self.setWandEffectOptions() # has to be done before setup():
-    self.editUtil.setCurrentEffect("WandEffect")
+    #self.editUtil.setCurrentEffect("WandEffect")
+    self.editUtil.setCurrentEffect("DefaultTool")
     self.editorWidget.setup()
     # invisible dummy button
     self.editorWidget.toolsBox.actions["NeedleFinder"]=qt.QAction(0)
@@ -688,6 +708,8 @@ class NeedleFinderWidget:
       self.fiducialObturatorButton.checked = 0
       self.start()
       self.fiducialButton.text = "2. Stop Giving Needle Tips [CTRL + ENTER]"
+      # here we are set and can create a first label volume from volume data
+      widget.createAddOrSelectLabelMapNode()
     else:
       self.stop()
       self.fiducialButton.text = "2. Start Giving Needle Tips [CTRL + ENTER]"
@@ -857,23 +879,14 @@ class NeedleFinderWidget:
                   print "tempPointList: ",self.tempPointList
                 if not self.wandLogics.has_key(sliceLogic):
                   if not self.labelMapNode:
-                    print "creating label map for working intensity volume"
-                    #create label map
-                    volLogic = slicer.modules.volumes.logic()
-                    #sliceLogic =slicer.app.layoutManager().sliceWidget("Red").sliceLogic()
-                    vn = sliceLogic.GetBackgroundLayer().GetVolumeNode()
-                    self.labelMapNode=volLogic.CreateAndAddLabelVolume(slicer.mrmlScene,vn,vn.GetName()+"-label")
-                    # select label volume
-                    selectionNode = slicer.app.applicationLogic().GetSelectionNode()
-                    selectionNode.SetReferenceActiveLabelVolumeID( self.labelMapNode.GetID() )
-                    slicer.app.applicationLogic().PropagateVolumeSelection(0)
+                    self.createAddOrSelectLabelMapNode()
                   print "creating new segment logic"
                   wl=EditorLib.WandEffectLogic(sliceLogic)
                   wl.undoRedo=self.undoRedo
                   wl.editUtil=self.editUtil
                   self.wandLogics[sliceLogic]=wl
                 print "wanding"
-                self.setWandEffectOptions() #/!\ the parameter node can be altered/deleted from outside so re-create/reset option node
+                self.setWandEffectOptions() #!! the parameter node can be altered/deleted from outside so re-create/reset option node
                 wl=self.wandLogics[sliceLogic]
                 xy = interactor.GetEventPosition()
                 print "xy: ",xy
@@ -921,6 +934,7 @@ class NeedleFinderWidget:
         # clear label image
         if self.labelMapNode:
           print "clearing label map"
+          self.undoRedo.saveState()
           labelImage=self.labelMapNode.GetImageData()
           shape=list(labelImage.GetDimensions()).reverse()
           labelArray = vtk.util.numpy_support.vtk_to_numpy(labelImage.GetPointData().GetScalars()).reshape(shape)
@@ -1997,10 +2011,12 @@ class NeedleFinderLogic:
       for node in nodes.values():
         coord       = [0,0,0]
         node.GetFiducialCoordinates(coord)
-        asl=int(round(self.ras2ijk(coord)[2]))
-        print "limit marker found in scene, z-limit [ras]: ",coord[2]
+        aslNew=int(round(self.ras2ijk(coord)[2]))
+        if aslNew>asl: 
+          asl=aslNew
+          print "limit marker found in scene, z-limit [ras]: ",coord[2]
         if found:
-          print "/!\ there should be only one limit marker!"
+          print "/!\ there should be only one axial limit marker!"
         found = True
     except:
       print "/!\ no z-limit marker in scene (required)!"
@@ -2060,7 +2076,7 @@ class NeedleFinderLogic:
     sigmaValue                  = widget.sigmaValue.value
     # stepsize                    = widget.stepsize.value
     gaussianAttenuationChecked  = widget.gaussianAttenuationButton.isChecked()
-    lookNeighborhood            = widget.gradient.isChecked()
+    gradient                    = widget.gradient.isChecked()
     numberOfPointsPerNeedle     = max(1,widget.numberOfPointsPerNeedle.value-1)
     nbRotatingIterations        = widget.nbRotatingIterations.value
     radiusNeedleParameter       = widget.radiusNeedleParameter.value
@@ -2245,7 +2261,7 @@ class NeedleFinderLogic:
               center    +=  imageData.GetScalarComponentAsDouble(ijk[0]-1, ijk[1]-1, ijk[2], 0)
 
               total     += center ** exponent
-              if lookNeighborhood ==1 and mode == "circle" :
+              if gradient ==1 and mode == "circle" :
                 
                 g1 = imageData.GetScalarComponentAsDouble(ijk[0]+radiusNeedle, ijk[1], ijk[2], 0)
                 g2 = imageData.GetScalarComponentAsDouble(ijk[0]-radiusNeedle, ijk[1], ijk[2], 0)
@@ -2268,7 +2284,7 @@ class NeedleFinderLogic:
                
                 # total = self.objectiveFunctionLOG(imageData, ijk, radiusNeedleParameter, spacing, 1)
 
-              if lookNeighborhood ==1 and mode == "square" :
+              if gradient ==1 and mode == "square" :
                 
                 g1 = imageData.GetScalarComponentAsDouble(ijk[0]+radiusNeedle, ijk[1], ijk[2], 0)
                 g2 = imageData.GetScalarComponentAsDouble(ijk[0]-radiusNeedle, ijk[1], ijk[2], 0)
@@ -2380,7 +2396,7 @@ class NeedleFinderLogic:
     sigmaValue                  = widget.sigmaValue.value
     stepsize                    = widget.stepsize.value
     gaussianAttenuationChecked  = widget.gaussianAttenuationButton.isChecked()
-    lookNeighborhood            = widget.gradient.isChecked()
+    gradient                    = widget.gradient.isChecked()
     numberOfPointsPerNeedle     = widget.numberOfPointsPerNeedle.value
     nbRotatingIterations        = widget.nbRotatingIterations.value
     radiusNeedleParameter       = widget.radiusNeedleParameter.value
@@ -2479,7 +2495,7 @@ class NeedleFinderLogic:
               
               center    = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
               total     += center
-              if lookNeighborhood ==1 :
+              if gradient ==1 :
 
                 radiusNeedle        = int(round(radiusNeedleParameter/float(spacing[0])))
                 radiusNeedleCorner  = int(round((radiusNeedleParameter/float(spacing[0])/1.414)))
@@ -2589,7 +2605,7 @@ class NeedleFinderLogic:
     sigmaValue                  = widget.sigmaValue.value
     stepsize                    = widget.stepsize.value
     gaussianAttenuationChecked  = widget.gaussianAttenuationButton.isChecked()
-    lookNeighborhood            = widget.gradient.isChecked()
+    gradient                    = widget.gradient.isChecked()
     numberOfPointsPerNeedle     = widget.numberOfPointsPerNeedle.value
     nbRotatingIterations        = widget.nbRotatingIterations.value
     radiusNeedleParameter       = widget.radiusNeedleParameter.value
@@ -2683,7 +2699,7 @@ class NeedleFinderLogic:
               
               center    = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
               total     += center
-              if lookNeighborhood ==1 :
+              if gradient ==1 :
 
                 radiusNeedle        = int(round(radiusNeedleParameter/float(spacing[0])))
                 radiusNeedleCorner  = int(round((radiusNeedleParameter/float(spacing[0])/1.414)))
@@ -2787,6 +2803,7 @@ class NeedleFinderLogic:
     ijk         = [0,0,0]
     bestPoint   = [0,0,0]
     widget = slicer.modules.NeedleFinderWidget
+    label=None
 
     ### load parameters from GUI
     distanceMax                 = widget.distanceMax.value
@@ -2794,7 +2811,7 @@ class NeedleFinderLogic:
     sigmaValue                  = widget.sigmaValue.value
     stepsize                    = widget.stepsize.value
     gaussianAttenuationChecked  = widget.gaussianAttenuationButton.isChecked()
-    lookNeighborhood            = widget.gradient.isChecked()
+    gradient                    = widget.gradient.isChecked()
     numberOfPointsPerNeedle     = widget.numberOfPointsPerNeedle.value
     nbRotatingIterations        = widget.nbRotatingIterations.value
     radiusNeedleParameter       = widget.radiusNeedleParameter.value
@@ -2892,8 +2909,17 @@ class NeedleFinderLogic:
             if ijk[0]<dims[0] and ijk[0]>0 and  ijk[1]<dims[1] and ijk[1]>0 and ijk[2]<dims[2] and ijk[2]>0:
               
               center    = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
-              total     += center
-              if lookNeighborhood ==1 :
+              if labelData: label     = labelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0) 
+
+              #>>>>>>>>>>>>>>>>>>>>>>
+              if not label:
+                total     += center
+              else:
+                print "found label guide"
+                total/=2 # force high influence of labels
+              #<<<<<<<<<<<<<<<<<<<<
+              
+              if gradient ==1 :
 
                 radiusNeedle        = int(round(radiusNeedleParameter/float(spacing[0])))
                 radiusNeedleCorner  = int(round((radiusNeedleParameter/float(spacing[0])/1.414)))
@@ -2974,13 +3000,14 @@ class NeedleFinderLogic:
       if A[2]<=axialSegmentationLimit and A!=A0:
         break
     #>>>>>>>> use additional info from temp markers
-    aslRAS=widget.axialSegmentationLimitRAS
-    print "using additional points:"
-    for pt in tempPoints:
-      print pt
-      if pt[2]>aslRAS:
-        print "^^ using"
-        controlPoints.append(pt)
+    if 0:
+      aslRAS=widget.axialSegmentationLimitRAS
+      print "using additional points:"
+      for pt in tempPoints:
+        print pt
+        if pt[2]>aslRAS:
+          print "^^ using"
+          controlPoints.append(pt)
     #<<<<<<<<<
     #self.addNeedleToScene(controlPoints,colorVar)  
     if not autoStopTip:
@@ -3569,7 +3596,7 @@ class NeedleFinderLogic:
     elif not script:
       self.addNeedleToTable(int(model.GetID().strip('vtkMRMLModelNode')),label)
 
-  def deleteAllNeedlesFromScene(self):
+  def deleteAllAutoNeedlesFromScene(self):
     """
     Delete every segmented needle of the current set
     """
@@ -3588,17 +3615,22 @@ class NeedleFinderLogic:
     profprint()
     widget = slicer.modules.NeedleFinderWidget
     # remove artifacts from segmentation editor
-    # label volume
+    # label volumes
     if widget.labelMapNode:
       slicer.mrmlScene.RemoveNode(widget.labelMapNode.GetDisplayNode())
       slicer.mrmlScene.RemoveNode(widget.labelMapNode)
       widget.labelMapNode=None
+    while slicer.util.getNodes('*-label') != {}:
+      nodes = slicer.util.getNodes('*-label')
+      for node in nodes.values():
+        slicer.mrmlScene.RemoveNode(node)
     # 3d models (from SE's model builder)
-    for i in range(widget.currentLabel+1):
-      while slicer.util.getNodes(str(i)) != {}:
-        nodes = slicer.util.getNodes(str(i))
-        for node in nodes.values():
-          slicer.mrmlScene.RemoveNode(node)
+    if widget.currentLabel:
+      for i in range(widget.currentLabel+1):
+        while slicer.util.getNodes(str(i)) != {}:
+          nodes = slicer.util.getNodes(str(i))
+          for node in nodes.values():
+            slicer.mrmlScene.RemoveNode(node)
     # remove artifacts from needle finder
     while slicer.util.getNodes('python-catch-round_*') != {}:
       nodes = slicer.util.getNodes('python-catch-round_*')
@@ -4696,21 +4728,18 @@ class NeedleFinderLogic:
     #productive
     profprint()
     returnTips=[]
-    modelNodes=slicer.mrmlScene.GetNodesByClass('vtkMRMLModelNode')
-    nbNode=modelNodes.GetNumberOfItems()
-    for nthNode in range(nbNode):
-        # print nthNode
-        node=slicer.mrmlScene.GetNthNodeByClass(nthNode,'vtkMRMLModelNode')
-        if node.GetAttribute('type')=='Validation':
-            polydata = node.GetPolyData()
-            p,pbis=[0,0,0],[0,0,0]
-            if polydata.GetNumberOfPoints()>100: #??? this is risky when u have other models in the scene (not only neeedles(
-                polydata.GetPoint(0,p)
-                polydata.GetPoint(int(polydata.GetNumberOfPoints()-1),pbis)
-                if pbis[2]>p[2]:
-                    p=pbis
-                
-                returnTips.append(self.ras2ijk(p))
+    modelNodes=slicer.util.getNodes('manual-seg_*')
+    for name,node in modelNodes.iteritems():
+      print "found validation needle: ",name
+      polydata = node.GetPolyData()
+      p,pbis=[0,0,0],[0,0,0]
+      if polydata and polydata.GetNumberOfPoints()>100: #??? this is risky when u have other models in the scene (not only neeedles(
+          polydata.GetPoint(0,p)
+          polydata.GetPoint(int(polydata.GetNumberOfPoints()-1),pbis)
+          if pbis[2]>p[2]:
+              p=pbis
+          print p
+          returnTips.append(self.ras2ijk(p))
     return returnTips
 
   def startValidation(self, script=False):
@@ -4725,7 +4754,7 @@ class NeedleFinderLogic:
     profprint()
     tips= self.returnTipsFromNeedleModels()
     # delete old needles as they will be recalculated
-    self.deleteAllNeedlesFromScene()
+    self.deleteAllAutoNeedlesFromScene()
     # select the image node from the Red slice viewer
     m=vtk.vtkMatrix4x4()
     volumeNode = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
