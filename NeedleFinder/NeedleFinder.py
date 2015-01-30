@@ -563,8 +563,8 @@ class NeedleFinderWidget:
     self.setWandEffectOptions() # has to be done before setup():
     self.editUtil.setCurrentEffect("DefaultTool")
     self.editorWidget.setup()
-    # invisible dummy button
-    self.editorWidget.toolsBox.actions["NeedleFinder"]=qt.QAction(0)
+    # our mouse mode button
+    self.editorWidget.toolsBox.actions["NeedleFinder"]=qt.QAction(0) #dummy self.fiducialButton
     self.undoRedo=None
     self.undoRedo=self.editorWidget.toolsBox.undoRedo
     self.currentLabel=self.editUtil.getLabel()
@@ -3794,11 +3794,11 @@ class NeedleFinderLogic:
           if node.GetAttribute("ValidationNeedle") == "1":
             slicer.mrmlScene.RemoveNode(node)
       
-      while slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode') !={}:
-        nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
-        for node in nodes:
-          slicer.mrmlScene.RemoveNode(node)
-      self.deleteEvaluationNeedlesFromTable()
+      #while slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode') !={}:
+        #nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
+        #for node in nodes:
+          #slicer.mrmlScene.RemoveNode(node)
+      #self.deleteEvaluationNeedlesFromTable()
           
       widget.validationNeedleNumber = 1
       widget.stepNeedle             = 0
