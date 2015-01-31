@@ -549,6 +549,11 @@ class NeedleFinderWidget:
     self.parSearchButton.connect('clicked()',logic.parSearch)
     self.parSearchButton.setEnabled(1)
     
+    self.setAsValNeedlesButton = qt.QPushButton('Use Needles for Validation')
+    self.setAsValNeedlesButton.checkable = False
+    self.setAsValNeedlesButton.connect('clicked()',logic.setAllNeedleTubesAsValidationNeedles)
+    self.setAsValNeedlesButton.setEnabled(1)
+    
     ### create segmentation editor environment:
     editorWidgetParent = slicer.qMRMLWidget()
     editorWidgetParent.setLayout(qt.QVBoxLayout())
@@ -580,6 +585,7 @@ class NeedleFinderWidget:
     devFrame.addRow(self.hideContourButton)
     devFrame.addRow(self.filterButton)
     devFrame.addRow(self.parSearchButton)
+    devFrame.addRow(self.setAsValNeedlesButton)
     
     #put frames on the tab########################################
     self.layout.addRow(self.__segmentationFrame)
@@ -601,7 +607,7 @@ class NeedleFinderWidget:
     self.onResetParameters()
     self.setupShortcuts()
     
-  def setWandEffectOptions(self,tolerance=20,maxPixels=500,fillMode="Volume"):
+  def setWandEffectOptions(self,tolerance=20,maxPixels=50,fillMode="Volume"):
     """
     Set the wand logic parameters in parameter node
     """
@@ -926,7 +932,7 @@ class NeedleFinderWidget:
       elif event == "LeftButtonPressEvent": # mouse click
         # print event
         self.logic.t0     = time.clock()
-        colorVar    = random.randrange(50,100,1)/(100)
+        colorVar    = random.randrange(50,100,1) #???/(100.)
         volumeNode  = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
         imageData   = volumeNode.GetImageData()
         spacing     = volumeNode.GetSpacing()
@@ -975,7 +981,7 @@ class NeedleFinderWidget:
         xyz           = sliceWidget.sliceView().convertDeviceToXYZ(xy);
         ras           = sliceWidget.sliceView().convertXYZToRAS(xyz)
       
-      colorVar      = random.randrange(50,100,1)/(100)
+      colorVar      = random.randrange(50,100,1) #???/(100.)
       volumeNode    = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
       imageData     = volumeNode.GetImageData()
       spacing       = volumeNode.GetSpacing()
@@ -1010,7 +1016,7 @@ class NeedleFinderWidget:
         xyz         = sliceWidget.sliceView().convertDeviceToXYZ(xy);
         ras         = sliceWidget.sliceView().convertXYZToRAS(xyz)
       
-      colorVar      = random.randrange(50,100,1)/(100)
+      colorVar      = random.randrange(50,100,1) #???/(100.)
       volumeNode    = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
       imageData     = volumeNode.GetImageData()
       spacing       = volumeNode.GetSpacing()
@@ -1677,8 +1683,8 @@ class NeedleFinderLogic:
     Convert IJK coordinates to RAS coordinates. The transformation matrix is the one 
     of the active volume on the red slice
     """
-    #productive #math #coordinate-space-conversion
-    profprint()
+    #productive #math #coordinate-space-conversion #frequent
+    if frequent: profprint()
     m=vtk.vtkMatrix4x4()
     volumeNode = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
     volumeNode.GetIJKToRASMatrix(m)
@@ -1700,8 +1706,8 @@ class NeedleFinderLogic:
     Convert RAS coordinates to IJK coordinates. The transformation matrix is the one 
     of the active volume on the red slice
     """
-    #productive #math #coordinate-space-conversion
-    profprint()
+    #productive #math #coordinate-space-conversion #frequent
+    if frequent: profprint()
     m=vtk.vtkMatrix4x4()
     volumeNode = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
     volumeNode.GetIJKToRASMatrix(m)
@@ -1754,7 +1760,7 @@ class NeedleFinderLogic:
     label=self.array2()
     for I in xrange(len(label)):
       A=label[I]
-      colorVar = I/(len(label))
+      colorVar = I # ??? /(len(label))
       self.needleDetectionThread(A, imageData, colorVar,spacing)
       if slicer.modules.NeedleFinderWidget.autoStopTip.isChecked():
         self.needleDetectionUPThread(A, imageData, colorVar,spacing)
@@ -2016,24 +2022,29 @@ class NeedleFinderLogic:
     """
     #productive 
     profprint()
-    asl=0
+    asl=[0,0,-float("inf")]
+    coord       = [0,0,0]
     try:
       nodes = slicer.util.getNodes('template slice position*')
       found=False
       for node in nodes.values():
-        coord       = [0,0,0]
         node.GetFiducialCoordinates(coord)
-        aslNew=int(round(self.ras2ijk(coord)[2]))
-        if aslNew>asl: 
+        aslNew=coord
+        if aslNew[2]>asl[2]: 
           asl=aslNew
-          print "limit marker found in scene, z-limit [ras]: ",coord[2]
+          if found:
+            print "higher limit marker found in scene, z-limit [ras]: ",coord[2]
+          else:
+            print "first limit marker found in scene, z-limit [ras]: ",coord[2]
         if found:
           print "/!\ there should be only one axial limit marker!"
         found = True
     except:
       print "/!\ no z-limit marker in scene (required)!"
       msgbox("/!\ no z-limit marker in scene (required)!")
-    return asl,coord[2]
+    if asl[2]==-float("inf"):
+      asl=[0,0,0]
+    return int(round(self.ras2ijk(asl)[2])), coord[2]
     
   def needleDetectionThread(self,A, imageData,colorVar,spacing, script=False):
     """
@@ -2042,7 +2053,7 @@ class NeedleFinderLogic:
     #productive #onbutton
     profprint()
     widget = slicer.modules.NeedleFinderWidget
-    widget.axialSegmentationLimit,widget.axialSegmentationLimitRAS=self.findAxialSegmentationLimitFromMarker()
+    widget.axialSegmentationLimit, widget.axialSegmentationLimitRAS = self.findAxialSegmentationLimitFromMarker()
     # select algo version
     if widget.algoVersParameter.value == 1:
       self.needleDetectionThreadCurrentDev(A, imageData,colorVar,spacing, script)
@@ -2927,7 +2938,7 @@ class NeedleFinderLogic:
               if not label:
                 total     += center
               else:
-                print "found label guide"
+                print "found needle guide label marker"
                 total/=2 # force high influence of labels
               #<<<<<<<<<<<<<<<<<<<<
               
@@ -3434,7 +3445,7 @@ class NeedleFinderLogic:
 
     for i in range(len(self.obtuNeedlePt)):
       if self.obtuNeedlePt[i][0][0]!=999:
-          colorVar = random.randrange(50,100,1)/(100)
+          colorVar = random.randrange(50,100,1) ### ??? /(100.)
           controlPointsUnsorted = [val for val in self.obtuNeedlePt[i] if val !=[999,999,999]]
           controlPoints=controlPointsUnsorted
           #controlPoins = self.obtuNeedlePt[i]
@@ -3479,7 +3490,7 @@ class NeedleFinderLogic:
 
     for i in range(len(self.tableValueCtrPt)):
       if self.tableValueCtrPt[i][1]!=[999,999,999]:
-        colorVar = random.randrange(50,100,1)/float(100)
+        colorVar = random.randrange(50,100,1) #??? /(100.)
         controlPointsUnsorted = [val for val in self.tableValueCtrPt[i] if val !=[999,999,999]]
         controlPoints=self.sortTable(controlPointsUnsorted,(2,1,0))
         self.addNeedleToScene(controlPoints,i,'Validation')
@@ -3603,7 +3614,8 @@ class NeedleFinderLogic:
       model.SetAttribute("nth",str(nth))
     
     if needleType=='Validation':
-      self.addNeedleToTable(int(colorVar),label,'Validation')
+      #self.addNeedleToTable(int(colorVar),label,'Validation') ### ??? why ID=color here
+      self.addNeedleToTable(int(model.GetID().strip('vtkMRMLModelNode')),label,'Validation')
     
     elif not script:
       self.addNeedleToTable(int(model.GetID().strip('vtkMRMLModelNode')),label)
@@ -4740,18 +4752,21 @@ class NeedleFinderLogic:
     #productive
     profprint()
     returnTips=[]
-    modelNodes=slicer.util.getNodes('manual-seg_*')
-    for name,node in modelNodes.iteritems():
-      print "found validation needle: ",name
-      polydata = node.GetPolyData()
-      p,pbis=[0,0,0],[0,0,0]
-      if polydata and polydata.GetNumberOfPoints()>100: #??? this is risky when u have other models in the scene (not only neeedles(
-          polydata.GetPoint(0,p)
-          polydata.GetPoint(int(polydata.GetNumberOfPoints()-1),pbis)
-          if pbis[2]>p[2]:
-              p=pbis
-          print p
-          returnTips.append(self.ras2ijk(p))
+    modelNodes=slicer.mrmlScene.GetNodesByClass('vtkMRMLModelNode')
+    nbNode=modelNodes.GetNumberOfItems()
+    for nthNode in range(nbNode):
+        # print nthNode
+        node=slicer.mrmlScene.GetNthNodeByClass(nthNode,'vtkMRMLModelNode')
+        if node.GetAttribute('type')=='Validation':
+            polydata = node.GetPolyData()
+            p,pbis=[0,0,0],[0,0,0]
+            if polydata.GetNumberOfPoints()>100: #??? this is risky when u have other models in the scene (not only neeedles(
+                polydata.GetPoint(0,p)
+                polydata.GetPoint(int(polydata.GetNumberOfPoints()-1),pbis)
+                if pbis[2]>p[2]:
+                    p=pbis
+                
+                returnTips.append(self.ras2ijk(p))
     return returnTips
 
   def startValidation(self, script=False):
@@ -4778,7 +4793,7 @@ class NeedleFinderLogic:
 
     for i in range(len(tips)):
       A=tips[i]
-      colorVar = i/(len(tips))
+      colorVar = i #??? /(len(tips))
       self.needleDetectionThread(A, imageData, colorVar,spacing, script)
 
     #print tips
@@ -4797,8 +4812,11 @@ class NeedleFinderLogic:
     #productive #onButton
     profprint()
     widget = slicer.modules.NeedleFinderWidget
-    if self.fiducialNode != None:
-        slicer.mrmlScene.RemoveNode(self.fiducialNode)
+    #remove old nodes from scene
+    while slicer.util.getNodes('template slice position*') != {}:
+      nodes = slicer.util.getNodes('template slice position*')
+      for node in nodes.values():
+        slicer.mrmlScene.RemoveNode(node)
 
     s           =   slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetSliceNode()
     offSet      =   s.GetSliceOffset()
@@ -5104,7 +5122,26 @@ class NeedleFinderLogic:
             node.GetDisplayNode().SetSliceIntersectionVisibility(1)
     # print result
     return result
-
+  
+  def setAllNeedleTubesAsValidationNeedles(self):
+    """
+    This is used for testing, R&D. It sets the needles to validation type.
+    E.g. you load vtk needle models and want to use them as validation needles...
+    """
+    #test #research #button
+    profprint()
+    modelNodes=slicer.mrmlScene.GetNodesByClass('vtkMRMLModelNode')
+    nbNode=modelNodes.GetNumberOfItems()
+    for nthNode in range(nbNode):
+      node=slicer.mrmlScene.GetNthNodeByClass(nthNode,'vtkMRMLModelNode')
+      if node.GetID() and node.GetAttribute('type')!='Validation':
+        node.SetAttribute('type','Validation')
+        displayNode=node.GetDisplayNode()
+        colorVar    = random.randrange(50,100,1) #??? /(100.)
+        nth = int(colorVar)%64
+        displayNode.SetColor(self.color[int(nth)][0],self.color[int(nth)][1],self.color[int(nth)][2])
+        displayNode.SetSliceIntersectionVisibility(True)
+    
   def distance(self,pt1,pt2):
     """3D distance between two points
 
