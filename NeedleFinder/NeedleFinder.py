@@ -499,9 +499,9 @@ class NeedleFinderWidget:
     
     #algo
     self.algoVersParameter = qt.QSpinBox()
-    self.algoVersParameter.setMinimum(1)
-    self.algoVersParameter.setMaximum(4)
-    self.algoVersParameter.setValue(1)
+    self.algoVersParameter.setMinimum(0)
+    self.algoVersParameter.setMaximum(3)
+    self.algoVersParameter.setValue(0)
     algoLabel = qt.QLabel("Needle detection version: ")
     parameterFrame.addRow( algoLabel, self.algoVersParameter)
     
@@ -956,7 +956,7 @@ class NeedleFinderWidget:
           labelImage=self.labelMapNode.GetImageData()
           shape=list(labelImage.GetDimensions()).reverse()
           labelArray = vtk.util.numpy_support.vtk_to_numpy(labelImage.GetPointData().GetScalars()).reshape(shape)
-          labelArray[:]=0
+          #labelArray[:]=0
           self.editUtil.markVolumeNodeAsModified(widget.labelMapNode)
 
   def processEventNeedleValidation(self,observee,event=None):
@@ -2055,13 +2055,13 @@ class NeedleFinderLogic:
     widget = slicer.modules.NeedleFinderWidget
     widget.axialSegmentationLimit, widget.axialSegmentationLimitRAS = self.findAxialSegmentationLimitFromMarker()
     # select algo version
-    if widget.algoVersParameter.value == 1:
+    if widget.algoVersParameter.value == 0:
       self.needleDetectionThreadCurrentDev(A, imageData,colorVar,spacing, script)
-    if widget.algoVersParameter.value == 2:
+    if widget.algoVersParameter.value == 1:
       self.needleDetectionThread13_1(A, imageData,colorVar,spacing, script)
-    if widget.algoVersParameter.value == 3:
+    if widget.algoVersParameter.value == 2:
       self.needleDetectionThread13_2(A, imageData,colorVar,spacing, script)
-    if widget.algoVersParameter.value == 4:
+    if widget.algoVersParameter.value == 3:
       if widget.labelMapNode:
         self.needleDetectionThread13_3(A, imageData,widget.labelMapNode.GetImageData(),widget.tempPointList,colorVar,spacing, script)
       else:
@@ -2811,7 +2811,7 @@ class NeedleFinderLogic:
     iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
     https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
     
-    Experiment here: use additional user information to fix outliers.
+    >>>> Experiment here: use additional user information to fix outliers. <<<<
     
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
     The second extremity of this segment is saved as a control point (in controlPoints), used later. 
@@ -2832,7 +2832,6 @@ class NeedleFinderLogic:
     distanceMax                 = widget.distanceMax.value
     gradientPonderation         = widget.gradientPonderation.value
     sigmaValue                  = widget.sigmaValue.value
-    stepsize                    = widget.stepsize.value
     gaussianAttenuationChecked  = widget.gaussianAttenuationButton.isChecked()
     gradient                    = widget.gradient.isChecked()
     numberOfPointsPerNeedle     = widget.numberOfPointsPerNeedle.value
@@ -2858,7 +2857,7 @@ class NeedleFinderLogic:
     pixelValue      = numpy.zeros(shape=(dims[0],dims[1],dims[2]))
     
     A0              = A
-    print A0
+    print "A0: ",A0
     
     controlPoints       = []
     controlPointsIJK    = []
@@ -2869,12 +2868,13 @@ class NeedleFinderLogic:
     bestControlPoints.append(self.ijk2ras(A))
 
     for step in range(0,NbStepsNeedle+2):
-      print "length", lenghtNeedle
+      print "step, lengthNeedle: ", step, lenghtNeedle
       #step 0
       #------------------------------------------------------------------------------
       if step==0:
 
         L       = self.stepSize13(step+1,NbStepsNeedle+1)*lenghtNeedle
+        print "L: ",L
         C0      = [A[0],A[1],A[2]- L]
         rMax    = distanceMax/float(spacing[0])
         rIter   = int(round(rMax))
@@ -2885,7 +2885,7 @@ class NeedleFinderLogic:
       else:
 
         stepSize = self.stepSize13(step+1,NbStepsNeedle+1)*lenghtNeedle
-        print stepSize
+        print "stepSize: ",stepSize
 
         C0      = [ 2*A[0]-tip0[0],
                     2*A[1]-tip0[1],
@@ -2932,14 +2932,16 @@ class NeedleFinderLogic:
             if ijk[0]<dims[0] and ijk[0]>0 and  ijk[1]<dims[1] and ijk[1]>0 and ijk[2]<dims[2] and ijk[2]>0:
               
               center    = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
-              if labelData: label     = labelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0) 
+              if labelData: 
+                label     = labelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0) 
+                labelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, 1) #see the search cones
 
               #>>>>>>>>>>>>>>>>>>>>>>
-              if not label:
+              #if not label:
                 total     += center
-              else:
-                print "found needle guide label marker"
-                total/=2 # force high influence of labels
+              #else:
+              #  print "found needle guide label marker"
+              #  total/=2 # force high influence of labels
               #<<<<<<<<<<<<<<<<<<<<
               
               if gradient ==1 :
@@ -5038,7 +5040,7 @@ class NeedleFinderLogic:
                             widget.sigmaValue.value]
 
     for i in range(len(result)):
-      if widget.algoVersParameter.value == 1:
+      if widget.algoVersParameter.value == 0:
         val=self.hausdorffDistance(result[i][1],result[i][2])
       else:
         val=self.hausdorffDistance13(result[i][1],result[i][2])
@@ -5783,6 +5785,7 @@ class NeedleFinderLogic:
     widget.lenghtNeedleParameter.value    = lenghtNeedleParameter
     widget.radiusNeedleParameter.value    = radiusNeedleParameter
     widget.algoVersParameter.value        = algoVersParameter
+    print "#############"
     print "algoVers: ",algoVersParameter
     print "Parameters successfully loaded!"
     
