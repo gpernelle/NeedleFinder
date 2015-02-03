@@ -603,6 +603,24 @@ class NeedleFinderWidget:
 
     # init table report
     logic.initTableView() # init the report table
+    
+    # Lauren feature request: set mainly unused coronal view to sagittal to display ground truth bitmap image (if available)
+    # Usage after fresh slicer start: 1. Load scene and reference jpg. 2. Then open NeedleFinder
+    # TODO: feature does not work so far
+    vn=slicer.util.getNode("Case *") # the naming convention for the ground truth jpg files: "Case XXX.jpg"
+    if vn:
+      # show image if available
+      slicer.app.layoutManager().sliceWidget("Green").sliceLogic().GetBackgroundLayer().SetVolumeNode(vn)
+      sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
+      if sGreen ==None :
+        sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
+      sGreen.SetSliceVisible(0)
+      reformatLogic = slicer.vtkSlicerReformatLogic()
+      reformatLogic.SetSliceNormal(sGreen,0,0,-.5)
+      #ori=[0,0,0]
+      #ori=reformatLogic.GetSliceOrigin()
+      #reformatLogic.SetSliceOrigin(sGreen,ori[1],ori[2],0)
+      sGreen.Modified()
 
     self.onResetParameters()
     self.setupShortcuts()
@@ -2161,16 +2179,17 @@ class NeedleFinderLogic:
     bestControlPoints.append(self.ijk2ras(A))
     #---------------------------------------------------------------------------------
     # Draw fiducial points initial tip and found tip
-    """
-    fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
-    fiducial.Initialize(slicer.mrmlScene)
-    fiducial.SetName('Best tip')
-    fiducial.SetFiducialCoordinates(self.ijk2ras(A))
-    fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
-    fiducial.Initialize(slicer.mrmlScene)
-    fiducial.SetName('A init')
-    fiducial.SetFiducialCoordinates(self.ijk2ras(AInit))
-    """
+    if drawFiducialPoints:
+      """
+      fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+      fiducial.Initialize(slicer.mrmlScene)
+      fiducial.SetName('Best tip')
+      fiducial.SetFiducialCoordinates(self.ijk2ras(A))
+      """
+      fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+      fiducial.Initialize(slicer.mrmlScene)
+      fiducial.SetName('A init')
+      fiducial.SetFiducialCoordinates(self.ijk2ras(AInit))
     
     for step in range(0,NbStepsNeedle+1):
       
@@ -2255,7 +2274,7 @@ class NeedleFinderLogic:
                             C0[2]]
 
           total     = 0
-          M         = [[0,0,0] for i in xrange(tIter+1)]
+          M         = [[0,0,0] for i in xrange(int(tIter)+1)]
           
          
           # calculates tIter = number of points per segment 
@@ -2395,7 +2414,7 @@ class NeedleFinderLogic:
       self.addNeedleToScene(self.controlPoints,colorVar, 'Detection', script)
   
   def needleDetectionThread13_1(self,A, imageData,colorVar,spacing,script=False):
-    '''MICCAI2013 version variant 1, 3/11/13
+    '''MICCAI2013 suspect version variant 1, 3/11/13
     iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
     https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
     
@@ -2406,7 +2425,7 @@ class NeedleFinderLogic:
     NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
     From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
     '''
-    #productive
+    #productive #probablyMiccai
     profprint()
     ### initialisation of the parameters
     ijk         = [0,0,0]
@@ -2462,8 +2481,8 @@ class NeedleFinderLogic:
         L       = self.stepSize13(step+1,NbStepsNeedle+1)*lenghtNeedle
         C0      = [A[0],A[1],A[2]- L]
         rMax    = distanceMax/float(spacing[0])
-        rIter   = int(round(rMax))
-        tIter   = max(1,int(round(L)))
+        rIter   = rMax
+        tIter   = int(round(L))
 
       #step 1,2,...
       #------------------------------------------------------------------------------
@@ -2474,22 +2493,22 @@ class NeedleFinderLogic:
 
         C0      = [ 2*A[0]-tip0[0],
                     2*A[1]-tip0[1],
-                    A[2]-stepSize   ]
+                    A[2]-stepSize   ] # ??? this is buggy vector calculus, now its a feature ;-)
 
         rMax    = max(stepSize,distanceMax/float(spacing[0]))
         rIter   = max(15,min(20,int(rMax/float(spacing[0]))))
-        tIter   = max(1,int(round(stepSize)))
+        tIter   = stepSize
         
       estimator     = 0
       minEstimator  = 0  
 
       #radius variation
-      for R in range(rIter+1):
+      for R in range(int(rIter)+1):
 
         r=R*(rMax/float(rIter))
         
         ### angle variation from 0 to 360
-        for thetaStep in xrange(nbRotatingStep ):
+        for thetaStep in xrange(int(nbRotatingStep) ):
           
           angleInDegree = (thetaStep*360)/float(nbRotatingStep)
           theta         = math.radians(angleInDegree)
@@ -2499,11 +2518,11 @@ class NeedleFinderLogic:
                             C0[2]]
 
           total     = 0
-          M         = [[0,0,0] for i in xrange(tIter+1)]
+          M         = [[0,0,0] for i in xrange(int(tIter)+1)]
           
          
           # calculates tIter = number of points per segment 
-          for t in xrange(tIter+1):
+          for t in xrange(int(tIter)+1):
 
             tt  = t/float(tIter)
             
@@ -2604,7 +2623,7 @@ class NeedleFinderLogic:
       self.addNeedleToScene(controlPoints,colorVar, 'Detection', script)
   
   def needleDetectionThread13_2(self,A, imageData,colorVar,spacing,script=False):
-    '''MICCAI13 Variant2 2/27/13
+    '''MICCAI13 suspect Variant2 2/27/13
     iGyne_old 4450bbcb543e7432122f06c1905aab4eb8b446e6
     https://github.com/gpernelle/iGyne_old/commit/4450bbcb543e7432122f06c1905aab4eb8b446e6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
     
@@ -2615,7 +2634,7 @@ class NeedleFinderLogic:
     NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
     From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
     '''
-    #research
+    #research #obsolete #deprecated #notMiccai
     profprint()
     ### initialisation of the parameters
     ijk         = [0,0,0]
@@ -2666,8 +2685,8 @@ class NeedleFinderLogic:
         L       = 20/float(spacing[2])
         C0      = [A[0],A[1],A[2]- L]
         rMax    = distanceMax/float(spacing[0])
-        rIter   = max(1,int(round(rMax)))
-        tIter   = max(1,int(round(L)))
+        rIter   = rMax
+        tIter   = int(round(L))
 
       #step 1,2,...
       #------------------------------------------------------------------------------
@@ -2677,23 +2696,22 @@ class NeedleFinderLogic:
 
         C0      = [ 2*A[0]-tip0[0],
                     2*A[1]-tip0[1],
-                    A[2]-stepSize   ]
+                    A[2]-stepSize   ] # ??? this is buggy vector calculus, now its a feature ;-)
 
         rMax    = max(stepSize,distanceMax/float(spacing[0]))
         rIter   = max(15,min(20,int(rMax/float(spacing[0]))))
-        #tIter   = stepSize
-        tIter = max(1,int(round(stepSize)))
+        tIter   = stepSize
         
       estimator     = 0
       minEstimator  = 0  
 
       #radius variation
-      for R in range(rIter+1):
+      for R in range(int(rIter)+1):
 
         r=R*(rMax/float(rIter))
         
         ### angle variation from 0 to 360
-        for thetaStep in xrange(nbRotatingStep ):
+        for thetaStep in xrange(int(nbRotatingStep) ):
           
           angleInDegree = (thetaStep*360)/float(nbRotatingStep)
           theta         = math.radians(angleInDegree)
@@ -2703,11 +2721,11 @@ class NeedleFinderLogic:
                             C0[2]]
 
           total     = 0
-          M         = [[0,0,0] for i in xrange(tIter+1)]
+          M         = [[0,0,0] for i in xrange(int(tIter)+1)]
           
          
           # calculates tIter = number of points per segment 
-          for t in xrange(tIter+1):
+          for t in xrange(int(tIter)+1):
 
             tt  = t/float(tIter)
             
@@ -2877,8 +2895,8 @@ class NeedleFinderLogic:
         print "L: ",L
         C0      = [A[0],A[1],A[2]- L]
         rMax    = distanceMax/float(spacing[0])
-        rIter   = int(round(rMax))
-        tIter   = max(1,int(round(L)))
+        rIter   = rMax
+        tIter   = int(round(L))
 
       #step 1,2,...
       #------------------------------------------------------------------------------
@@ -2889,22 +2907,22 @@ class NeedleFinderLogic:
 
         C0      = [ 2*A[0]-tip0[0],
                     2*A[1]-tip0[1],
-                    A[2]-stepSize   ]
+                    A[2]-stepSize   ] # ??? this is buggy vector calculus, now its a feature ;-)
 
         rMax    = max(stepSize,distanceMax/float(spacing[0]))
         rIter   = max(15,min(20,int(rMax/float(spacing[0]))))
-        tIter   = max(1,int(round(stepSize)))
+        tIter   = stepSize
         
       estimator     = 0
       minEstimator  = 0  
 
       #radius variation
-      for R in range(rIter+1):
+      for R in range(int(rIter)+1):
 
         r=R*(rMax/float(rIter))
         
         ### angle variation from 0 to 360
-        for thetaStep in xrange(nbRotatingStep ):
+        for thetaStep in xrange(int(nbRotatingStep) ):
           
           angleInDegree = (thetaStep*360)/float(nbRotatingStep)
           theta         = math.radians(angleInDegree)
@@ -2914,11 +2932,11 @@ class NeedleFinderLogic:
                             C0[2]]
 
           total     = 0
-          M         = [[0,0,0] for i in xrange(tIter+1)]
+          M         = [[0,0,0] for i in xrange(int(tIter)+1)]
           
          
           # calculates tIter = number of points per segment 
-          for t in xrange(tIter+1):
+          for t in xrange(int(tIter)+1):
 
             tt  = t/float(tIter)
             
@@ -3260,7 +3278,7 @@ class NeedleFinderLogic:
                               C0[2]]
 
             total     = 0
-            M         = [[0,0,0] for i in xrange(tIter+1)]
+            M         = [[0,0,0] for i in xrange(int(tIter)+1)]
             
             # calculates tIter = number of points per segment 
             for t in xrange(tIter+1):
