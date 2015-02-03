@@ -606,14 +606,15 @@ class NeedleFinderWidget:
     
     # Lauren feature request: set mainly unused coronal view to sagittal to display ground truth bitmap image (if available)
     # Usage after fresh slicer start: 1. Load scene and reference jpg. 2. Then open NeedleFinder
-    # TODO: feature does not work so far
+    # TODO: feature does not work so far (show the JPG image doesnt work)
     vn=slicer.util.getNode("Case *") # the naming convention for the ground truth jpg files: "Case XXX.jpg"
     if vn:
-      # show image if available
+      # show JPG image if available
       slicer.app.layoutManager().sliceWidget("Green").sliceLogic().GetBackgroundLayer().SetVolumeNode(vn)
       sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
       if sGreen ==None :
         sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
+      # set to axial view
       sGreen.SetSliceVisible(0)
       reformatLogic = slicer.vtkSlicerReformatLogic()
       reformatLogic.SetSliceNormal(sGreen,0,0,-.5)
@@ -621,6 +622,7 @@ class NeedleFinderWidget:
       #ori=reformatLogic.GetSliceOrigin()
       #reformatLogic.SetSliceOrigin(sGreen,ori[1],ori[2],0)
       sGreen.Modified()
+      slicer.app.layoutManager().sliceWidget("Green").sliceLogic().GetBackgroundLayer().Modified()
 
     self.onResetParameters()
     self.setupShortcuts()
@@ -1657,6 +1659,17 @@ class NeedleFinderLogic:
     F = self.Fibonacci(l)
     s =F[k+1]/float(sum(self.Fibonacci(l)))
     return s
+
+  def stepSizeAndre(self,k,l):
+    """
+    The size of the step depends on:
+    - the length of the needle
+    - how many control points per needle 
+    """
+    #productive
+    F = self.Fibonacci(l)
+    s =F[k+1]/float(sum(self.Fibonacci(l))-1)
+    return s
   
   def stepSize13(self,k,l):
     '''MICCAI13 version
@@ -2610,6 +2623,12 @@ class NeedleFinderLogic:
       controlPointsIJK.append(A)
 
       if widget.drawFiducialPoints.isChecked():
+        # remove old control pts
+        tempFidNodes = slicer.mrmlScene.GetNodesByName('.')
+        for i in range(tempFidNodes.GetNumberOfItems()):
+          node = tempFidNodes.GetItemAsObject(i)
+          if node:
+            slicer.mrmlScene.RemoveNode(node)
         fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         fiducial.Initialize(slicer.mrmlScene)
         fiducial.SetName('.')
@@ -2829,7 +2848,7 @@ class NeedleFinderLogic:
     iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
     https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
     
-    >>>> Experiment here: use additional user information to fix outliers. <<<<
+    >>>> Bug fixes & experiment here: use additional user information to fix outliers. <<<<
     
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
     The second extremity of this segment is saved as a control point (in controlPoints), used later. 
@@ -2862,10 +2881,10 @@ class NeedleFinderLogic:
     # lenghtNeedle = abs(self.ijk2ras(A)[2]*0.9)
 
     if axialSegmentationLimit!=None:
-      lenghtNeedle = abs(A[2] - axialSegmentationLimit)*1.15*spacing[2]
+      lenghtNeedle = abs(A[2] - axialSegmentationLimit)*1.*spacing[2] #??? why was there: prologn the needle length guess 15%
     else:
-      lenghtNeedle = A[2]*0.9*spacing[2]
-    
+      lenghtNeedle = A[2]*0.9*spacing[2] #??? why shorten the needle length guess here
+
     rMax            = distanceMax/float(spacing[0])
     NbStepsNeedle   = numberOfPointsPerNeedle - 1
     nbRotatingStep  = nbRotatingIterations
@@ -2885,33 +2904,35 @@ class NeedleFinderLogic:
     controlPointsIJK.append(A)
     bestControlPoints.append(self.ijk2ras(A))
 
-    for step in range(0,NbStepsNeedle+2):
+    for step in range(0,NbStepsNeedle):
       print "step, lengthNeedle: ", step, lenghtNeedle
       #step 0
       #------------------------------------------------------------------------------
       if step==0:
 
-        L       = self.stepSize13(step+1,NbStepsNeedle+1)*lenghtNeedle
+        #L       = self.stepSize13(step+1,NbStepsNeedle+1)*lenghtNeedle
+        L       = self.stepSizeAndre(step+1,NbStepsNeedle)*lenghtNeedle
         print "L: ",L
-        C0      = [A[0],A[1],A[2]- L]
+        C0      = [A[0],A[1],A[2]- int(round(L/spacing[2]))]
         rMax    = distanceMax/float(spacing[0])
         rIter   = rMax
-        tIter   = int(round(L))
+        tIter   = max(1,int(round(L))) ### ??? L can be smaller 1
 
       #step 1,2,...
       #------------------------------------------------------------------------------
       else:
 
-        stepSize = self.stepSize13(step+1,NbStepsNeedle+1)*lenghtNeedle
+        #stepSize = self.stepSize13(step+1,NbStepsNeedle+1)*lenghtNeedle
+        stepSize = self.stepSizeAndre(step+1,NbStepsNeedle)*lenghtNeedle
         print "stepSize: ",stepSize
 
         C0      = [ 2*A[0]-tip0[0],
                     2*A[1]-tip0[1],
-                    A[2]-stepSize   ] # ??? this is buggy vector calculus, now its a feature ;-)
+                    A[2]-int(round(stepSize/spacing[2]))   ] # ??? this is buggy vector calculus, now its a feature ;-)
 
         rMax    = max(stepSize,distanceMax/float(spacing[0]))
         rIter   = max(15,min(20,int(rMax/float(spacing[0]))))
-        tIter   = stepSize
+        tIter   = max(1,int(round(stepSize))) ### ??? stepSize can be smaller 1
         
       estimator     = 0
       minEstimator  = 0  
@@ -3022,7 +3043,7 @@ class NeedleFinderLogic:
         A   = bestPoint
  
 
-      if A[2]<axialSegmentationLimit and A!=A0:
+      if 0 and A[2]<axialSegmentationLimit and A!=A0:
         
         asl = axialSegmentationLimit
         l   = (A[2]-asl)/float(tip0[2]-A[2])
@@ -3035,12 +3056,14 @@ class NeedleFinderLogic:
       controlPointsIJK.append(A)
 
       if widget.drawFiducialPoints.isChecked():
+        print "#controlPoints: ",len(controlPoints)
         fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         fiducial.Initialize(slicer.mrmlScene)
         fiducial.SetName('.')
         fiducial.SetFiducialCoordinates(controlPoints[step+1])
 
       if A[2]<=axialSegmentationLimit and A!=A0:
+        print "too long" 
         break
     #>>>>>>>> use additional info from temp markers
     if 0:
@@ -3055,7 +3078,7 @@ class NeedleFinderLogic:
     #self.addNeedleToScene(controlPoints,colorVar)  
     if not autoStopTip:
       self.addNeedleToScene(controlPoints,colorVar, 'Detection', script)
-    
+  
   #------------------------------------------------------------------------------ 
   #
   #
@@ -3703,6 +3726,12 @@ class NeedleFinderLogic:
     reformatLogic = slicer.vtkSlicerReformatLogic()
     reformatLogic.SetSliceNormal(sYellow,1,0,0)
     tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
+    for i in range(tempFidNodes.GetNumberOfItems()):
+      node = tempFidNodes.GetItemAsObject(i)
+      if node:
+        slicer.mrmlScene.RemoveNode(node)
+    # bezier control points
+    tempFidNodes = slicer.mrmlScene.GetNodesByName('.')
     for i in range(tempFidNodes.GetNumberOfItems()):
       node = tempFidNodes.GetItemAsObject(i)
       if node:
