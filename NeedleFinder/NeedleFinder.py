@@ -56,7 +56,7 @@ frequent=False
 MAXNEEDLES=1000
 
 def msgbox(text):
-  qt.QMessageBox.about(0, 'Needle Finder Profiling:', text)
+  qt.QMessageBox.about(0, 'Profiling:', text)
 def profprint(className=""):
   if profiling: print "%s.%s -----------------------"%(className,whosdaddy())
 def profbox(className=""):  
@@ -421,7 +421,7 @@ class NeedleFinderWidget:
     self.gradientPonderation.setMinimum(0.01)
     self.gradientPonderation.setMaximum(500)
     self.gradientPonderation.setValue(5)
-    gradientPonderationLabel = qt.QLabel("Neighborhood Ponderation: ")
+    gradientPonderationLabel = qt.QLabel("Gradient Ponderation: ")
     parameterFrame.addRow( gradientPonderationLabel, self.gradientPonderation)
 
     # center accuentuation
@@ -606,11 +606,13 @@ class NeedleFinderWidget:
     
     # Lauren feature request: set mainly unused coronal view to sagittal to display ground truth bitmap image (if available)
     # Usage after fresh slicer start: 1. Load scene and reference jpg. 2. Then open NeedleFinder
-    # TODO: feature does not work so far (show the JPG image doesnt work)
-    vn=slicer.util.getNode("Case *") # the naming convention for the ground truth jpg files: "Case XXX.jpg"
-    if vn:
+    # TODO: feature does not work so far (show the JPG image doesnt work, ie. SetVolumeNode())
+    vnJPG=slicer.util.getNode("Case *") # the naming convention for the ground truth JPG files: "Case XXX.jpg"
+    if vnJPG:
+      print "(showing ground truth in green view)"
       # show JPG image if available
-      slicer.app.layoutManager().sliceWidget("Green").sliceLogic().GetBackgroundLayer().SetVolumeNode(vn)
+      sw=slicer.app.layoutManager().sliceWidget("Green")
+      sw.sliceLogic().GetBackgroundLayer().SetVolumeNode(vnJPG)
       sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
       if sGreen ==None :
         sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
@@ -621,9 +623,20 @@ class NeedleFinderWidget:
       #ori=[0,0,0]
       #ori=reformatLogic.GetSliceOrigin()
       #reformatLogic.SetSliceOrigin(sGreen,ori[1],ori[2],0)
+      sw.fitSliceToBackground()
       sGreen.Modified()
       slicer.app.layoutManager().sliceWidget("Green").sliceLogic().GetBackgroundLayer().Modified()
-
+    vn=slicer.util.getNode("Case*MR*") 
+    if vn:
+      print "(showing MR volume in red/yellow view)"
+      # show MR image if available
+      sw=slicer.app.layoutManager().sliceWidget("Red")
+      sw.sliceLogic().GetBackgroundLayer().SetVolumeNode(vn)
+      sw.fitSliceToBackground()
+      sw=slicer.app.layoutManager().sliceWidget("Yellow")
+      sw.sliceLogic().GetBackgroundLayer().SetVolumeNode(vn)
+      sw.fitSliceToBackground()
+ 
     self.onResetParameters()
     self.setupShortcuts()
     
@@ -661,7 +674,12 @@ class NeedleFinderWidget:
       s = qt.QShortcut(k,slicer.util.mainWindow())
       s.connect('activated()', f)
       s.connect('activatedAmbiguously()', f)
-      print "SlicerRC - '%s' -> '%s'" % (keys, f.__name__)
+      print "'%s' -> '%s'" % (keys, f.__name__)
+      # convenient for the python console
+      globals()['nfw'] = nfw = slicer.modules.NeedleFinderWidget
+      globals()['nfl'] = nfl = slicer.modules.NeedleFinderWidget.logic
+      print "nfl -> NeedleFinderLogic"
+      print "nfw -> NeedleFinderWidget"
 
   def segmentNeedle(self):
       """
@@ -971,13 +989,22 @@ class NeedleFinderWidget:
         #self.labelMapNode=None
         # clear label image
         if self.labelMapNode:
-          print "clearing label map"
-          self.undoRedo.saveState()
-          labelImage=self.labelMapNode.GetImageData()
-          shape=list(labelImage.GetDimensions()).reverse()
-          labelArray = vtk.util.numpy_support.vtk_to_numpy(labelImage.GetPointData().GetScalars()).reshape(shape)
-          #labelArray[:]=0
-          self.editUtil.markVolumeNodeAsModified(widget.labelMapNode)
+          if 0: self.clearLabelMap()
+          
+  def clearLabelMap(self):
+    """
+    Erase the contents of the label map.
+    """
+    #productive
+    profprint()
+    widget = slicer.modules.NeedleFinderWidget
+    print "clearing label map"
+    self.undoRedo.saveState()
+    labelImage=self.labelMapNode.GetImageData()
+    shape=list(labelImage.GetDimensions()).reverse()
+    labelArray = vtk.util.numpy_support.vtk_to_numpy(labelImage.GetPointData().GetScalars()).reshape(shape)
+    labelArray[:]=0
+    self.editUtil.markVolumeNodeAsModified(widget.labelMapNode)
 
   def processEventNeedleValidation(self,observee,event=None):
     """
@@ -2480,7 +2507,7 @@ class NeedleFinderLogic:
     controlPoints       = []
     controlPointsIJK    = []
     bestControlPoints   = []
-
+          
     controlPoints.append(self.ijk2ras(A))
     controlPointsIJK.append(A)
     bestControlPoints.append(self.ijk2ras(A))
@@ -2623,12 +2650,6 @@ class NeedleFinderLogic:
       controlPointsIJK.append(A)
 
       if widget.drawFiducialPoints.isChecked():
-        # remove old control pts
-        tempFidNodes = slicer.mrmlScene.GetNodesByName('.')
-        for i in range(tempFidNodes.GetNumberOfItems()):
-          node = tempFidNodes.GetItemAsObject(i)
-          if node:
-            slicer.mrmlScene.RemoveNode(node)
         fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         fiducial.Initialize(slicer.mrmlScene)
         fiducial.SetName('.')
@@ -2690,7 +2711,7 @@ class NeedleFinderLogic:
     controlPoints       = []
     controlPointsIJK    = []
     bestControlPoints   = []
-
+    
     controlPoints.append(self.ijk2ras(A))
     controlPointsIJK.append(A)
     bestControlPoints.append(self.ijk2ras(A))
@@ -2955,7 +2976,7 @@ class NeedleFinderLogic:
           total     = 0
           M         = [[0,0,0] for i in xrange(int(tIter)+1)]
           
-         
+          label=labelCtr=0
           # calculates tIter = number of points per segment 
           for t in xrange(int(tIter)+1):
 
@@ -2971,18 +2992,7 @@ class NeedleFinderLogic:
             if ijk[0]<dims[0] and ijk[0]>0 and  ijk[1]<dims[1] and ijk[1]>0 and ijk[2]<dims[2] and ijk[2]>0:
               
               center    = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
-              if labelData: 
-                label     = labelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0) 
-                labelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, 1) #see the search cones
-
-              #>>>>>>>>>>>>>>>>>>>>>>
-              #if not label:
-                total     += center
-              #else:
-              #  print "found needle guide label marker"
-              #  total/=2 # force high influence of labels
-              #<<<<<<<<<<<<<<<<<<<<
-              
+                            
               if gradient ==1 :
 
                 radiusNeedle        = int(round(radiusNeedleParameter/float(spacing[0])))
@@ -2999,10 +3009,24 @@ class NeedleFinderLogic:
                 
                 total += 8*center - ((g1+g2+g3+g4+g5+g6+g7+g8)/8)*gradientPonderation
               
+              #>>>>>>>>>>>>>>>>>>>>>>
+              if labelData: 
+                label     = labelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0) 
+                #labelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, 306) #mark the search cones in label volume
+
+              if not label:
+                total     += center
+              elif label<300:
+                #print "found needle guide label marker"
+                # force high influence of labels
+                labelCtr+=1
+              #<<<<<<<<<<<<<<<<<<<<
+
+          if labelCtr: total=-1000*labelCtr
+          
           if R==0:
             
-            initialIntensity    = total
-            estimator           = total
+            initialIntensity = estimator = total
             
           if gaussianAttenuationChecked==1 and step>=2 :
             
@@ -3033,6 +3057,7 @@ class NeedleFinderLogic:
             if estimator<minEstimator or minEstimator == 0:
               minEstimator  = estimator
               if minEstimator!=0:  
+                print "best estimator value: ",estimator
                 bestPoint   = C
         
            
@@ -3041,7 +3066,7 @@ class NeedleFinderLogic:
         A   = C0
       elif bestPoint!=tip0: 
         A   = bestPoint
- 
+
 
       if 0 and A[2]<axialSegmentationLimit and A!=A0:
         
@@ -3063,18 +3088,9 @@ class NeedleFinderLogic:
         fiducial.SetFiducialCoordinates(controlPoints[step+1])
 
       if A[2]<=axialSegmentationLimit and A!=A0:
-        print "too long" 
+        print "/!\ needle too long" 
         break
-    #>>>>>>>> use additional info from temp markers
-    if 0:
-      aslRAS=widget.axialSegmentationLimitRAS
-      print "using additional points:"
-      for pt in tempPoints:
-        print pt
-        if pt[2]>aslRAS:
-          print "^^ using"
-          controlPoints.append(pt)
-    #<<<<<<<<<
+
     #self.addNeedleToScene(controlPoints,colorVar)  
     if not autoStopTip:
       self.addNeedleToScene(controlPoints,colorVar, 'Detection', script)
@@ -3657,12 +3673,25 @@ class NeedleFinderLogic:
       model.SetAttribute("nth",str(nth))
     
     if needleType=='Validation':
+      o=0
       #self.addNeedleToTable(int(colorVar),label,'Validation') ### ??? why ID=color here
-      self.addNeedleToTable(int(model.GetID().strip('vtkMRMLModelNode')),label,'Validation')
+      #self.addNeedleToTable(int(model.GetID().strip('vtkMRMLModelNode')),label,'Validation')
     
     elif not script:
       self.addNeedleToTable(int(model.GetID().strip('vtkMRMLModelNode')),label)
 
+  def deleteControlPoints(self):
+    """
+    Delete control points from needle bezier curves.
+    """
+    #research
+    # remove old control pts from scene
+    tempFidNodes = slicer.mrmlScene.GetNodesByName('.')
+    for i in range(tempFidNodes.GetNumberOfItems()):
+      node = tempFidNodes.GetItemAsObject(i)
+      if node:
+        slicer.mrmlScene.RemoveNode(node)
+        
   def deleteAllAutoNeedlesFromScene(self):
     """
     Delete every segmented needle of the current set
@@ -3677,6 +3706,35 @@ class NeedleFinderLogic:
   def deleteAllModelsFromScene(self):
     """
     Delete every segmented needle, template slice markers and reset yellow segment
+    """
+    #research
+    self.deleteNeedleDetectionModelsFromScene()
+    self.deleteNeedleValidationModelsFromScene()
+  
+  def deleteNeedleValidationModelsFromScene(self):
+    """
+    Delete artifacts from validation from scene.
+    """
+    #producitve #onbutton
+    profprint()
+    while slicer.util.getNodes('manual-seg_*') != {}:
+      nodes = slicer.util.getNodes('manual-seg_*')
+      for node in nodes.values():
+        slicer.mrmlScene.RemoveNode(node)
+    while slicer.util.getNodes('obturator-seg_*') != {}:
+      nodes = slicer.util.getNodes('obturator-seg_*')
+      for node in nodes.values():
+        slicer.mrmlScene.RemoveNode(node)
+    # bezier control points
+    self.deleteControlPoints()
+    while slicer.util.getNodes('template slice position*') != {}:
+      nodes = slicer.util.getNodes('template slice position*')
+      for node in nodes.values():
+        slicer.mrmlScene.RemoveNode(node)
+      
+  def deleteNeedleDetectionModelsFromScene(self):
+    """
+    Delete artifacts from semi-auto segmentation from scene.
     """
     #productive #onButton
     profprint()
@@ -3703,22 +3761,10 @@ class NeedleFinderLogic:
       nodes = slicer.util.getNodes('python-catch-round_*')
       for node in nodes.values():
         slicer.mrmlScene.RemoveNode(node)
-    while slicer.util.getNodes('manual-seg_*') != {}:
-      nodes = slicer.util.getNodes('manual-seg_*')
-      for node in nodes.values():
-        slicer.mrmlScene.RemoveNode(node)
-    while slicer.util.getNodes('obturator-seg_*') != {}:
-      nodes = slicer.util.getNodes('obturator-seg_*')
-      for node in nodes.values():
-        slicer.mrmlScene.RemoveNode(node)
     #while slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode') !={}:
       #nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
       #for node in nodes.values():
         #slicer.mrmlScene.RemoveNode(node)
-    while slicer.util.getNodes('template slice position*') != {}:
-      nodes = slicer.util.getNodes('template slice position*')
-      for node in nodes.values():
-        slicer.mrmlScene.RemoveNode(node)
     sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
     if sYellow ==None :
         sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
@@ -3731,11 +3777,7 @@ class NeedleFinderLogic:
       if node:
         slicer.mrmlScene.RemoveNode(node)
     # bezier control points
-    tempFidNodes = slicer.mrmlScene.GetNodesByName('.')
-    for i in range(tempFidNodes.GetNumberOfItems()):
-      node = tempFidNodes.GetItemAsObject(i)
-      if node:
-        slicer.mrmlScene.RemoveNode(node)
+    self.deleteControlPoints()
     sYellow.Modified()
         
   def deleteLastNeedle(self):
@@ -3786,7 +3828,7 @@ class NeedleFinderLogic:
           It will delete every segmented needles...
           """,qt.QMessageBox.Ok, qt.QMessageBox.Cancel)
     if ret == qt.QMessageBox.Ok or script == True:
-      self.deleteAllModelsFromScene()
+      self.deleteNeedleDetectionModelsFromScene()
       self.previousValues=[[0,0,0]]
       self.round=1
       if widget.newInsertionButton:
@@ -3825,7 +3867,6 @@ class NeedleFinderLogic:
       widget.fiducialButton.setEnabled(0)
       widget.deleteNeedleButton.setEnabled(0)
       widget.resetDetectionButton.setEnabled(0)
-      self.deleteAllModelsFromScene()
       widget.labelMapNode=None
       widget.tempPointList=[]
       widget.templateSliceButton.text = "1. Select Current Axial Slice as Seg. Limit (current: None)"
@@ -3844,17 +3885,7 @@ class NeedleFinderLogic:
       It will delete every segmented needles and the control points...
       """,qt.QMessageBox.Ok, qt.QMessageBox.Cancel)
     if ret == qt.QMessageBox.Ok:
-      while slicer.util.getNodes('manual-seg*') != {}:
-        nodes = slicer.util.getNodes('manual-seg*')
-        for node in nodes.values():
-          slicer.mrmlScene.RemoveNode(node)
-
-      while slicer.util.getNodes('.*') != {}:
-        nodes = slicer.util.getNodes('.*')
-        for node in nodes.values():
-          if node.GetAttribute("ValidationNeedle") == "1":
-            slicer.mrmlScene.RemoveNode(node)
-      
+      self.deleteNeedleValidationModelsFromScene()
       #while slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode') !={}:
         #nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
         #for node in nodes:
@@ -3864,7 +3895,7 @@ class NeedleFinderLogic:
       widget.validationNeedleNumber = 1
       widget.stepNeedle             = 0
       self.tableValueCtrPt        =[[[999,999,999] for i in range(100)] for j in range(100)]
-      print "Manual needle segmentation reset!" 
+      print "Manual needle validation segmentation reset!" 
 
   def deleteEvaluationNeedlesFromTable(self):
     """
@@ -4008,7 +4039,7 @@ class NeedleFinderLogic:
     Parameter optimization using brute-force algo...
     """
     #research
-    profbox()
+    profprint()
     w = slicer.modules.NeedleFinderWidget
     l = w.logic
     path = [ 0 for i in range(100)]
@@ -4022,10 +4053,31 @@ class NeedleFinderLogic:
     path[38] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 38 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
     path[40] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 40 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
 
-    # code piece from Guillaume parameterSearch.py
-    for i in range(1,2):
+    # write table header line
+    l.exportEvaluation(['i','maxHD','avgHD','stdHD','radiusNeedle',
+                        'lenghtNeedle',
+                        'distanceMax',
+                        'numberOfPointsPerNeedle',
+                        'nbRotatingIterations',
+                        'stepSize',
+                        'gradientPonderation',
+                        'exponent',
+                        'gaussianAttenuationButton',
+                        'sigma'],'/tmp/stats.csv')
+    l.exportEvaluation(['HD','ID1','ID2','radiusNeedle',
+                        'lenghtNeedle',
+                        'distanceMax',
+                        'numberOfPointsPerNeedle',
+                        'nbRotatingIterations',
+                        'stepSize',
+                        'gradientPonderation',
+                        'exponent',
+                        'gaussianAttenuationButton',
+                        'sigma'],'/tmp/text.csv')
+    # simple search in one dimension (Guillaumes parameterSearch.py)
+    for i in range(3,7):
       l.resetNeedleDetection(script=True)
-      w.sigmaValue.setValue(i) # change parameter sigma
+      w.numberOfPointsPerNeedle.setValue(i) # change parameter control points
       l.startValidation(script=True)
       results = l.evaluate(script=True) # calculate HD distances
       l.exportEvaluation(results, '/tmp/text.csv')
@@ -4035,34 +4087,35 @@ class NeedleFinderLogic:
       maxHD=HD[:,0].max()
       avgHD=HD[:,0].mean()
       stdHD=HD[:,0].std()
-      resultsEval=[maxHD,avgHD,stdHD] + l.valuesExperience
+      resultsEval=[i,maxHD,avgHD,stdHD] + l.valuesExperience
       l.exportEvaluation(resultsEval,'/tmp/stats.csv')
     
-    # code piece from Guillaume bruteForce.py  
-    for id in range(100):
-      if path[id]:
-        print "processing ",path[id]
-        slicer.util.loadScene( path[id] )
-        for i in range(1,10000):
-          l.resetNeedleDetection(script=True)
-          w.radiusNeedleParameter.setValue(np.random.randint(1,6))
-          w.stepsize.setValue(np.random.randint(1,40))
-          w.sigmaValue.setValue(np.random.randint(1,40)) # change parameter sigma
-          w.gradientPonderation.setValue(np.random.randint(1,20))
-          w.exponent.setValue(np.random.randint(1,20))
-          w.numberOfPointsPerNeedle.setValue(np.random.randint(3,11))
-          l.startValidation(script=True)
-          results = l.evaluate(script=True) # calculate HD distances
-          l.exportEvaluation(results, '/tmp/'+str(id)+'.csv')
-          HD=np.array(results)
-          maxHD=HD[:,0].max()
-          avgHD=HD[:,0].mean()
-          stdHD=HD[:,0].std()
-          resultsEval=[maxHD,avgHD,stdHD] + l.valuesExperience
-          l.exportEvaluation(resultsEval,'/tmp/'+str(id)+'_stats.csv')
-          # end = time.time()
-          # print 'processing time: ', end-start
-          # start = time.time()
+    # code piece from Guillaumes (bruteForce.py) random search  
+    if 0:
+      for id in range(100):
+        if path[id]:
+          print "processing ",path[id]
+          slicer.util.loadScene( path[id] )
+          for i in range(1,10000):
+            l.resetNeedleDetection(script=True)
+            w.radiusNeedleParameter.setValue(np.random.randint(1,6))
+            w.stepsize.setValue(np.random.randint(1,40))
+            w.sigmaValue.setValue(np.random.randint(1,40)) # change parameter sigma
+            w.gradientPonderation.setValue(np.random.randint(1,20))
+            w.exponent.setValue(np.random.randint(1,20))
+            w.numberOfPointsPerNeedle.setValue(np.random.randint(3,11))
+            l.startValidation(script=True)
+            results = l.evaluate(script=True) # calculate HD distances
+            l.exportEvaluation(results, '/tmp/'+str(id)+'.csv')
+            HD=np.array(results)
+            maxHD=HD[:,0].max()
+            avgHD=HD[:,0].mean()
+            stdHD=HD[:,0].std()
+            resultsEval=[maxHD,avgHD,stdHD] + l.valuesExperience
+            l.exportEvaluation(resultsEval,'/tmp/'+str(id)+'_stats.csv')
+            # end = time.time()
+            # print 'processing time: ', end-start
+            # start = time.time()
 
   #----------------------------------------------------------------------------------------------
   """ Needle segmentation report"""
@@ -4853,7 +4906,7 @@ class NeedleFinderLogic:
         for i in range(len(t)):
             print t[i][0]
 
-  def placeAxialLimitMarker(self):
+  def placeAxialLimitMarker(self, assign=True):
     """
     Get the K (of IJK) value of the current axial slice. 
     Used to define the slice containing the template
@@ -4861,27 +4914,28 @@ class NeedleFinderLogic:
     #productive #onButton
     profprint()
     widget = slicer.modules.NeedleFinderWidget
-    #remove old nodes from scene
-    while slicer.util.getNodes('template slice position*') != {}:
-      nodes = slicer.util.getNodes('template slice position*')
-      for node in nodes.values():
-        slicer.mrmlScene.RemoveNode(node)
-
-    s           =   slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetSliceNode()
-    offSet      =   s.GetSliceOffset()
-    rasVector   =   [0,0,offSet]
-    widget.templateSliceButton.text = "1. Select Current Axial Slice as Seg. Limit (current: "+str(offSet)+")"
-
-    widget.axialSegmentationLimit = int(round(self.ras2ijk(rasVector)[2]))
-
-    self.fiducialNode = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
-    self.fiducialNode.Initialize(slicer.mrmlScene)
-    self.fiducialNode.SetName('template slice position')        
-    self.fiducialNode.SetFiducialCoordinates(rasVector)
-    fd=self.fiducialNode.GetDisplayNode()
-    fd.SetVisibility(1)
-    fd.SetColor([0,1,0])
-    widget.fiducialButton.setEnabled(1)
+    if assign:
+      #remove old nodes from scene
+      while slicer.util.getNodes('template slice position*') != {}:
+        nodes = slicer.util.getNodes('template slice position*')
+        for node in nodes.values():
+          slicer.mrmlScene.RemoveNode(node)
+  
+      s           =   slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetSliceNode()
+      offSet      =   s.GetSliceOffset()
+      rasVector   =   [0,0,offSet]
+      widget.templateSliceButton.text = "1. Select Current Axial Slice as Seg. Limit (current: "+str(offSet)+")"
+  
+      widget.axialSegmentationLimit = int(round(self.ras2ijk(rasVector)[2]))
+  
+      self.fiducialNode = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+      self.fiducialNode.Initialize(slicer.mrmlScene)
+      self.fiducialNode.SetName('template slice position')        
+      self.fiducialNode.SetFiducialCoordinates(rasVector)
+      fd=self.fiducialNode.GetDisplayNode()
+      fd.SetVisibility(1)
+      fd.SetColor([0,1,0])
+      widget.fiducialButton.setEnabled(1)
     # here we are set and can create a first label volume from volume data
     widget.createAddOrSelectLabelMapNode()
 
@@ -4890,13 +4944,13 @@ class NeedleFinderLogic:
     crosshairNode.SetCrosshairMode(slicer.vtkMRMLCrosshairNode().ShowIntersection)
 
   def exportEvaluation(self,results,url):
-    """ Export evaluation results to a CSV file
+    """ Export evaluation results to a CSV file (e.g. when doing parameter optimizations)
 
     :param results: array containing the results of the evaluation
     :param url: url for saving the file
-    ??? used?
     """
-    profbox()
+    #research
+    profprint()
     if not os.path.exists(url):
       open(url, 'w').close()
     myfile = open(url, 'a')
