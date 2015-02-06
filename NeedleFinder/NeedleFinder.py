@@ -604,16 +604,15 @@ class NeedleFinderWidget:
     # init table report
     logic.initTableView() # init the report table
     
-    # Lauren feature request: set mainly unused coronal view to sagittal to display ground truth bitmap image (if available)
-    # Usage after fresh slicer start: 1. Load scene and reference jpg. 2. Then open NeedleFinder
-    # TODO: feature does not work so far (show the JPG image doesnt work, ie. SetVolumeNode())
+    # Lauren's feature request: set mainly unused coronal view to sagittal to display ground truth bitmap image (if available)
+    # Usage after fresh slicer start: 1. Load scene and 2. reference jpg. 3. Then open NeedleFinder from Modules selector
     vnJPG=slicer.util.getNode("Case *") # the naming convention for the ground truth JPG files: "Case XXX.jpg"
     if vnJPG:
-      print "(showing ground truth in green view)"
+      print "showing ground 2d image truth in green view"
       # show JPG image if available
       sw=slicer.app.layoutManager().sliceWidget("Green")
-      bl=sw.sliceLogic().GetBackgroundLayer()
-      bl.SetVolumeNode(vnJPG)
+      cn = sw.mrmlSliceCompositeNode()
+      cn.SetBackgroundVolumeID(vnJPG.GetID())
       slicer.app.layoutManager().sliceWidget("Green").sliceLogic().GetBackgroundLayer().Modified()
       sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
       if sGreen ==None :
@@ -623,16 +622,6 @@ class NeedleFinderWidget:
       sGreen.SetOrientationToAxial()
       sw.fitSliceToBackground()
       sGreen.Modified()
-    vn=slicer.util.getNode("Case*MR*") 
-    if vn:
-      print "(showing MR volume in red/yellow view)"
-      # show MR image if available
-      sw=slicer.app.layoutManager().sliceWidget("Red")
-      sw.sliceLogic().GetBackgroundLayer().SetVolumeNode(vn)
-      sw.fitSliceToBackground()
-      sw=slicer.app.layoutManager().sliceWidget("Yellow")
-      sw.sliceLogic().GetBackgroundLayer().SetVolumeNode(vn)
-      sw.fitSliceToBackground()
  
     self.onResetParameters()
     self.setupShortcuts()
@@ -2745,7 +2734,7 @@ class NeedleFinderLogic:
         C0      = [ 2*A[0]-tip0[0], # ??? why do you go double step in xy-plane
                     2*A[1]-tip0[1],
                     A[2]-int(round(stepSize/spacing[2]))   ] # ??? this is buggy vector calculus, now its a feature ;-)
-        #isntead C0 = [A[0], A[1], A[2]-int(round(stepSize/spacing[2])) ] #!!!
+        #instead C0 = [A[0], A[1], A[2]-int(round(stepSize/spacing[2])) ] #!!!
         rMax    = max(stepSize,distanceMax/float(spacing[0]))
         rIter   = max(15,min(20,int(rMax/float(spacing[0]))))
         tIter   = max(1,int(round(stepSize))) ### ??? stepSize can be smaller 1
