@@ -51,7 +51,7 @@ def whosdaddy():
     return inspect.stack()[2][3]
 def whosgranny():
     return inspect.stack()[3][3]
-profiling=True
+profiling=False
 frequent=False
 MAXNEEDLES=1000
 
@@ -612,20 +612,17 @@ class NeedleFinderWidget:
       print "(showing ground truth in green view)"
       # show JPG image if available
       sw=slicer.app.layoutManager().sliceWidget("Green")
-      sw.sliceLogic().GetBackgroundLayer().SetVolumeNode(vnJPG)
+      bl=sw.sliceLogic().GetBackgroundLayer()
+      bl.SetVolumeNode(vnJPG)
+      slicer.app.layoutManager().sliceWidget("Green").sliceLogic().GetBackgroundLayer().Modified()
       sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
       if sGreen ==None :
         sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
       # set to axial view
       sGreen.SetSliceVisible(0)
-      reformatLogic = slicer.vtkSlicerReformatLogic()
-      reformatLogic.SetSliceNormal(sGreen,0,0,-.5)
-      #ori=[0,0,0]
-      #ori=reformatLogic.GetSliceOrigin()
-      #reformatLogic.SetSliceOrigin(sGreen,ori[1],ori[2],0)
+      sGreen.SetOrientationToAxial()
       sw.fitSliceToBackground()
       sGreen.Modified()
-      slicer.app.layoutManager().sliceWidget("Green").sliceLogic().GetBackgroundLayer().Modified()
     vn=slicer.util.getNode("Case*MR*") 
     if vn:
       print "(showing MR volume in red/yellow view)"
@@ -2662,208 +2659,6 @@ class NeedleFinderLogic:
     if not autoStopTip:
       self.addNeedleToScene(controlPoints,colorVar, 'Detection', script)
   
-  def needleDetectionThread13_2(self,A, imageData,colorVar,spacing,script=False):
-    '''MICCAI13 suspect Variant2 2/27/13
-    iGyne_old 4450bbcb543e7432122f06c1905aab4eb8b446e6
-    https://github.com/gpernelle/iGyne_old/commit/4450bbcb543e7432122f06c1905aab4eb8b446e6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
-    
-    From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
-    The second extremity of this segment is saved as a control point (in controlPoints), used later. 
-    Then, this step is iterated, replacing the needle tip by the latest control point. 
-    The height of the new conic region (stepsize) is increased as well as its base diameter (rMax) and its normal is collinear to the previous computed segment. (cf. C0) 
-    NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
-    From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
-    '''
-    #research #obsolete #deprecated #notMiccai
-    profprint()
-    ### initialisation of the parameters
-    ijk         = [0,0,0]
-    bestPoint   = [0,0,0]
-    widget = slicer.modules.NeedleFinderWidget
-
-    ### load parameters from GUI
-    distanceMax                 = widget.distanceMax.value
-    gradientPonderation         = widget.gradientPonderation.value
-    sigmaValue                  = widget.sigmaValue.value
-    stepsize                    = widget.stepsize.value
-    gaussianAttenuationChecked  = widget.gaussianAttenuationButton.isChecked()
-    gradient                    = widget.gradient.isChecked()
-    numberOfPointsPerNeedle     = widget.numberOfPointsPerNeedle.value
-    nbRotatingIterations        = widget.nbRotatingIterations.value
-    radiusNeedleParameter       = widget.radiusNeedleParameter.value
-    axialSegmentationLimit      = widget.axialSegmentationLimit
-    autoStopTip                 = widget.autoStopTip.isChecked()
-
-    ### length needle = distance Aijk[2]*0.9
-    lenghtNeedle = self.ijk2ras(A)[2]*0.9
-    
-    rMax            = distanceMax/float(spacing[0])
-    NbStepsNeedle   = numberOfPointsPerNeedle - 1
-    nbRotatingStep  = nbRotatingIterations
-
-    dims            =[0,0,0]
-    imageData.GetDimensions(dims)
-    pixelValue      = numpy.zeros(shape=(dims[0],dims[1],dims[2]))
-    
-    A0              = A
-    print A0
-    
-    controlPoints       = []
-    controlPointsIJK    = []
-    bestControlPoints   = []
-    
-    controlPoints.append(self.ijk2ras(A))
-    controlPointsIJK.append(A)
-    bestControlPoints.append(self.ijk2ras(A))
-
-    for step in range(0,NbStepsNeedle+2):
-      
-      #step 0
-      #------------------------------------------------------------------------------
-      if step==0:
-
-        L       = 20/float(spacing[2])
-        C0      = [A[0],A[1],A[2]- L]
-        rMax    = distanceMax/float(spacing[0])
-        rIter   = rMax
-        tIter   = int(round(L))
-
-      #step 1,2,...
-      #------------------------------------------------------------------------------
-      else:
-
-        stepSize = max(self.stepSize13(step,NbStepsNeedle+1)*lenghtNeedle,stepsize/float(spacing[2]))
-
-        C0      = [ 2*A[0]-tip0[0],
-                    2*A[1]-tip0[1],
-                    A[2]-stepSize   ] # ??? this is buggy vector calculus, now its a feature ;-)
-
-        rMax    = max(stepSize,distanceMax/float(spacing[0]))
-        rIter   = max(15,min(20,int(rMax/float(spacing[0]))))
-        tIter   = stepSize
-        
-      estimator     = 0
-      minEstimator  = 0  
-
-      #radius variation
-      for R in range(int(rIter)+1):
-
-        r=R*(rMax/float(rIter))
-        
-        ### angle variation from 0 to 360
-        for thetaStep in xrange(int(nbRotatingStep) ):
-          
-          angleInDegree = (thetaStep*360)/float(nbRotatingStep)
-          theta         = math.radians(angleInDegree)
-
-          C             = [ C0[0]+r*(math.cos(theta)),
-                            C0[1]+r*(math.sin(theta)),
-                            C0[2]]
-
-          total     = 0
-          M         = [[0,0,0] for i in xrange(int(tIter)+1)]
-          
-         
-          # calculates tIter = number of points per segment 
-          for t in xrange(int(tIter)+1):
-
-            tt  = t/float(tIter)
-            
-            # x,y,z coordinates
-            for i in range(3):
-              
-              M[t][i]   = (1-tt)*A[i] + tt*C[i]
-              ijk[i]    = int(round(M[t][i]))
-              
-            # first, test if points are in the image space 
-            if ijk[0]<dims[0] and ijk[0]>0 and  ijk[1]<dims[1] and ijk[1]>0 and ijk[2]<dims[2] and ijk[2]>0:
-              
-              center    = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
-              total     += center
-              if gradient ==1 :
-
-                radiusNeedle        = int(round(radiusNeedleParameter/float(spacing[0])))
-                radiusNeedleCorner  = int(round((radiusNeedleParameter/float(spacing[0])/1.414)))
-                
-                g1 = imageData.GetScalarComponentAsDouble(ijk[0]+radiusNeedle, ijk[1], ijk[2], 0)
-                g2 = imageData.GetScalarComponentAsDouble(ijk[0]-radiusNeedle, ijk[1], ijk[2], 0)
-                g3 = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1]+radiusNeedle, ijk[2], 0)
-                g4 = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1]-radiusNeedle, ijk[2], 0)
-                g5 = imageData.GetScalarComponentAsDouble(ijk[0]+radiusNeedleCorner, ijk[1]+radiusNeedleCorner, ijk[2], 0)                    
-                g6 = imageData.GetScalarComponentAsDouble(ijk[0]-radiusNeedleCorner, ijk[1]-radiusNeedleCorner, ijk[2], 0)
-                g7 = imageData.GetScalarComponentAsDouble(ijk[0]-radiusNeedleCorner, ijk[1]+radiusNeedleCorner, ijk[2], 0)
-                g8 = imageData.GetScalarComponentAsDouble(ijk[0]+radiusNeedleCorner, ijk[1]-radiusNeedleCorner, ijk[2], 0)
-                
-                total += 8*center - ((g1+g2+g3+g4+g5+g6+g7+g8)/8)*gradientPonderation
-              
-          if R==0:
-            
-            initialIntensity    = total
-            estimator           = total
-            
-          if gaussianAttenuationChecked==1 and step>=2 :
-            
-            if tip0[2]-A[2]!=0:
-            
-                stepSize    =(A[2] - C0[2])
-                K           =stepSize/float(tip0[2]-A[2])
-
-                X           = [ A[0] + K * (A[0]-tip0[0]),
-                                A[1] + K * (A[1]-tip0[1]),
-                                A[2] + K * (A[2]-tip0[2]) ]
-
-                rgauss      = (  (C[0]-X[0])**2 
-                                +(C[1]-X[1])**2
-                                +(C[2]-X[2])**2 )**0.5
-
-                gaussianAttenuation = math.exp(-(rgauss/float(rMax))**2/float((2*(sigmaValue/float(10))**2)))   # 1 for x=0, 0.2 for x=5
-                estimator           = (total)*gaussianAttenuation
-            else:
-                estimator = total
-
-
-          else:
-            estimator = (total)
-       
-          if estimator<initialIntensity:
-
-            if estimator<minEstimator or minEstimator == 0:
-              minEstimator  = estimator
-              if minEstimator!=0:  
-                bestPoint   = C
-        
-           
-      tip0  = A
-      if bestPoint==[0,0,0]:
-        A   = C0
-      elif bestPoint!=tip0: 
-        A   = bestPoint
- 
-      if A[2]<axialSegmentationLimit:
-        
-        asl = axialSegmentationLimit
-        l   = (A[2]-asl)/float(tip0[2]-A[2])
-
-        A   =[  A[0] - l*(tip0[0]-A[0]),
-                A[1] - l*(tip0[1]-A[1]),
-                A[2] - l*(tip0[2]-A[2])]
-
-      controlPoints.append(self.ijk2ras(A))
-      controlPointsIJK.append(A)
-
-      if widget.drawFiducialPoints.isChecked():
-        fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
-        fiducial.Initialize(slicer.mrmlScene)
-        fiducial.SetName('.')
-        fiducial.SetFiducialCoordinates(controlPoints[step+1])
-
-      if A[2]<=axialSegmentationLimit:
-        break
-    
-    #self.addNeedleToScene(controlPoints,colorVar)
-    if not autoStopTip:
-      self.addNeedleToScene(controlPoints,colorVar, 'Detection', script)
-  
   def needleDetectionThread13_3(self,A, imageData,labelData,tempPoints,colorVar,spacing,script=False):
     '''MICCAI2013 version variant 1, 3/11/13
     iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
@@ -2947,10 +2742,10 @@ class NeedleFinderLogic:
         stepSize = self.stepSizeAndre(step+1,NbStepsNeedle)*lenghtNeedle
         print "stepSize: ",stepSize
 
-        C0      = [ 2*A[0]-tip0[0],
+        C0      = [ 2*A[0]-tip0[0], # ??? why do you go double step in xy-plane
                     2*A[1]-tip0[1],
                     A[2]-int(round(stepSize/spacing[2]))   ] # ??? this is buggy vector calculus, now its a feature ;-)
-
+        #isntead C0 = [A[0], A[1], A[2]-int(round(stepSize/spacing[2])) ] #!!!
         rMax    = max(stepSize,distanceMax/float(spacing[0]))
         rIter   = max(15,min(20,int(rMax/float(spacing[0]))))
         tIter   = max(1,int(round(stepSize))) ### ??? stepSize can be smaller 1
@@ -3020,9 +2815,9 @@ class NeedleFinderLogic:
                 #print "found needle guide label marker"
                 # force high influence of labels
                 labelCtr+=1
-              #<<<<<<<<<<<<<<<<<<<<
 
-          if labelCtr: total=-1000*labelCtr
+          if labelCtr: total=-10000*labelCtr
+          #<<<<<<<<<<<<<<<<<<<<
           
           if R==0:
             
@@ -3057,7 +2852,7 @@ class NeedleFinderLogic:
             if estimator<minEstimator or minEstimator == 0:
               minEstimator  = estimator
               if minEstimator!=0:  
-                print "best estimator value: ",estimator
+                #print "best estimator value: ",estimator
                 bestPoint   = C
         
            
@@ -4033,15 +3828,54 @@ class NeedleFinderLogic:
     # notify
     backgroundNode.GetImageData().Modified()
     backgroundNode.Modified()
-    
-  def parSearch(self):
+  
+  def writeTableHeader(self,fileName,variant=0):
     """
-    Parameter optimization using brute-force algo...
+    Write table header to file.
+    """
+    #research
+    w = slicer.modules.NeedleFinderWidget
+    l = w.logic
+    if not variant:
+      l.exportEvaluation(['maxHD','avgHD','stdHD','medHD',
+                        'radiusNeedle',
+                        'lenghtNeedle',
+                        'distanceMax',
+                        'numberOfPointsPerNeedle',
+                        'nbRotatingIterations',
+                        'stepSize',
+                        'gradientPonderation',
+                        'exponent',
+                        'gaussianAttenuationButton',
+                        'sigma',
+                        'algoV',
+                        t.strftime("%d/%m/%Y"),t.strftime("%H:%M:%S")
+                        ],fileName)
+    else:
+      l.exportEvaluation(['HD','ID1','ID2',
+                        'radiusNeedle',
+                        'lenghtNeedle',
+                        'distanceMax',
+                        'numberOfPointsPerNeedle',
+                        'nbRotatingIterations',
+                        'stepSize',
+                        'gradientPonderation',
+                        'exponent',
+                        'gaussianAttenuationButton',
+                        'sigma',
+                        'algoV',
+                        t.strftime("%d/%m/%Y"),t.strftime("%H:%M:%S")
+                        ],fileName)
+  
+  def parSearch(self, mode=False):
+    """
+    Parameter optimization using brute-force/random-search algo...
     """
     #research
     profprint()
     w = slicer.modules.NeedleFinderWidget
     l = w.logic
+    
     path = [ 0 for i in range(100)]
     path[24] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 24 NRRD/Manual/2013-02-25-Scene-without-CtrPt.mrml'
     path[29] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 29 NRRD/Manual/2013-02-26-Scene-without-CtrPts.mrml'
@@ -4053,49 +3887,72 @@ class NeedleFinderLogic:
     path[38] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 38 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
     path[40] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 40 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
 
-    # write table header line
-    l.exportEvaluation(['i','maxHD','avgHD','stdHD','radiusNeedle',
-                        'lenghtNeedle',
-                        'distanceMax',
-                        'numberOfPointsPerNeedle',
-                        'nbRotatingIterations',
-                        'stepSize',
-                        'gradientPonderation',
-                        'exponent',
-                        'gaussianAttenuationButton',
-                        'sigma'],'/tmp/stats.csv')
-    l.exportEvaluation(['HD','ID1','ID2','radiusNeedle',
-                        'lenghtNeedle',
-                        'distanceMax',
-                        'numberOfPointsPerNeedle',
-                        'nbRotatingIterations',
-                        'stepSize',
-                        'gradientPonderation',
-                        'exponent',
-                        'gaussianAttenuationButton',
-                        'sigma'],'/tmp/text.csv')
-    # simple search in one dimension (Guillaumes parameterSearch.py)
-    for i in range(3,7):
-      l.resetNeedleDetection(script=True)
-      w.numberOfPointsPerNeedle.setValue(i) # change parameter control points
-      l.startValidation(script=True)
-      results = l.evaluate(script=True) # calculate HD distances
-      l.exportEvaluation(results, '/tmp/text.csv')
-      # stats
-      HD=np.array(results)
-      # HD.shape = (int(len(results)/float(3)),3)
-      maxHD=HD[:,0].max()
-      avgHD=HD[:,0].mean()
-      stdHD=HD[:,0].std()
-      resultsEval=[i,maxHD,avgHD,stdHD] + l.valuesExperience
-      l.exportEvaluation(resultsEval,'/tmp/stats.csv')
-    
-    # code piece from Guillaumes (bruteForce.py) random search  
-    if 0:
+    #Andres file system (cases copies from AMIGO share) MICCAI13 results (LB/AM)
+    path = [ 0 for i in range(100)]
+    path[24] = '/home/amastmeyer/Pictures/MICCAI13/Case  024/NRRD/Auto-Eval-LB/2013-02-28-Scene.mrml'
+    path[28] = '/home/amastmeyer/Pictures/MICCAI13/Case  028/NRRD/Auto-Eval-LB/2013-02-28-Scene.mrml'
+    path[29] = '/home/amastmeyer/Pictures/MICCAI13/Case  029/NRRD/Auto-Eval-LB/2013-02-26-Scene.mrml'
+    path[30] = '/home/amastmeyer/Pictures/MICCAI13/Case  030/NRRD/Auto-Eval-LB/2013-02-26-Scene.mrml'
+    path[31] = '/home/amastmeyer/Pictures/MICCAI13/Case  031/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
+    path[33] = '/home/amastmeyer/Pictures/MICCAI13/Case  033/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
+    path[34] = '/home/amastmeyer/Pictures/MICCAI13/Case  034/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
+    path[37] = '/home/amastmeyer/Pictures/MICCAI13/Case  037/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
+    path[38] = '/home/amastmeyer/Pictures/MICCAI13/Case  038/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
+    path[40] = '/home/amastmeyer/Pictures/MICCAI13/Case  040/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
+
+    if mode==0:
+      # simple run with current parameters/algo over several patients
+      self.writeTableHeader('/tmp/AP-All_stats.csv')
       for id in range(100):
         if path[id]:
           print "processing ",path[id]
+          self.writeTableHeader('/tmp/AP-'+str(id)+'.csv',1)
+          slicer.mrmlScene.Clear(0)
           slicer.util.loadScene( path[id] )
+          l.resetNeedleDetection(script=True)
+          l.startValidation(script=True)
+          results = l.evaluate(script=True) # calculate HD distances
+          l.exportEvaluation(results, '/tmp/AP-'+str(id)+'.csv')
+          # stats
+          HD=np.array(results)
+          # HD.shape = (int(len(results)/float(3)),3)
+          maxHD=HD[:,0].max()
+          avgHD=HD[:,0].mean()
+          stdHD=HD[:,0].std()
+          sl=np.sort(HD[:,0])
+          medHD=sl[sl.size/2]
+          resultsEval=[maxHD,avgHD,stdHD, medHD] + l.valuesExperience + [id]
+          l.exportEvaluation(resultsEval,'/tmp/AP-All_stats.csv')
+    elif mode==1:
+      id='Current'
+      # simple brute force search in the dimensions (Guillaumes parameterSearch.py)
+      self.writeTableHeader('/tmp/BF-'+str(id)+'.csv',1)
+      self.writeTableHeader('/tmp/BF-'+str(id)+'_stats.csv')
+      for i in range(3,12):
+        l.resetNeedleDetection(script=True)
+        w.numberOfPointsPerNeedle.setValue(i) # change parameter control points
+        l.startValidation(script=True)
+        results = l.evaluate(script=True) # calculate HD distances
+        l.exportEvaluation(results, '/tmp/BF-'+str(id)+'.csv')
+        # stats
+        HD=np.array(results)
+        # HD.shape = (int(len(results)/float(3)),3)
+        maxHD=HD[:,0].max()
+        avgHD=HD[:,0].mean()
+        stdHD=HD[:,0].std()
+        sl=np.sort(HD[:,0])
+        medHD=sl[sl.size/2]
+        resultsEval=[maxHD,avgHD,stdHD, medHD] + l.valuesExperience
+        l.exportEvaluation(resultsEval,'/tmp/BF-'+str(id)+'_stats.csv')
+    elif mode==2:
+      # code piece from Guillaumes (bruteForce.py) multi patient mode search  
+      for id in range(100):
+        if path[id]:
+          print "processing ",path[id]
+          slicer.mrmlScene.Clear(0)
+          slicer.util.loadScene( path[id] )
+          self.writeTableHeader('/tmp/RS-'+str(id)+'.csv',1)
+          self.writeTableHeader('/tmp/RS-'+str(id)+'_stats.csv')
           for i in range(1,10000):
             l.resetNeedleDetection(script=True)
             w.radiusNeedleParameter.setValue(np.random.randint(1,6))
@@ -4106,13 +3963,15 @@ class NeedleFinderLogic:
             w.numberOfPointsPerNeedle.setValue(np.random.randint(3,11))
             l.startValidation(script=True)
             results = l.evaluate(script=True) # calculate HD distances
-            l.exportEvaluation(results, '/tmp/'+str(id)+'.csv')
+            l.exportEvaluation(results, '/tmp/RS-'+str(id)+'.csv')
             HD=np.array(results)
             maxHD=HD[:,0].max()
             avgHD=HD[:,0].mean()
             stdHD=HD[:,0].std()
-            resultsEval=[maxHD,avgHD,stdHD] + l.valuesExperience
-            l.exportEvaluation(resultsEval,'/tmp/'+str(id)+'_stats.csv')
+            sl=np.sort(HD[:,0])
+            medHD=sl[sl.size/2]
+            resultsEval=[maxHD,avgHD,stdHD, medHD] + l.valuesExperience
+            l.exportEvaluation(resultsEval,'/tmp/RS-'+str(id)+'_stats.csv')
             # end = time.time()
             # print 'processing time: ', end-start
             # start = time.time()
@@ -5138,7 +4997,8 @@ class NeedleFinderLogic:
                             widget.gradientPonderation.value,
                             widget.exponent.value,
                             widget.gaussianAttenuationButton.isChecked()*1,
-                            widget.sigmaValue.value]
+                            widget.sigmaValue.value,
+                            widget.algoVersParameter.value]
 
     for i in range(len(result)):
       if widget.algoVersParameter.value == 0:
