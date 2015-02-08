@@ -21,7 +21,7 @@ Links
   .. [1] https://www.spl.harvard.edu/publications/item/view/2459
   .. [2] https://www.spl.harvard.edu/publications/item/view/2316
 """
-from FiducialLayoutSwitchBug1914 import FiducialLayoutSwitchBug1914
+
 """
 TODO: gaussianAttenuation in NeedleDetectionThread is missing 1/(sigma*(2pi)**0.5)
 meaning the integral of the gaussian is not always 1 - we could see the impact of adding the scaling effect by
