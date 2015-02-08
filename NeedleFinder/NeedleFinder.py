@@ -21,6 +21,7 @@ Links
   .. [1] https://www.spl.harvard.edu/publications/item/view/2459
   .. [2] https://www.spl.harvard.edu/publications/item/view/2316
 """
+from FiducialLayoutSwitchBug1914 import FiducialLayoutSwitchBug1914
 """
 TODO: gaussianAttenuation in NeedleDetectionThread is missing 1/(sigma*(2pi)**0.5)
 meaning the integral of the gaussian is not always 1 - we could see the impact of adding the scaling effect by
@@ -51,7 +52,7 @@ def whosdaddy():
     return inspect.stack()[2][3]
 def whosgranny():
     return inspect.stack()[3][3]
-profiling=False
+profiling=True
 frequent=False
 MAXNEEDLES=1000
 
@@ -2211,11 +2212,12 @@ class NeedleFinderLogic:
       fiducial.Initialize(slicer.mrmlScene)
       fiducial.SetName('Best tip')
       fiducial.SetFiducialCoordinates(self.ijk2ras(A))
-      """
+      
       fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
       fiducial.Initialize(slicer.mrmlScene)
       fiducial.SetName('A init')
       fiducial.SetFiducialCoordinates(self.ijk2ras(AInit))
+      """
     
     for step in range(0,NbStepsNeedle+1):
       
@@ -2887,7 +2889,7 @@ class NeedleFinderLogic:
   #
   #------------------------------------------------------------------------------
 
-  def needleDetectionUPThread(self,A, imageData,colorVar,spacing):
+  def needleDetectionUPThread(self,A, imageData,colorVar,spacing,script=False):
     """
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
     The second extremity of this segment is saved as a control point (in controlPoints), used later. 
@@ -2897,7 +2899,7 @@ class NeedleFinderLogic:
     From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
     """
     #research
-
+    profprint()
     widget = slicer.modules.NeedleFinderWidget
 
     ### initialisation of the parameters
@@ -3036,7 +3038,7 @@ class NeedleFinderLogic:
       # In order to find the tip, if the last point is beyond the tip (tested function of 
       # the relative value of the objective function), we start a dichotomy
       # the dichotomy runs until a) point below the tip  or b) more than 7 loops
-
+      testSuccess=None
       while continueDichotomy==1 and dichoStep <=7 and stopTracking == 0 :
         # reset values
         estimator     = 0
@@ -3049,7 +3051,7 @@ class NeedleFinderLogic:
             K         /= float(2)
             stepSize  /= float(2)
 
-            if testSuccess ==1:
+            if testSuccess==1:
               P0 = P1
             else:
               P0 = P0
@@ -3214,15 +3216,16 @@ class NeedleFinderLogic:
       if widget.drawFiducialPoints.isChecked():
         fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         fiducial.Initialize(slicer.mrmlScene)
-        fiducial.SetName('.'+str(step)+'.'+str(self.objectiveFunction(imageData, A, 3, spacing, 1)))
+        fiducial.SetName('..'+str(step)+'.'+str(self.objectiveFunction(imageData, A, 3, spacing, 1)))
         fiducial.SetFiducialCoordinates(controlPointsUP[step+1])
-
+        fiducial.GetDisplayNode().SetColor(1,1,0)
+        
       if A[2]<=axialSegmentationLimit and A!=A0:
         break
     
     for i in range(len(controlPointsUP)):
       self.controlPoints.append(controlPointsUP[i])
-    self.addNeedleToScene(self.controlPoints,colorVar)
+    self.addNeedleToScene(self.controlPoints,colorVar, 'Detection', script)
     # print 'length:',tot
 
   def drawObturatorNeedles(self):
@@ -4701,6 +4704,7 @@ class NeedleFinderLogic:
     """
     #productive
     profprint()
+    widget = slicer.modules.NeedleFinderWidget
     returnTips=[]
     modelNodes=slicer.mrmlScene.GetNodesByClass('vtkMRMLModelNode')
     nbNode=modelNodes.GetNumberOfItems()
@@ -4711,11 +4715,14 @@ class NeedleFinderLogic:
             polydata = node.GetPolyData()
             p,pbis=[0,0,0],[0,0,0]
             if polydata.GetNumberOfPoints()>100: #??? this is risky when u have other models in the scene (not only neeedles(
-                polydata.GetPoint(0,p)
-                polydata.GetPoint(int(polydata.GetNumberOfPoints()-1),pbis)
-                if pbis[2]>p[2]:
-                    p=pbis
-                
+                if not widget.autoStopTip.isChecked():
+                  polydata.GetPoint(0,p)
+                  polydata.GetPoint(int(polydata.GetNumberOfPoints()-1),pbis)
+                  if pbis[2]>p[2]:
+                      p=pbis
+                else:
+                  # get a point from the middle of the needle shaft polygon model
+                  polydata.GetPoint(int(polydata.GetNumberOfPoints()/2),p)
                 returnTips.append(self.ras2ijk(p))
     return returnTips
 
@@ -4729,6 +4736,7 @@ class NeedleFinderLogic:
     """
     #productive #button
     profprint()
+    widget = slicer.modules.NeedleFinderWidget
     tips= self.returnTipsFromNeedleModels()
     # delete old needles as they will be recalculated
     self.deleteAllAutoNeedlesFromScene()
@@ -4745,6 +4753,8 @@ class NeedleFinderLogic:
       A=tips[i]
       colorVar = i #??? /(len(tips))
       self.needleDetectionThread(A, imageData, colorVar,spacing, script)
+      if widget.autoStopTip.isChecked():
+        self.needleDetectionUPThread(A, imageData, colorVar,spacing, script)
 
     #print tips
     if script == False:
