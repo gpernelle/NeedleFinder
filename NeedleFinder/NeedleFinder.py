@@ -2272,7 +2272,7 @@ class NeedleFinderLogic:
         Vy        = A[1]-tip0[1]
         Vz        = A[2]-tip0[2]
 
-      coeffSize = abs(stepSize)
+      coeffSize = abs(stepSize)/spacing[2]
       if Vz != 0 :
         K         = coeffSize/float(abs(Vz))
       else:
@@ -3024,7 +3024,7 @@ class NeedleFinderLogic:
         Vy        = A[1]-tip0[1]
         Vz        = A[2]-tip0[2]
 
-      coeffSize = abs(stepSize)
+      coeffSize = abs(stepSize)/spacing[2]
       if Vz != 0 :
         K         = coeffSize/float(abs(Vz))
       else:
