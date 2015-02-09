@@ -451,12 +451,12 @@ class NeedleFinderWidget:
     # parameterFrame.addRow( nbRadiusIterationsLabel, self.nbRadiusIterations)
     
     # distance max spin box
-    self.distanceMax = qt.QSpinBox()
-    self.distanceMax.setMinimum(0)
-    self.distanceMax.setMaximum(1000)
-    self.distanceMax.setValue(5)
+    self.radiusMax = qt.QSpinBox()
+    self.radiusMax.setMinimum(0)
+    self.radiusMax.setMaximum(1000)
+    self.radiusMax.setValue(5)
     distanceMaxLabel = qt.QLabel("Radius of cone base (mm): ")
-    parameterFrame.addRow(distanceMaxLabel, self.distanceMax)
+    parameterFrame.addRow(distanceMaxLabel, self.radiusMax)
     
     # nb rotating iterations spin box
     self.nbRotatingIterations = qt.QSpinBox()
@@ -2108,9 +2108,9 @@ class NeedleFinderLogic:
       print "/!\ unused algoVersion 2"
     if widget.algoVersParameter.value == 3:
       if widget.labelMapNode:
-        self.needleDetectionThread13_3(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, up=False, script=script)
+        self.needleDetectionThread13_3(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, bUp=False, bScript=script)
       else:
-        self.needleDetectionThread13_3(A, imageData, None, widget.tempPointList, colorVar, spacing, up=False, script=script)
+        self.needleDetectionThread13_3(A, imageData, None, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script)
       
   def needleDetectionThreadCurrentDev(self, A, imageData, colorVar, spacing, script=False):
     """
@@ -2139,7 +2139,7 @@ class NeedleFinderLogic:
 
     widget = slicer.modules.NeedleFinderWidget
 
-    distanceMax = widget.distanceMax.value
+    distanceMax = widget.radiusMax.value
     gradientPonderation = widget.gradientPonderation.value
     sigmaValue = widget.sigmaValue.value
     # stepsize                    = widget.stepsize.value
@@ -2207,6 +2207,11 @@ class NeedleFinderLogic:
     #---------------------------------------------------------------------------------
     # Draw fiducial points initial tip and found tip
     if drawFiducialPoints:
+      oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+      oFiducial.Initialize(slicer.mrmlScene)
+      oFiducial.SetName('.0')
+      oFiducial.SetFiducialCoordinates(self.ijk2ras(A))
+      oFiducial.GetDisplayNode().SetColor(0,0,1)
       """
       fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
       fiducial.Initialize(slicer.mrmlScene)
@@ -2461,7 +2466,7 @@ class NeedleFinderLogic:
     widget = slicer.modules.NeedleFinderWidget
 
     # ## load parameters from GUI
-    distanceMax = widget.distanceMax.value
+    distanceMax = widget.radiusMax.value
     gradientPonderation = widget.gradientPonderation.value
     sigmaValue = widget.sigmaValue.value
     stepsize = widget.stepsize.value
@@ -2491,6 +2496,12 @@ class NeedleFinderLogic:
     
     A0 = A
     print A0
+    if widget.drawFiducialPoints.isChecked():
+      oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+      oFiducial.Initialize(slicer.mrmlScene)
+      oFiducial.SetName('.0')
+      oFiducial.SetFiducialCoordinates(self.ijk2ras(A))
+      oFiducial.GetDisplayNode().SetColor(0,0,1)
     
     controlPoints = []
     controlPointsIJK = []
@@ -2650,254 +2661,253 @@ class NeedleFinderLogic:
     if not autoStopTip:
       self.addNeedleToScene(controlPoints, colorVar, 'Detection', script)
   
-  def needleDetectionThread13_3(self, A, imageData, labelData, tempPoints, colorVar, spacing, up=False, script=False):
+  def needleDetectionThread13_3(self, ijkA, imgData, imgLabelData, lrasTempPoints, iColorVar, fvSpacing, bUp=False, bScript=False):
     '''MICCAI2013 version variant 1, 3/11/13
     iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
     https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
     
-    >>>> Bug fixes & experiments here: e.g. use additional user information to fix outliers. <<<<
+    >>>> Andre's Bug fixes & experiments here: e.g. use additional user information to fix outliers. <<<<
     
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
-    The second extremity of this segment is saved as a control point (in controlPoints), used later. 
-    Then, this step is iterated, replacing the needle tip by the latest control point. 
-    The height of the new conic region (stepsize) is increased as well as its base diameter (rMax) and its normal is collinear to the previous computed segment. (cf. C0) 
-    NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
-    From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
+    The second extremity of this segment is saved as a control point (in lvControlPointsRAS), used later. 
+    Then, this iStep is iterated, replacing the needle tip by the latest control point. 
+    The height of the new conic region (stepsize) is increased as well as its base diameter (iRMax) and its normal is collinear to the previous computed segment. (cf. ijkC0) 
+    nStepsNeedle iterations give nStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
+    From these nStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
     '''
     profprint()
     # research
-    # ## initialisation of the parameters
+    ### initialisation of the parameters
+    ijkAPrevious=None
     ijk = [0, 0, 0]
-    bestPoint = [0, 0, 0]
+    ijkBestPoint = [0, 0, 0]
     widget = slicer.modules.NeedleFinderWidget
-    label = None
+    fLabel = None
 
     # ## load parameters from GUI
-    distanceMax = widget.distanceMax.value
-    gradientPonderation = widget.gradientPonderation.value
-    sigmaValue = widget.sigmaValue.value
-    gaussianAttenuationChecked = widget.gaussianAttenuationButton.isChecked()
-    gradient = widget.gradient.isChecked()
-    numberOfPointsPerNeedle = widget.numberOfPointsPerNeedle.value
-    nbRotatingIterations = widget.nbRotatingIterations.value
-    radiusNeedleParameter = widget.radiusNeedleParameter.value
-    axialSegmentationLimit = widget.axialSegmentationLimit
-    autoStopTip = widget.autoStopTip.isChecked()
+    iRadiusMax_mm = widget.radiusMax.value
+    iGradientPonderation = widget.gradientPonderation.value
+    iSigmaValue = widget.sigmaValue.value
+    bGaussianAttenuation = widget.gaussianAttenuationButton.isChecked()
+    bGradient = widget.gradient.isChecked()
+    nPointsPerNeedle = widget.numberOfPointsPerNeedle.value
+    nRotatingIts = widget.nbRotatingIterations.value
+    iRadiusNeedle_mm = widget.radiusNeedleParameter.value
+    iAxialSegmentationLimit = widget.axialSegmentationLimit
+    bAutoStopTip = widget.autoStopTip.isChecked()
 
     # ## length needle = distance Aijk[2]*0.9
-    # lenghtNeedle = abs(self.ijk2ras(A)[2]*0.9)
+    # fLenghtNeedle_mm = abs(self.ijk2ras(ijkA)[2]*0.9)
 
-    if axialSegmentationLimit != None:
-      lenghtNeedle = abs(A[2] - axialSegmentationLimit) * 1.*spacing[2]  # ??? why was there: prologn the needle length guess 15%
+    if iAxialSegmentationLimit != None:
+      fLenghtNeedle_mm = abs(ijkA[2] - iAxialSegmentationLimit) * 1.*fvSpacing[2]  # ??? why was there: prologn the needle length guess 15%
     else:
-      lenghtNeedle = A[2] * 0.9 * spacing[2]  # ??? why shorten the needle length guess here
+      fLenghtNeedle_mm = ijkA[2] * 1 * fvSpacing[2]  # ??? why was shortening of the needle length guess here
 
-    rMax = distanceMax / float(spacing[0])
-    NbStepsNeedle = numberOfPointsPerNeedle - 1
-    nbRotatingStep = nbRotatingIterations
-    if up:
+    nStepsNeedle = nPointsPerNeedle - 1 # one point (mouse click on tip) is already there
+    if bUp:
       print "searching upwards"
-      zDirectionSign = 1
+      iZDirectionSign = 1
     else:
       print "searching downwards"
-      zDirectionSign = -1
+      iZDirectionSign = -1
 
-    dims = [0, 0, 0]
-    imageData.GetDimensions(dims)
-    pixelValue = numpy.zeros(shape=(dims[0], dims[1], dims[2]))
+    ivDims = [0, 0, 0]
+    imgData.GetDimensions(ivDims)
     
-    A0 = A
-    print "A0: ", A0
+    ijkA0 = ijkA
+    print "ijkA0: ", ijkA0
+    if widget.drawFiducialPoints.isChecked():
+      oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+      oFiducial.Initialize(slicer.mrmlScene)
+      oFiducial.SetName('.0')
+      oFiducial.SetFiducialCoordinates(self.ijk2ras(ijkA))
+      oFiducial.GetDisplayNode().SetColor(0,0,1)
     
-    if not up: 
-      self.controlPoints = []
-    controlPoints = []
-    controlPointsIJK = []
-    bestControlPoints = []
+    if not bUp: 
+      self.controlPoints = [] # in up mode, more interpol. points will be added to this array
+    lvControlPointsRAS = []
+    lvControlPointsIJK = []
+    lvBestControlPoints = []
 
-    controlPoints.append(self.ijk2ras(A))
-    controlPointsIJK.append(A)
-    bestControlPoints.append(self.ijk2ras(A))
+    lvControlPointsRAS.append(self.ijk2ras(ijkA))
+    lvControlPointsIJK.append(ijkA)
+    lvBestControlPoints.append(self.ijk2ras(ijkA))
 
-    for step in range(0, NbStepsNeedle):
-      print "step, lengthNeedle: ", step, lenghtNeedle
-      # step 0
+    for iStep in range(0, nStepsNeedle):
+      print "iStep, lengthNeedle: ", iStep, fLenghtNeedle_mm
+      #fStepSize_mm = self.stepSize13(iStep+1,nStepsNeedle+1)*fLenghtNeedle_mm
+      fStepSize_mm = self.stepSizeAndre(iStep + 1, nStepsNeedle) * fLenghtNeedle_mm
+      #fStepSize_mm = fLenghtNeedle_mm / nStepsNeedle  # <<<<< experiment, this is better!
+      print "fStepSize_mm: ", fStepSize_mm
+      
+      # iStep 0
       #------------------------------------------------------------------------------
-      if step == 0:
-
-        # L       = self.stepSize13(step+1,NbStepsNeedle+1)*lenghtNeedle
-        L = self.stepSizeAndre(step + 1, NbStepsNeedle) * lenghtNeedle
-        L = lenghtNeedle / NbStepsNeedle  # <<<<< experiment, this is better!
-        print "L: ", L
-        C0 = [A[0], A[1], A[2] + zDirectionSign * int(round(L / spacing[2]))]
-        rMax = distanceMax / float(spacing[0])
-        rIter = rMax
-        tIter = max(1, int(round(L)))  # ## ??? L can be smaller 1 and it is in mm not int index coordinates
-
-      # step 1,2,...
+      if iStep == 0:
+        ijkC0 = [ijkA[0], ijkA[1], ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))]
+        iRMax = iRadiusMax_mm / float(fvSpacing[0])
+        nRIter = iRMax
+        #nTIter = max(1, int(round(iStep)))  ### ??? L can be smaller 1 and it is in mm not int index coordinates
+      
+      # iStep 1,2,...
       #------------------------------------------------------------------------------
       else:
 
-        # stepSize = self.stepSize13(step+1,NbStepsNeedle+1)*lenghtNeedle
-        stepSize = self.stepSizeAndre(step + 1, NbStepsNeedle) * lenghtNeedle
-        stepSize = lenghtNeedle / NbStepsNeedle  # <<<<< experiment, this is better!
-        print "stepSize: ", stepSize
+        ijkC0 = [ 2 * ijkA[0] - ijkAPrevious[0],  # ??? why do you go double iStep in xy-plane
+                    2 * ijkA[1] - ijkAPrevious[1],
+                    ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))   ]  # ??? this is buggy vector calculus, now its a feature ;-)
 
-        C0 = [ 2 * A[0] - tip0[0],  # ??? why do you go double step in xy-plane
-                    2 * A[1] - tip0[1],
-                    A[2] + zDirectionSign * int(round(stepSize / spacing[2]))   ]  # ??? this is buggy vector calculus, now its a feature ;-)
+        # ijkC0 = [ijkA[0], ijkA[1], ijkA[2]+iZDirectionSign*int(round(fStepSize_mm/fvSpacing[2])) ] #!!! performs better on average on MICCAI13 cases
 
-        # C0 = [A[0], A[1], A[2]-int(round(stepSize/spacing[2])) ] #!!! performs better on average on MICCAI13 cases
-
-        rMax = max(stepSize, distanceMax / float(spacing[0]))
-        rIter = max(15, min(20, int(rMax / float(spacing[0]))))
-        tIter = max(1, int(round(stepSize)))  # ## ??? stepSize can be smaller 1
+        iRMax = max(fStepSize_mm/fvSpacing[0], iRadiusMax_mm / float(fvSpacing[0]))
+        nRIter = max(15, min(20, int(round(iRMax)))) # / float(fvSpacing[0]))))
+      
+      nTIter = max(1, int(round(fStepSize_mm/fvSpacing[2])))
         
-      estimator = 0
-      minEstimator = 0
+      fEstimator = 0
+      fMinEstimator = 0
 
       # radius variation
-      for R in range(int(rIter) + 1):
+      for iR in range(int(nRIter) + 1):
 
-        r = R * (rMax / float(rIter))
+        fR = iR * (iRMax / float(nRIter))
         
         # ## angle variation from 0 to 360
-        for thetaStep in xrange(int(nbRotatingStep)):
+        for iThetaStep in xrange(int(nRotatingIts)):
           
-          angleInDegree = (thetaStep * 360) / float(nbRotatingStep)
-          theta = math.radians(angleInDegree)
+          fAngle_deg = (iThetaStep * 360.) / float(nRotatingIts)
+          fThetaStep_rad = math.radians(fAngle_deg)
 
-          C = [ C0[0] + r * (math.cos(theta)),
-                            C0[1] + r * (math.sin(theta)),
-                            C0[2]]
+          ijkC = [ ijkC0[0] + fR * (math.cos(fThetaStep_rad)),
+                            ijkC0[1] + fR * (math.sin(fThetaStep_rad)),
+                            ijkC0[2]]
 
-          total = 0
-          M = [[0, 0, 0] for i in xrange(int(tIter) + 1)]
+          fTotal = 0
+          lijkM = [[0, 0, 0] for i in xrange(int(nTIter) + 1)]
           
-          label = labelCtr = 0
-          # calculates tIter = number of points per segment 
-          for t in xrange(int(tIter) + 1):
+          fLabel = nLabelVoxFound = 0
+          # calculates nTIter = number of points per segment 
+          for iTStep in xrange(int(nTIter) + 1):
 
-            tt = t / float(tIter)
+            fTStep = iTStep / float(nTIter)
             
             # x,y,z coordinates
             for i in range(3):
               
-              M[t][i] = (1 - tt) * A[i] + tt * C[i]
-              ijk[i] = int(round(M[t][i]))
+              lijkM[iTStep][i] = (1 - fTStep) * ijkA[i] + fTStep * ijkC[i]
+              ijk[i] = int(round(lijkM[iTStep][i]))
               
             # first, test if points are in the image space 
-            if ijk[0] < dims[0] and ijk[0] > 0 and  ijk[1] < dims[1] and ijk[1] > 0 and ijk[2] < dims[2] and ijk[2] > 0:
+            if ijk[0] < ivDims[0] and ijk[0] > 0 and  ijk[1] < ivDims[1] and ijk[1] > 0 and ijk[2] < ivDims[2] and ijk[2] > 0:
               
-              center = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
+              dCenter = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
                             
-              if gradient == 1 :
+              if bGradient == 1 :
 
-                radiusNeedle = int(round(radiusNeedleParameter / float(spacing[0])))
-                radiusNeedleCorner = int(round((radiusNeedleParameter / float(spacing[0]) / 1.414)))
+                iRadiusNeedle = int(round(iRadiusNeedle_mm / float(fvSpacing[0])))
+                iRadiusNeedleCorner = int(round((iRadiusNeedle_mm / float(fvSpacing[0]) / 1.414)))
                 
-                g1 = imageData.GetScalarComponentAsDouble(ijk[0] + radiusNeedle, ijk[1], ijk[2], 0)
-                g2 = imageData.GetScalarComponentAsDouble(ijk[0] - radiusNeedle, ijk[1], ijk[2], 0)
-                g3 = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1] + radiusNeedle, ijk[2], 0)
-                g4 = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1] - radiusNeedle, ijk[2], 0)
-                g5 = imageData.GetScalarComponentAsDouble(ijk[0] + radiusNeedleCorner, ijk[1] + radiusNeedleCorner, ijk[2], 0)                    
-                g6 = imageData.GetScalarComponentAsDouble(ijk[0] - radiusNeedleCorner, ijk[1] - radiusNeedleCorner, ijk[2], 0)
-                g7 = imageData.GetScalarComponentAsDouble(ijk[0] - radiusNeedleCorner, ijk[1] + radiusNeedleCorner, ijk[2], 0)
-                g8 = imageData.GetScalarComponentAsDouble(ijk[0] + radiusNeedleCorner, ijk[1] - radiusNeedleCorner, ijk[2], 0)
+                g1 = imgData.GetScalarComponentAsDouble(ijk[0] + iRadiusNeedle, ijk[1], ijk[2], 0)
+                g2 = imgData.GetScalarComponentAsDouble(ijk[0] - iRadiusNeedle, ijk[1], ijk[2], 0)
+                g3 = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1] + iRadiusNeedle, ijk[2], 0)
+                g4 = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1] - iRadiusNeedle, ijk[2], 0)
+                g5 = imgData.GetScalarComponentAsDouble(ijk[0] + iRadiusNeedleCorner, ijk[1] + iRadiusNeedleCorner, ijk[2], 0)                    
+                g6 = imgData.GetScalarComponentAsDouble(ijk[0] - iRadiusNeedleCorner, ijk[1] - iRadiusNeedleCorner, ijk[2], 0)
+                g7 = imgData.GetScalarComponentAsDouble(ijk[0] - iRadiusNeedleCorner, ijk[1] + iRadiusNeedleCorner, ijk[2], 0)
+                g8 = imgData.GetScalarComponentAsDouble(ijk[0] + iRadiusNeedleCorner, ijk[1] - iRadiusNeedleCorner, ijk[2], 0)
                 
-                total += 8 * center - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8) * gradientPonderation
+                fTotal += 8 * dCenter - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8) * iGradientPonderation
               
               # >>>>>>>>>>>>>>>>>>>>>>
-              if labelData: 
-                label = labelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0) 
-                # labelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, 306) #mark the search cones in label volume
+              if imgLabelData: 
+                fLabel = imgLabelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0) 
+                # imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, 306) #mark the search cones in fLabel volume
 
-              if not label:
-                total += center
-              elif label < 300:
-                # print "found needle guide label marker"
+              if not fLabel:
+                fTotal += dCenter
+              elif fLabel < 300:
+                # print "found needle guide fLabel marker"
                 # force high influence of labels
-                labelCtr += 1
+                nLabelVoxFound += 1
 
-          if labelCtr: total = -10000 * labelCtr
+          if nLabelVoxFound: fTotal = -10000 * nLabelVoxFound
           # <<<<<<<<<<<<<<<<<<<<
           
-          if R == 0:
+          if iR == 0:
             
-            initialIntensity = estimator = total
+            fInitialIntensity = fEstimator = fTotal
             
-          if gaussianAttenuationChecked == 1 and step >= 2 :
+          if bGaussianAttenuation == 1 and iStep >= 2 :
             
-            if tip0[2] - A[2] != 0:
+            if ijkAPrevious[2] - ijkA[2] != 0:
             
-                stepSize = (A[2] - C0[2])
-                K = stepSize / float(tip0[2] - A[2])
+                fK = (ijkA[2] - ijkC0[2]) / float(ijkAPrevious[2] - ijkA[2])
 
-                X = [ A[0] + K * (A[0] - tip0[0]),
-                                A[1] + K * (A[1] - tip0[1]),
-                                A[2] + K * (A[2] - tip0[2]) ]
+                ijkX = [ ijkA[0] + fK * (ijkA[0] - ijkAPrevious[0]),
+                                ijkA[1] + fK * (ijkA[1] - ijkAPrevious[1]),
+                                ijkA[2] + fK * (ijkA[2] - ijkAPrevious[2]) ]
 
-                rgauss = ((C[0] - X[0]) ** 2 
-                                + (C[1] - X[1]) ** 2
-                                + (C[2] - X[2]) ** 2) ** 0.5
+                fRgauss = ((ijkC[0] - ijkX[0]) ** 2 
+                                + (ijkC[1] - ijkX[1]) ** 2
+                                + (ijkC[2] - ijkX[2]) ** 2) ** 0.5
 
-                gaussianAttenuation = math.exp(-(rgauss / float(rMax)) ** 2 / float((2 * (sigmaValue / float(10)) ** 2)))  # 1 for x=0, 0.2 for x=5
-                estimator = (total) * gaussianAttenuation
+                fGaussianAttenuation = math.exp(-(fRgauss / float(iRMax)) ** 2 / float((2 * (iSigmaValue / float(10)) ** 2)))  # 1 for x=0, 0.2 for x=5
+                fEstimator = (fTotal) * fGaussianAttenuation
             else:
-                estimator = total
+                fEstimator = fTotal
 
 
           else:
-            estimator = (total)
+            fEstimator = (fTotal)
        
-          if estimator < initialIntensity:
+          if fEstimator < fInitialIntensity:
 
-            if estimator < minEstimator or minEstimator == 0:
-              minEstimator = estimator
-              if minEstimator != 0:  
-                # print "best estimator value: ",estimator
-                bestPoint = C
+            if fEstimator < fMinEstimator or fMinEstimator == 0:
+              fMinEstimator = fEstimator
+              if fMinEstimator != 0:  
+                # print "best fEstimator value: ",fEstimator
+                ijkBestPoint = ijkC
         
            
-      tip0 = A
-      if bestPoint == [0, 0, 0]:
-        A = C0
-      elif bestPoint != tip0: 
-        A = bestPoint
+      ijkAPrevious = ijkA
+      if ijkBestPoint == [0, 0, 0]:
+        ijkA = ijkC0
+      elif ijkBestPoint != ijkAPrevious: 
+        ijkA = ijkBestPoint
 
-
-      if 0 and A[2] < axialSegmentationLimit and A != A0:
+      # drag back a control point to the axial limit plane
+      if ijkA[2] < iAxialSegmentationLimit and ijkA != ijkA0:
         
-        asl = axialSegmentationLimit
-        l = (A[2] - asl) / float(tip0[2] - A[2])
+        asl = iAxialSegmentationLimit
+        l = (ijkA[2] - asl) / float(ijkAPrevious[2] - ijkA[2])
 
-        A = [  A[0] - l * (tip0[0] - A[0]),
-                A[1] - l * (tip0[1] - A[1]),
-                A[2] - l * (tip0[2] - A[2])]
+        ijkA = [  ijkA[0] - l * (ijkAPrevious[0] - ijkA[0]),
+                ijkA[1] - l * (ijkAPrevious[1] - ijkA[1]),
+                ijkA[2] - l * (ijkAPrevious[2] - ijkA[2])]
 
-      controlPoints.append(self.ijk2ras(A))
-      controlPointsIJK.append(A)
+      lvControlPointsRAS.append(self.ijk2ras(ijkA))
+      lvControlPointsIJK.append(ijkA)
 
       if widget.drawFiducialPoints.isChecked():
-        print "#controlPoints: ", len(controlPoints)
-        fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
-        fiducial.Initialize(slicer.mrmlScene)
-        if not up: fiducial.SetName('.')
-        else: fiducial.SetName('..')
-        fiducial.SetFiducialCoordinates(controlPoints[step + 1])
-        if up: fiducial.GetDisplayNode().SetColor(1, 1, 0)
+        print "#lvControlPointsRAS: ", len(lvControlPointsRAS)
+        oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+        oFiducial.Initialize(slicer.mrmlScene)
+        if not bUp: oFiducial.SetName('.')
+        else: oFiducial.SetName('..')
+        oFiducial.SetFiducialCoordinates(lvControlPointsRAS[iStep + 1])
+        if bUp: oFiducial.GetDisplayNode().SetColor(1, 1, 0)
 
-      if A[2] <= axialSegmentationLimit and A != A0:
+      if ijkA[2] <= iAxialSegmentationLimit and ijkA != ijkA0:
         print "/!\ needle too long" 
         break
 
-    # self.addNeedleToScene(controlPoints,colorVar)  
-    for i in range(len(controlPoints)): self.controlPoints.append(controlPoints[i])
-    if not autoStopTip:
-      self.addNeedleToScene(controlPoints, colorVar, 'Detection', script)
+    # self.addNeedleToScene(lvControlPointsRAS,iColorVar)  
+    for i in range(len(lvControlPointsRAS)): self.controlPoints.append(lvControlPointsRAS[i])
+    if not bAutoStopTip:
+      self.addNeedleToScene(lvControlPointsRAS, iColorVar, 'Detection', bScript)
       self.controlPoints = []
-    if autoStopTip and up:
-      self.addNeedleToScene(self.controlPoints, colorVar, 'Detection', script)
+    if bAutoStopTip and bUp:
+      self.addNeedleToScene(self.controlPoints, iColorVar, 'Detection', bScript)
       self.controlPoints = []
       
   #------------------------------------------------------------------------------ 
@@ -2924,9 +2934,9 @@ class NeedleFinderLogic:
       print "/!\ unused algoVersion 2"
     if widget.algoVersParameter.value == 3:
       if widget.labelMapNode:
-        self.needleDetectionThread13_3(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, up=True, script=script)
+        self.needleDetectionThread13_3(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, bUp=True, bScript=script)
       else:
-        self.needleDetectionThread13_3(A, imageData, None, widget.tempPointList, colorVar, spacing, up=True, script=script)
+        self.needleDetectionThread13_3(A, imageData, None, widget.tempPointList, colorVar, spacing, bUp=True, bScript=script)
       
   def needleDetectionUPThreadCurrentDev(self, A, imageData, colorVar, spacing, script=False):
     """
@@ -2946,7 +2956,7 @@ class NeedleFinderLogic:
     bestPoint = [0, 0, 0]
 
     # ## load parameters from GUI
-    distanceMax = widget.distanceMax.value
+    distanceMax = widget.radiusMax.value
     gradientPonderation = widget.gradientPonderation.value
     sigmaValue = widget.sigmaValue.value
     stepsize = widget.stepsize.value
@@ -3512,7 +3522,7 @@ class NeedleFinderLogic:
     """
     # research
     # remove old control pts from scene
-    tempFidNodes = slicer.mrmlScene.GetNodesByName('.')
+    tempFidNodes = slicer.mrmlScene.GetNodesByName('.*')
     for i in range(tempFidNodes.GetNumberOfItems()):
       node = tempFidNodes.GetItemAsObject(i)
       if node:
@@ -3871,7 +3881,7 @@ class NeedleFinderLogic:
       l.exportEvaluation(['maxHD', 'avgHD', 'stdHD', 'medHD',
                         'radiusNeedle',
                         'lenghtNeedle',
-                        'distanceMax',
+                        'radiusMax',
                         'numberOfPointsPerNeedle',
                         'nbRotatingIterations',
                         'stepSize',
@@ -3886,7 +3896,7 @@ class NeedleFinderLogic:
       l.exportEvaluation(['HD', 'ID1', 'ID2',
                         'radiusNeedle',
                         'lenghtNeedle',
-                        'distanceMax',
+                        'radiusMax',
                         'numberOfPointsPerNeedle',
                         'nbRotatingIterations',
                         'stepSize',
@@ -4289,7 +4299,7 @@ class NeedleFinderLogic:
     parameters['outputFolderName'] = self.foldername
     parameters['nbPointsPerLine'] = self.nbPointsPerLine.value
     parameters['nbRadiusIterations'] = self.nbRadiusIterations.value
-    parameters['distanceMax'] = self.distanceMax.value
+    parameters['radiusMax'] = self.radiusMax.value
     parameters['numberOfPointsPerNeedle'] = self.numberOfPointsPerNeedle.value
     parameters['nbRotatingIterations'] = self.nbRotatingIterations.value
     
@@ -5028,7 +5038,7 @@ class NeedleFinderLogic:
     widget = slicer.modules.NeedleFinderWidget
     self.valuesExperience = [ widget.radiusNeedleParameter.value,
                             widget.lenghtNeedleParameter.value,
-                            widget.distanceMax.value,
+                            widget.radiusMax.value,
                             widget.numberOfPointsPerNeedle.value,
                             widget.nbRotatingIterations.value,
                             widget.stepsize.value,
@@ -5722,7 +5732,7 @@ class NeedleFinderLogic:
     config.set('IntegerSection', 'sigmaValue', widget.sigmaValue.value)
     config.set('IntegerSection', 'gradientPonderation', widget.gradientPonderation.value)
     config.set('IntegerSection', 'exponent', widget.exponent.value)
-    config.set('IntegerSection', 'distanceMax', widget.distanceMax.value)
+    config.set('IntegerSection', 'distanceMax', widget.radiusMax.value)
     config.set('IntegerSection', 'nbRotatingIterations', widget.nbRotatingIterations.value)
     config.set('IntegerSection', 'numberOfPointsPerNeedle', widget.numberOfPointsPerNeedle.value)
     config.set('IntegerSection', 'lenghtNeedleParameter', widget.lenghtNeedleParameter.value)
@@ -5778,7 +5788,7 @@ class NeedleFinderLogic:
     widget.sigmaValue.value = sigmaValue
     widget.gradientPonderation.value = gradientPonderation
     widget.exponent.value = exponent
-    widget.distanceMax.value = distanceMax
+    widget.radiusMax.value = distanceMax
     widget.nbRotatingIterations.value = nbRotatingIterations
     widget.numberOfPointsPerNeedle.value = numberOfPointsPerNeedle
     widget.lenghtNeedleParameter.value = lenghtNeedleParameter
