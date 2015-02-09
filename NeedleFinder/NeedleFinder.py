@@ -2717,6 +2717,7 @@ class NeedleFinderLogic:
 
         #L       = self.stepSize13(step+1,NbStepsNeedle+1)*lenghtNeedle
         L       = self.stepSizeAndre(step+1,NbStepsNeedle)*lenghtNeedle
+        L=lenghtNeedle/NbStepsNeedle #<<<<< experiment
         print "L: ",L
         C0      = [A[0],A[1],A[2]- int(round(L/spacing[2]))]
         rMax    = distanceMax/float(spacing[0])
@@ -2729,18 +2730,21 @@ class NeedleFinderLogic:
 
         #stepSize = self.stepSize13(step+1,NbStepsNeedle+1)*lenghtNeedle
         stepSize = self.stepSizeAndre(step+1,NbStepsNeedle)*lenghtNeedle
+        stepSize = lenghtNeedle/NbStepsNeedle #<<<<< experiment
         print "stepSize: ",stepSize
 
         C0      = [ 2*A[0]-tip0[0], # ??? why do you go double step in xy-plane
                     2*A[1]-tip0[1],
                     A[2]-int(round(stepSize/spacing[2]))   ] # ??? this is buggy vector calculus, now its a feature ;-)
-        #instead C0 = [A[0], A[1], A[2]-int(round(stepSize/spacing[2])) ] #!!!
+
+        #C0 = [A[0], A[1], A[2]-int(round(stepSize/spacing[2])) ] #!!! performs better on average on MICCAI13 cases
+
         rMax    = max(stepSize,distanceMax/float(spacing[0]))
         rIter   = max(15,min(20,int(rMax/float(spacing[0]))))
         tIter   = max(1,int(round(stepSize))) ### ??? stepSize can be smaller 1
         
       estimator     = 0
-      minEstimator  = 0  
+      minEstimator  = 0
 
       #radius variation
       for R in range(int(rIter)+1):
