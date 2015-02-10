@@ -3976,6 +3976,7 @@ class NeedleFinderLogic:
           l.startValidation(script=True)
           results = l.evaluate(script=True)  # calculate HD distances
           l.exportEvaluation(results, '/tmp/AP-' + str(id) + '.csv')
+          #slicer.util.saveScene()
           # stats
           HD = np.array(results)
           # HD.shape = (int(len(results)/float(3)),3)
@@ -3997,6 +3998,7 @@ class NeedleFinderLogic:
         l.startValidation(script=True)
         results = l.evaluate(script=True)  # calculate HD distances
         l.exportEvaluation(results, '/tmp/BF-' + str(id) + '.csv')
+        #slicer.util.saveScene()
         # stats
         HD = np.array(results)
         # HD.shape = (int(len(results)/float(3)),3)
@@ -4027,6 +4029,8 @@ class NeedleFinderLogic:
             l.startValidation(script=True)
             results = l.evaluate(script=True)  # calculate HD distances
             l.exportEvaluation(results, '/tmp/RS-' + str(id) + '.csv')
+            #slicer.util.saveScene()
+            # stats
             HD = np.array(results)
             maxHD = HD[:, 0].max()
             avgHD = HD[:, 0].mean()
