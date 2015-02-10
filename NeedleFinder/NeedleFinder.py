@@ -2759,6 +2759,11 @@ class NeedleFinderLogic:
         rasSegmentVector*=fStepSize_mm
         rasC0=rasA+rasSegmentVector
         ijkC0=self.ras2ijk(rasC0)
+        oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+        oFiducial.Initialize(slicer.mrmlScene)
+        oFiducial.SetName('.b'+str(iStep+1))
+        oFiducial.SetFiducialCoordinates(rasC0)
+        oFiducial.GetDisplayNode().SetColor(1,0,1)
         #ijkSegmentVector=rasSegmentVector/np.array(spacing)
         #ijkC0 = [ 2 * ijkA[0] - ijkAPrevious[0],  # ??? why do you go double iStep in xy-plane
         #            2 * ijkA[1] - ijkAPrevious[1],
@@ -2828,7 +2833,7 @@ class NeedleFinderLogic:
               # >>>>>>>>>>>>>>>>>>>>>>
               if imgLabelData: 
                 fLabel = imgLabelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0) 
-                # imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, 306) #mark the search cones in fLabel volume
+                imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, 306) #mark the search cones in fLabel volume
 
               if not fLabel:
                 fTotal += dCenter
@@ -3529,10 +3534,9 @@ class NeedleFinderLogic:
     """
     # research
     # remove old control pts from scene
-    tempFidNodes = slicer.mrmlScene.GetNodesByName('.*')
-    for i in range(tempFidNodes.GetNumberOfItems()):
-      node = tempFidNodes.GetItemAsObject(i)
-      if node:
+    while slicer.util.getNodes('.*') != {}:
+      nodes = slicer.util.getNodes('.*')
+      for node in nodes.values():
         slicer.mrmlScene.RemoveNode(node)
         
   def deleteAllAutoNeedlesFromScene(self):
