@@ -2758,6 +2758,7 @@ class NeedleFinderLogic:
       # iStep 0
       #------------------------------------------------------------------------------
       if iStep == 0:
+        
         ijkC0 = [ijkA[0], ijkA[1], ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))]
         iRMax = iRadiusMax_mm / float(fvSpacing[0])
         nRIter = iRMax
@@ -2766,26 +2767,17 @@ class NeedleFinderLogic:
       # iStep 1,2,...
       #------------------------------------------------------------------------------
       else:
-        # >>>>>>>>>>>>>>>>>> exp.03
-        rasA=np.array(self.ijk2ras(ijkA)); rasAPrevious=np.array(self.ijk2ras(ijkAPrevious))
-        rasSegmentVector=rasA-rasAPrevious
-        fLenSV=np.sqrt(np.dot(rasSegmentVector,rasSegmentVector))
-        rasSegmentVector/=fLenSV
-        rasSegmentVector*=fStepSize_mm
-        rasC0=rasA+rasSegmentVector
-        ijkC0=self.ras2ijk(rasC0)
-        # <<<<<<<<<<<<<<<<<< 
-        if 0:
-          ijkSegmentVector=rasSegmentVector/np.array(spacing)
-          ijkC0 = [ 2 * ijkA[0] - ijkAPrevious[0],  # ??? why do you go double iStep in xy-plane
-                      2 * ijkA[1] - ijkAPrevious[1],
-                      ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))   ]  # ??? this is buggy vector calculus, now its a feature ;-)
+       
+        ijkSegmentVector=rasSegmentVector/np.array(spacing)
+        ijkC0 = [ 2 * ijkA[0] - ijkAPrevious[0],  # ??? why do you go double iStep in xy-plane
+                    2 * ijkA[1] - ijkAPrevious[1],
+                    ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))   ]  # ??? this is buggy vector calculus, now its a feature ;-)
 
         # ijkC0 = [ijkA[0], ijkA[1], ijkA[2]+iZDirectionSign*int(round(fStepSize_mm/fvSpacing[2])) ] #!!! performs better on average on MICCAI13 cases
 
         iRMax = max(fStepSize_mm/fvSpacing[0], iRadiusMax_mm / float(fvSpacing[0]))
         nRIter = max(15, min(20, int(round(iRMax)))) # / float(fvSpacing[0]))))
-      
+
       if 1: # show cone base markers
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         oFiducial.Initialize(slicer.mrmlScene)
