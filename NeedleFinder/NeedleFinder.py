@@ -2287,7 +2287,14 @@ class NeedleFinderLogic:
       C0 = [ P0[0] + K * Vx,
                     P0[1] + K * Vy,
                     P0[2] + K * Vz ]
-        
+      
+      if drawFiducialPoints and 1: # show cone base markers b
+        oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+        oFiducial.Initialize(slicer.mrmlScene)
+        oFiducial.SetName('.b'+str(iStep+1))
+        oFiducial.SetFiducialCoordinates(self.ijk2ras(C0))
+        oFiducial.GetDisplayNode().SetColor(1,0,1)
+  
       estimator = 0
       minEstimator = 0  
 
@@ -2537,7 +2544,14 @@ class NeedleFinderLogic:
         rMax = max(stepSize, distanceMax / float(spacing[0]))
         rIter = max(15, min(20, int(rMax / float(spacing[0])))) # ??? why divide again by spacing[0]
         tIter = stepSize  # ## ??? stepSize can be smaller 1 and it is in mm not int index coordinates
-        
+      
+      if widget.drawFiducialPoints.isChecked() and 1: # show cone base markers b
+        oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+        oFiducial.Initialize(slicer.mrmlScene)
+        oFiducial.SetName('.b'+str(iStep+1))
+        oFiducial.SetFiducialCoordinates(self.ijk2ras(C0))
+        oFiducial.GetDisplayNode().SetColor(1,0,1)
+  
       estimator = 0
       minEstimator = 0  
 
@@ -2752,6 +2766,7 @@ class NeedleFinderLogic:
       # iStep 1,2,...
       #------------------------------------------------------------------------------
       else:
+        # >>>>>>>>>>>>>>>>>> exp.03
         rasA=np.array(self.ijk2ras(ijkA)); rasAPrevious=np.array(self.ijk2ras(ijkAPrevious))
         rasSegmentVector=rasA-rasAPrevious
         fLenSV=np.sqrt(np.dot(rasSegmentVector,rasSegmentVector))
@@ -2759,20 +2774,24 @@ class NeedleFinderLogic:
         rasSegmentVector*=fStepSize_mm
         rasC0=rasA+rasSegmentVector
         ijkC0=self.ras2ijk(rasC0)
-        oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
-        oFiducial.Initialize(slicer.mrmlScene)
-        oFiducial.SetName('.b'+str(iStep+1))
-        oFiducial.SetFiducialCoordinates(rasC0)
-        oFiducial.GetDisplayNode().SetColor(1,0,1)
-        #ijkSegmentVector=rasSegmentVector/np.array(spacing)
-        #ijkC0 = [ 2 * ijkA[0] - ijkAPrevious[0],  # ??? why do you go double iStep in xy-plane
-        #            2 * ijkA[1] - ijkAPrevious[1],
-        #            ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))   ]  # ??? this is buggy vector calculus, now its a feature ;-)
+        # <<<<<<<<<<<<<<<<<< 
+        if 0:
+          ijkSegmentVector=rasSegmentVector/np.array(spacing)
+          ijkC0 = [ 2 * ijkA[0] - ijkAPrevious[0],  # ??? why do you go double iStep in xy-plane
+                      2 * ijkA[1] - ijkAPrevious[1],
+                      ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))   ]  # ??? this is buggy vector calculus, now its a feature ;-)
 
         # ijkC0 = [ijkA[0], ijkA[1], ijkA[2]+iZDirectionSign*int(round(fStepSize_mm/fvSpacing[2])) ] #!!! performs better on average on MICCAI13 cases
 
         iRMax = max(fStepSize_mm/fvSpacing[0], iRadiusMax_mm / float(fvSpacing[0]))
         nRIter = max(15, min(20, int(round(iRMax)))) # / float(fvSpacing[0]))))
+      
+      if 1: # show cone base markers
+        oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+        oFiducial.Initialize(slicer.mrmlScene)
+        oFiducial.SetName('.b'+str(iStep+1))
+        oFiducial.SetFiducialCoordinates(rasC0)
+        oFiducial.GetDisplayNode().SetColor(1,0,1)
       
       nTIter = max(1, int(round(fStepSize_mm/fvSpacing[2])))
         
