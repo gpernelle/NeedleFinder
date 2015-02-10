@@ -2268,8 +2268,8 @@ class NeedleFinderLogic:
 
 
         stepSize = self.stepSize(step + 1, NbStepsNeedle + 1) * lenghtNeedle
-        rMax = max(stepSize, distanceMax / float(spacing[0]))
-        rIter = max(15, min(20, int(rMax / float(spacing[0]))))
+        rMax = max(stepSize, distanceMax / float(spacing[0])) # ??? why is stepSize not divided by spacing[0]
+        rIter = max(15, min(20, int(rMax / float(spacing[0])))) # ??? why divide rMax again by spacing[0]
         tIter = max(1, int(round(stepSize)))  # ## ??? stepSize can be smaller 1 and it is in mm not int index coordinates
       
         # Vector V    
@@ -2521,7 +2521,7 @@ class NeedleFinderLogic:
         C0 = [A[0], A[1], A[2] - L]
         rMax = distanceMax / float(spacing[0])
         rIter = rMax
-        tIter = int(round(L))  # ## ??? L can be smaller 1 and it is in mm not int index coordinates
+        tIter = int(round(L))  # ??? L can be smaller 1 and it is in mm not int index coordinates
 
       # step 1,2,...
       #------------------------------------------------------------------------------
@@ -2535,7 +2535,7 @@ class NeedleFinderLogic:
                     A[2] - stepSize   ]  # ??? this is buggy vector calculus, now its a feature ;-)
 
         rMax = max(stepSize, distanceMax / float(spacing[0]))
-        rIter = max(15, min(20, int(rMax / float(spacing[0]))))
+        rIter = max(15, min(20, int(rMax / float(spacing[0])))) # ??? why divide again by spacing[0]
         tIter = stepSize  # ## ??? stepSize can be smaller 1 and it is in mm not int index coordinates
         
       estimator = 0
@@ -2666,7 +2666,7 @@ class NeedleFinderLogic:
     iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
     https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
     
-    >>>> Andre's Bug fixes & experiments here: e.g. use additional user information to fix outliers. <<<<
+    >>>> Andre's bug fixes & experiments here: e.g. use additional user information to fix outliers. <<<<
     
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
     The second extremity of this segment is saved as a control point (in lvControlPointsRAS), used later. 
@@ -2697,12 +2697,12 @@ class NeedleFinderLogic:
     bAutoStopTip = widget.autoStopTip.isChecked()
 
     # ## length needle = distance Aijk[2]*0.9
-    # fLenghtNeedle_mm = abs(self.ijk2ras(ijkA)[2]*0.9)
+    # fEstNeedleLength_mm = abs(self.ijk2ras(ijkA)[2]*0.9)
 
     if iAxialSegmentationLimit != None:
-      fLenghtNeedle_mm = abs(ijkA[2] - iAxialSegmentationLimit) * 1.*fvSpacing[2]  # ??? why was there: prologn the needle length guess 15%
+      fEstNeedleLength_mm = abs(ijkA[2] - iAxialSegmentationLimit) * 1.*fvSpacing[2]  # ??? why was there: prologn the needle length guess 15%
     else:
-      fLenghtNeedle_mm = ijkA[2] * 1 * fvSpacing[2]  # ??? why was shortening of the needle length guess here
+      fEstNeedleLength_mm = ijkA[2] * 1 * fvSpacing[2]  # ??? why was shortening of the needle length guess here
 
     nStepsNeedle = nPointsPerNeedle - 1 # one point (mouse click on tip) is already there
     if bUp:
@@ -2735,10 +2735,10 @@ class NeedleFinderLogic:
     lvBestControlPoints.append(self.ijk2ras(ijkA))
 
     for iStep in range(0, nStepsNeedle):
-      print "iStep, lengthNeedle: ", iStep, fLenghtNeedle_mm
-      #fStepSize_mm = self.stepSize13(iStep+1,nStepsNeedle+1)*fLenghtNeedle_mm
-      fStepSize_mm = self.stepSizeAndre(iStep + 1, nStepsNeedle) * fLenghtNeedle_mm
-      #fStepSize_mm = fLenghtNeedle_mm / nStepsNeedle  # <<<<< experiment, this is better!
+      print "iStep, lengthNeedle: ", iStep, fEstNeedleLength_mm
+      #fStepSize_mm = self.stepSize13(iStep+1,nStepsNeedle+1)*fEstNeedleLength_mm
+      fStepSize_mm = self.stepSizeAndre(iStep + 1, nStepsNeedle) * fEstNeedleLength_mm
+      #fStepSize_mm = fEstNeedleLength_mm / nStepsNeedle  # <<<<< experiment, this is better!
       print "fStepSize_mm: ", fStepSize_mm
       
       # iStep 0
@@ -2752,10 +2752,17 @@ class NeedleFinderLogic:
       # iStep 1,2,...
       #------------------------------------------------------------------------------
       else:
-
-        ijkC0 = [ 2 * ijkA[0] - ijkAPrevious[0],  # ??? why do you go double iStep in xy-plane
-                    2 * ijkA[1] - ijkAPrevious[1],
-                    ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))   ]  # ??? this is buggy vector calculus, now its a feature ;-)
+        rasA=np.array(self.ijk2ras(ijkA)); rasAPrevious=np.array(self.ijk2ras(ijkAPrevious))
+        rasSegmentVector=rasA-rasAPrevious
+        fLenSV=np.sqrt(np.dot(rasSegmentVector,rasSegmentVector))
+        rasSegmentVector/=fLenSV
+        rasSegmentVector*=fStepSize_mm
+        rasC0=rasA+rasSegmentVector
+        ijkC0=self.ras2ijk(rasC0)
+        #ijkSegmentVector=rasSegmentVector/np.array(spacing)
+        #ijkC0 = [ 2 * ijkA[0] - ijkAPrevious[0],  # ??? why do you go double iStep in xy-plane
+        #            2 * ijkA[1] - ijkAPrevious[1],
+        #            ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))   ]  # ??? this is buggy vector calculus, now its a feature ;-)
 
         # ijkC0 = [ijkA[0], ijkA[1], ijkA[2]+iZDirectionSign*int(round(fStepSize_mm/fvSpacing[2])) ] #!!! performs better on average on MICCAI13 cases
 
@@ -2875,7 +2882,7 @@ class NeedleFinderLogic:
       elif ijkBestPoint != ijkAPrevious: 
         ijkA = ijkBestPoint
 
-      # drag back a control point to the axial limit plane
+      # drag back a too far low control point to the axial limit plane
       if ijkA[2] < iAxialSegmentationLimit and ijkA != ijkA0:
         
         asl = iAxialSegmentationLimit
@@ -2892,8 +2899,8 @@ class NeedleFinderLogic:
         print "#lvControlPointsRAS: ", len(lvControlPointsRAS)
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         oFiducial.Initialize(slicer.mrmlScene)
-        if not bUp: oFiducial.SetName('.')
-        else: oFiducial.SetName('..')
+        if not bUp: oFiducial.SetName('.'+str(iStep+1))
+        else: oFiducial.SetName('..'+str(iStep+1))
         oFiducial.SetFiducialCoordinates(lvControlPointsRAS[iStep + 1])
         if bUp: oFiducial.GetDisplayNode().SetColor(1, 1, 0)
 
@@ -3928,7 +3935,7 @@ class NeedleFinderLogic:
     path[38] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 38 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
     path[40] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 40 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
 
-    # Andres file system (cases copies from AMIGO share) MICCAI13 results (LB/AM)
+    # Andre's file system (cases copies from AMIGO share) MICCAI13 results (LB/AM)
     path = [ 0 for i in range(100)]
     path[24] = '/home/amastmeyer/Pictures/MICCAI13/Case  024/NRRD/Auto-Eval-LB/2013-02-28-Scene.mrml'
     path[28] = '/home/amastmeyer/Pictures/MICCAI13/Case  028/NRRD/Auto-Eval-LB/2013-02-28-Scene.mrml'
