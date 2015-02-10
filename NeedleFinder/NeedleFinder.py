@@ -2760,7 +2760,6 @@ class NeedleFinderLogic:
       if iStep == 0:
         
         ijkC0 = [ijkA[0], ijkA[1], ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))]
-        rasC0 = self.ijk2ras(ijkC0)
         iRMax = iRadiusMax_mm / float(fvSpacing[0])
         nRIter = iRMax
         #nTIter = max(1, int(round(iStep)))  ### ??? L can be smaller 1 and it is in mm not int index coordinates
@@ -2769,7 +2768,6 @@ class NeedleFinderLogic:
       #------------------------------------------------------------------------------
       else:
        
-        ijkSegmentVector=rasSegmentVector/np.array(spacing)
         ijkC0 = [ 2 * ijkA[0] - ijkAPrevious[0],  # ??? why do you go double iStep in xy-plane
                     2 * ijkA[1] - ijkAPrevious[1],
                     ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))   ]  # ??? this is buggy vector calculus, now its a feature ;-)
@@ -2783,6 +2781,7 @@ class NeedleFinderLogic:
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         oFiducial.Initialize(slicer.mrmlScene)
         oFiducial.SetName('.b'+str(iStep+1))
+        rasC0 = self.ijk2ras(ijkC0)
         oFiducial.SetFiducialCoordinates(rasC0)
         oFiducial.GetDisplayNode().SetColor(1,0,1)
       
