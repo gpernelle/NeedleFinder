@@ -5767,7 +5767,10 @@ class NeedleFinderLogic:
     sigmaValue = config.getint('IntegerSection', 'sigmaValue')
     gradientPonderation = config.getint('IntegerSection', 'gradientPonderation')
     exponent = config.getint('IntegerSection', 'exponent')
-    distanceMax = config.getint('IntegerSection', 'distanceMax')
+    try:
+      radiusMax = config.getint('IntegerSection', 'distanceMax') # try deprecated parameter name (old parameter files)
+    except:
+      radiusMax = config.getint('IntegerSection', 'radiusMax')
     nbRotatingIterations = config.getint('IntegerSection', 'nbRotatingIterations')
     numberOfPointsPerNeedle = config.getint('IntegerSection', 'numberOfPointsPerNeedle')
     lenghtNeedleParameter = config.getint('IntegerSection', 'lenghtNeedleParameter')
@@ -5788,7 +5791,7 @@ class NeedleFinderLogic:
     widget.sigmaValue.value = sigmaValue
     widget.gradientPonderation.value = gradientPonderation
     widget.exponent.value = exponent
-    widget.radiusMax.value = distanceMax
+    widget.radiusMax.value = radiusMax
     widget.nbRotatingIterations.value = nbRotatingIterations
     widget.numberOfPointsPerNeedle.value = numberOfPointsPerNeedle
     widget.lenghtNeedleParameter.value = lenghtNeedleParameter
