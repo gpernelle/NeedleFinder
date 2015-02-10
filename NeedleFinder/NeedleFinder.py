@@ -2760,6 +2760,7 @@ class NeedleFinderLogic:
       if iStep == 0:
         
         ijkC0 = [ijkA[0], ijkA[1], ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))]
+        rasC0 = self.ijk2ras(ijkC0)
         iRMax = iRadiusMax_mm / float(fvSpacing[0])
         nRIter = iRMax
         #nTIter = max(1, int(round(iStep)))  ### ??? L can be smaller 1 and it is in mm not int index coordinates
@@ -2777,7 +2778,7 @@ class NeedleFinderLogic:
 
         iRMax = max(fStepSize_mm/fvSpacing[0], iRadiusMax_mm / float(fvSpacing[0]))
         nRIter = max(15, min(20, int(round(iRMax)))) # / float(fvSpacing[0]))))
-
+      
       if 1: # show cone base markers
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         oFiducial.Initialize(slicer.mrmlScene)
@@ -3987,6 +3988,7 @@ class NeedleFinderLogic:
           medHD = sl[sl.size / 2]
           resultsEval = [maxHD, avgHD, stdHD, medHD] + l.valuesExperience + [id]
           l.exportEvaluation(resultsEval, '/tmp/AP-All_stats.csv')
+          #msgbox("Pause")
     elif mode == 1:
       id = 'Current'
       # simple brute force search in the dimensions (Guillaumes parameterSearch.py)
