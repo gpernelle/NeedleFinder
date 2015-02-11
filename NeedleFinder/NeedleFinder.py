@@ -630,16 +630,22 @@ class NeedleFinderWidget:
     """
     Set the wand logic parameters in parameter node
     """
-    # research
+    #research
     profprint()
     parameterNode = self.editUtil.getParameterNode()
-    # set options 
+    # set useful options for wand tool
     parameterNode.SetParameter("WandEffect,tolerance", str(tolerance))
     parameterNode.SetParameter("WandEffect,maxPixels", str(maxPixels))
     parameterNode.SetParameter("WandEffect,fillMode", fillMode)
     wandOpt = EditorLib.WandEffectOptions()
     wandOpt.setMRMLDefaults()
     wandOpt.__del__()
+    # set useful options for paint tool
+    parameterNode.SetParameter("PaintEffect,radius", "1")
+    parameterNode.SetParameter("PaintEffect,sphere", "1")
+    paintOpt = EditorLib.PaintEffectOptions()
+    paintOpt.setMRMLDefaults()
+    paintOpt.__del__()
     
   def keyPressEvent(self, event):
     print "You Pressed: " + event.text()
@@ -2751,8 +2757,8 @@ class NeedleFinderLogic:
     for iStep in range(0, nStepsNeedle):
       print "iStep, lengthNeedle: ", iStep, fEstNeedleLength_mm
       #fStepSize_mm = self.stepSize13(iStep+1,nStepsNeedle+1)*fEstNeedleLength_mm
-      #fStepSize_mm = self.stepSizeAndre(iStep + 1, nStepsNeedle) * fEstNeedleLength_mm
-      fStepSize_mm = fEstNeedleLength_mm / nStepsNeedle  # <<<<< this is better on average over MICCAI13 cases
+      fStepSize_mm = self.stepSizeAndre(iStep + 1, nStepsNeedle) * fEstNeedleLength_mm
+      #fStepSize_mm = fEstNeedleLength_mm / nStepsNeedle  # <<<<< this is better on average over MICCAI13 cases
       print "fStepSize_mm: ", fStepSize_mm
       
       # iStep 0
@@ -2772,10 +2778,10 @@ class NeedleFinderLogic:
                   2 * ijkA[1] - ijkAPrevious[1],
                   ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))   ]  # ??? this is buggy vector calculus, now its a feature ;-)
 
-        #ijkC0 = [ijkA[0], ijkA[1], ijkA[2]+iZDirectionSign*int(round(fStepSize_mm/fvSpacing[2])) ] #<<< going down along z-axis performs better on average on MICCAI13 cases
+        ijkC0 = [ijkA[0], ijkA[1], ijkA[2]+iZDirectionSign*int(round(fStepSize_mm/fvSpacing[2])) ] #<<< cons. going down along z-axis performs better on average on MICCAI13 cases
 
         iRMax = max(fStepSize_mm/fvSpacing[0], iRadiusMax_mm / float(fvSpacing[0]))
-        nRIter = max(15, min(20, int(round(iRMax)))) # / float(fvSpacing[0]))))
+        nRIter = max(15, min(20, int(round(iRMax/ float(fvSpacing[0]))))) # ??? why /fvSpacing again
         
       if 1: # show cone base markers
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
@@ -2786,7 +2792,7 @@ class NeedleFinderLogic:
         oFiducial.SetFiducialCoordinates(rasC0)
         oFiducial.GetDisplayNode().SetColor(0,0,1)
       
-      nTIter = max(1, int(round(fStepSize_mm/min(fvSpacing)))) # <<<< more conservative step size
+      nTIter = max(1, int(round(fStepSize_mm/fvSpacing[2]))) # <<<< /min(fvSpacing) consider smaller step size
         
       fEstimator = 0
       fMinEstimator = 0
@@ -2809,7 +2815,7 @@ class NeedleFinderLogic:
           fTotal = 0
           lijkM = [[0, 0, 0] for i in xrange(int(nTIter) + 1)]
           
-          fLabel = nLabelVoxFound = 0
+          fLabel = 0
           # calculates nTIter = number of points per segment 
           for iTStep in xrange(int(nTIter) + 1):
 
@@ -2826,7 +2832,7 @@ class NeedleFinderLogic:
               
               dCenter = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
                             
-              if iStep>nStepsNeedle/2 and bGradient == 1 :
+              if bGradient == 1 : # <<< iStep>nStepsNeedle/2 and
 
                 iRadiusNeedle = int(round(iRadiusNeedle_mm / float(fvSpacing[0])))
                 iRadiusNeedleCorner = int(round((iRadiusNeedle_mm / float(fvSpacing[0]) / 1.414)))
@@ -2842,20 +2848,20 @@ class NeedleFinderLogic:
                 
                 fTotal += 8 * dCenter - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8) * iGradientPonderation
               
+              fTotal += dCenter
+              
               # >>>>>>>>>>>>>>>>>>>>>> exp.02
               if imgLabelData: 
+                #print "looking for user hints"
                 fLabel = imgLabelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0) 
-                imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, 306) #mark the search cones in fLabel volume
 
-              if not fLabel:
-                fTotal += dCenter
-              elif fLabel < 300:
-                # print "found needle guide fLabel marker"
-                # force high influence of labels
-                nLabelVoxFound += 1
+                if fLabel>0 and fLabel < 300: # higher labels are reserved for debugging
+                  #print "found needle guide fLabel marker"
+                  # force high influence of labels
+                  fTotal -= 10000
 
-          if nLabelVoxFound: fTotal = -10000 * nLabelVoxFound
-          # <<<<<<<<<<<<<<<<<<<<
+                #imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, 306) #mark the search cones in fLabel volume
+              # <<<<<<<<<<<<<<<<<<<<
           
           if iR == 0:
             
@@ -3600,11 +3606,11 @@ class NeedleFinderLogic:
     widget = slicer.modules.NeedleFinderWidget
     # remove artifacts from segmentation editor
     # label volumes
-    if widget.labelMapNode:
+    if 0 and widget.labelMapNode:
       slicer.mrmlScene.RemoveNode(widget.labelMapNode.GetDisplayNode())
       slicer.mrmlScene.RemoveNode(widget.labelMapNode)
       widget.labelMapNode = None
-    while slicer.util.getNodes('*-label') != {}:
+    while 0 and slicer.util.getNodes('*-label') != {}:
       nodes = slicer.util.getNodes('*-label')
       for node in nodes.values():
         slicer.mrmlScene.RemoveNode(node)
@@ -4814,8 +4820,14 @@ class NeedleFinderLogic:
     # productive #button
     profprint()
     widget = slicer.modules.NeedleFinderWidget
-    if widget.labelMapNode:
-      widget.clearLabelMap()
+    if not script and widget.labelMapNode:
+      dialog = qt.QDialog()
+      ret = messageBox = qt.QMessageBox.question(dialog, 'Question', """
+          Do you want to clear the label hint map and fiducials?
+          """, qt.QMessageBox.Yes, qt.QMessageBox.No)
+      if ret==qt.QMessageBox.Yes: 
+        widget.clearLabelMap()
+        self.deleteControlPoints()
     self.deleteNeedleDetectionModelsFromScene()
     tips = self.returnTipsFromNeedleModels()
     # delete old needles as they will be recalculated
