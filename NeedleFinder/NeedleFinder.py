@@ -2766,7 +2766,7 @@ class NeedleFinderLogic:
       
       # iStep 1,2,...
       #------------------------------------------------------------------------------
-      else:
+      elif step== 1:
        
         ijkC0 = [ 2 * ijkA[0] - ijkAPrevious[0],  # ??? why do you go double iStep in xy-plane
                   2 * ijkA[1] - ijkAPrevious[1],
@@ -2776,25 +2776,28 @@ class NeedleFinderLogic:
 
         iRMax = max(fStepSize_mm/fvSpacing[0], iRadiusMax_mm / float(fvSpacing[0]))
         nRIter = max(15, min(20, int(round(iRMax)))) # / float(fvSpacing[0]))))
-        
+
         #>>>>>> exp.04
-        F0=63/1000.
+        fF0=63/1000.
         rasA=np.array(self.ijk2ras(ijkA))
         rasAPrevious=np.array(self.ijk2ras(ijkAPrevious))
         rasSegmentVector=rasA-rasAPrevious
         fLenSV=np.sqrt(np.dot(rasSegmentVector,rasSegmentVector))
         if not fLenSV: msgbox("irr. vector"); break
         rasSegmentVector/=fLenSV
-        fAngleZvSeg=np.arccos(np.dot(-fvZ,rasSegmentVector))
-        print "angle from -z-axis: ", np.rad2deg(fAngleZvSeg)
+        fAngleZvSeg_rad=np.arccos(np.dot(-fvZ,rasSegmentVector))
+        print "angle from -z-axis: ", np.rad2deg(fAngleZvSeg_rad)
         rasNeedlePlaneNormal = np.cross(-fvZ,rasSegmentVector)
-        
+        fDeflection=np.sqrt(rasA[0]*rasA[0]+rasA[1]*rasA[1])
         sangle=fAngleZvSeg
-        F=F0*np.cos(sangle)/3 #estimate
+        fF=fF0*np.cos(sangle)/(np.pi) #estimate
         ijkSegmentVector=rasSegmentVector/np.array(fvSpacing)
-  
-        #<<<<<<
         
+      elif step>1:
+        1
+        
+        #<<<<<<
+
       if 1: # show cone base markers
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         oFiducial.Initialize(slicer.mrmlScene)
