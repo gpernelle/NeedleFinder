@@ -2775,7 +2775,7 @@ class NeedleFinderLogic:
         #ijkC0 = [ijkA[0], ijkA[1], ijkA[2]+iZDirectionSign*int(round(fStepSize_mm/fvSpacing[2])) ] #<<< going down along z-axis performs better on average on MICCAI13 cases
 
         iRMax = max(fStepSize_mm/fvSpacing[0], iRadiusMax_mm / float(fvSpacing[0]))
-        nRIter = max(15, min(20, int(round(iRMax)))) # / float(fvSpacing[0]))))
+        nRIter = max(15, min(20, int(round(iRMax)))) #<<< / float(fvSpacing[0]))))
 
         #>>>>>> exp.04
         fF0=63/1000.
