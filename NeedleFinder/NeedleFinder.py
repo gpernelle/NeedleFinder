@@ -21,7 +21,6 @@ Links
   .. [1] https://www.spl.harvard.edu/publications/item/view/2459
   .. [2] https://www.spl.harvard.edu/publications/item/view/2316
 """
-
 """
 TODO: gaussianAttenuation in NeedleDetectionThread is missing 1/(sigma*(2pi)**0.5)
 meaning the integral of the gaussian is not always 1 - we could see the impact of adding the scaling effect by
@@ -2209,7 +2208,7 @@ class NeedleFinderLogic:
     if drawFiducialPoints:
       oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
       oFiducial.Initialize(slicer.mrmlScene)
-      oFiducial.SetName('.0')
+      oFiducial.SetName('.c0')
       oFiducial.SetFiducialCoordinates(self.ijk2ras(A))
       oFiducial.GetDisplayNode().SetColor(0,0,1)
       """
@@ -2293,7 +2292,7 @@ class NeedleFinderLogic:
         oFiducial.Initialize(slicer.mrmlScene)
         oFiducial.SetName('.b'+str(iStep+1))
         oFiducial.SetFiducialCoordinates(self.ijk2ras(C0))
-        oFiducial.GetDisplayNode().SetColor(1,0,1)
+        oFiducial.GetDisplayNode().SetColor(0,0,1)
   
       estimator = 0
       minEstimator = 0  
@@ -2506,7 +2505,7 @@ class NeedleFinderLogic:
     if widget.drawFiducialPoints.isChecked():
       oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
       oFiducial.Initialize(slicer.mrmlScene)
-      oFiducial.SetName('.0')
+      oFiducial.SetName('.c0')
       oFiducial.SetFiducialCoordinates(self.ijk2ras(A))
       oFiducial.GetDisplayNode().SetColor(0,0,1)
     
@@ -2550,7 +2549,7 @@ class NeedleFinderLogic:
         oFiducial.Initialize(slicer.mrmlScene)
         oFiducial.SetName('.b'+str(iStep+1))
         oFiducial.SetFiducialCoordinates(self.ijk2ras(C0))
-        oFiducial.GetDisplayNode().SetColor(1,0,1)
+        oFiducial.GetDisplayNode().SetColor(0,0,1)
   
       estimator = 0
       minEstimator = 0  
@@ -2697,6 +2696,7 @@ class NeedleFinderLogic:
     ijkBestPoint = [0, 0, 0]
     widget = slicer.modules.NeedleFinderWidget
     fLabel = None
+    fvZ=np.array([0,0,1]); fvX=np.array([1,0,0]); fvY=np.array([0,1,0])
 
     # ## load parameters from GUI
     iRadiusMax_mm = widget.radiusMax.value
@@ -2734,7 +2734,7 @@ class NeedleFinderLogic:
     if widget.drawFiducialPoints.isChecked():
       oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
       oFiducial.Initialize(slicer.mrmlScene)
-      oFiducial.SetName('.0')
+      oFiducial.SetName('.c0')
       oFiducial.SetFiducialCoordinates(self.ijk2ras(ijkA))
       oFiducial.GetDisplayNode().SetColor(0,0,1)
     
@@ -2751,8 +2751,8 @@ class NeedleFinderLogic:
     for iStep in range(0, nStepsNeedle):
       print "iStep, lengthNeedle: ", iStep, fEstNeedleLength_mm
       #fStepSize_mm = self.stepSize13(iStep+1,nStepsNeedle+1)*fEstNeedleLength_mm
-      fStepSize_mm = self.stepSizeAndre(iStep + 1, nStepsNeedle) * fEstNeedleLength_mm
-      #fStepSize_mm = fEstNeedleLength_mm / nStepsNeedle  # <<<<< experiment, this is better!
+      #fStepSize_mm = self.stepSizeAndre(iStep + 1, nStepsNeedle) * fEstNeedleLength_mm
+      fStepSize_mm = fEstNeedleLength_mm / nStepsNeedle  # <<<<< this is better on average over MICCAI13 cases
       print "fStepSize_mm: ", fStepSize_mm
       
       # iStep 0
@@ -2769,23 +2769,42 @@ class NeedleFinderLogic:
       else:
        
         ijkC0 = [ 2 * ijkA[0] - ijkAPrevious[0],  # ??? why do you go double iStep in xy-plane
-                    2 * ijkA[1] - ijkAPrevious[1],
-                    ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))   ]  # ??? this is buggy vector calculus, now its a feature ;-)
+                  2 * ijkA[1] - ijkAPrevious[1],
+                  ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))   ]  # ??? this is buggy vector calculus, now its a feature ;-)
 
-        # ijkC0 = [ijkA[0], ijkA[1], ijkA[2]+iZDirectionSign*int(round(fStepSize_mm/fvSpacing[2])) ] #!!! performs better on average on MICCAI13 cases
+        #ijkC0 = [ijkA[0], ijkA[1], ijkA[2]+iZDirectionSign*int(round(fStepSize_mm/fvSpacing[2])) ] #<<< going down along z-axis performs better on average on MICCAI13 cases
 
         iRMax = max(fStepSize_mm/fvSpacing[0], iRadiusMax_mm / float(fvSpacing[0]))
         nRIter = max(15, min(20, int(round(iRMax)))) # / float(fvSpacing[0]))))
-      
+        
+        #>>>>>> exp.04
+        F0=63/1000.
+        rasA=np.array(self.ijk2ras(ijkA))
+        rasAPrevious=np.array(self.ijk2ras(ijkAPrevious))
+        rasSegmentVector=rasA-rasAPrevious
+        fLenSV=np.sqrt(np.dot(rasSegmentVector,rasSegmentVector))
+        if not fLenSV: msgbox("irr. vector"); break
+        rasSegmentVector/=fLenSV
+        fAngleZvSeg=np.arccos(np.dot(-fvZ,rasSegmentVector))
+        print "angle from -z-axis: ", np.rad2deg(fAngleZvSeg)
+        rasNeedlePlaneNormal = np.cross(-fvZ,rasSegmentVector)
+        
+        sangle=fAngleZvSeg
+        F=F0*np.cos(sangle)/3 #estimate
+        ijkSegmentVector=rasSegmentVector/np.array(fvSpacing)
+  
+        #<<<<<<
+        
       if 1: # show cone base markers
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         oFiducial.Initialize(slicer.mrmlScene)
-        oFiducial.SetName('.b'+str(iStep+1))
+        if not bUp: oFiducial.SetName('.b'+str(iStep+1))
+        else: oFiducial.SetName('.^b'+str(iStep+1))
         rasC0 = self.ijk2ras(ijkC0)
         oFiducial.SetFiducialCoordinates(rasC0)
-        oFiducial.GetDisplayNode().SetColor(1,0,1)
+        oFiducial.GetDisplayNode().SetColor(0,0,1)
       
-      nTIter = max(1, int(round(fStepSize_mm/fvSpacing[2])))
+      nTIter = max(1, int(round(fStepSize_mm/min(fvSpacing)))) # <<<< more conservative step size
         
       fEstimator = 0
       fMinEstimator = 0
@@ -2825,7 +2844,7 @@ class NeedleFinderLogic:
               
               dCenter = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
                             
-              if bGradient == 1 :
+              if iStep>nStepsNeedle/2 and bGradient == 1 :
 
                 iRadiusNeedle = int(round(iRadiusNeedle_mm / float(fvSpacing[0])))
                 iRadiusNeedleCorner = int(round((iRadiusNeedle_mm / float(fvSpacing[0]) / 1.414)))
@@ -2841,7 +2860,7 @@ class NeedleFinderLogic:
                 
                 fTotal += 8 * dCenter - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8) * iGradientPonderation
               
-              # >>>>>>>>>>>>>>>>>>>>>>
+              # >>>>>>>>>>>>>>>>>>>>>> exp.02
               if imgLabelData: 
                 fLabel = imgLabelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0) 
                 imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, 306) #mark the search cones in fLabel volume
@@ -2915,8 +2934,8 @@ class NeedleFinderLogic:
         print "#lvControlPointsRAS: ", len(lvControlPointsRAS)
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         oFiducial.Initialize(slicer.mrmlScene)
-        if not bUp: oFiducial.SetName('.'+str(iStep+1))
-        else: oFiducial.SetName('..'+str(iStep+1))
+        if not bUp: oFiducial.SetName('.c'+str(iStep+1))
+        else: oFiducial.SetName('.^c'+str(iStep+1))
         oFiducial.SetFiducialCoordinates(lvControlPointsRAS[iStep + 1])
         if bUp: oFiducial.GetDisplayNode().SetColor(1, 1, 0)
 
@@ -3532,7 +3551,7 @@ class NeedleFinderLogic:
       model.SetAttribute("nth", str(nth))
     
     if needleType == 'Validation':
-      o = 0
+      1
       # self.addNeedleToTable(int(colorVar),label,'Validation') ### ??? why ID=color here
       # self.addNeedleToTable(int(model.GetID().strip('vtkMRMLModelNode')),label,'Validation')
     
@@ -4813,6 +4832,9 @@ class NeedleFinderLogic:
     # productive #button
     profprint()
     widget = slicer.modules.NeedleFinderWidget
+    if widget.labelMapNode:
+      widget.clearLabelMap()
+    self.deleteNeedleDetectionModelsFromScene()
     tips = self.returnTipsFromNeedleModels()
     # delete old needles as they will be recalculated
     self.deleteAllAutoNeedlesFromScene()
