@@ -565,7 +565,7 @@ class NeedleFinderWidget:
     self.editUtil = None
     self.editUtil = self.editorWidget.editUtil  # EditorLib.EditUtil.EditUtil()
     self.currentLabel = None
-    self.setWandEffectOptions()  # has to be done before setup():
+    self.setEffectOptions()  # has to be done before setup():
     self.editUtil.setCurrentEffect("DefaultTool")
     self.editorWidget.setup()
     # our mouse mode button
@@ -626,7 +626,7 @@ class NeedleFinderWidget:
     self.onResetParameters()
     self.setupShortcuts()
     
-  def setWandEffectOptions(self, tolerance=20, maxPixels=50, fillMode="Volume"):
+  def setEffectOptions(self, tolerance=20, maxPixels=50, fillMode="Volume"):
     """
     Set the wand logic parameters in parameter node
     """
@@ -934,7 +934,7 @@ class NeedleFinderWidget:
                   wl.editUtil = self.editUtil
                   self.wandLogics[sliceLogic] = wl
                 print "wanding"
-                self.setWandEffectOptions()  # !! the parameter node can be altered/deleted from outside so re-create/reset option node
+                self.setEffectOptions()  # !! the parameter node can be altered/deleted from outside so re-create/reset option node
                 wl = self.wandLogics[sliceLogic]
                 xy = interactor.GetEventPosition()
                 print "xy: ", xy
