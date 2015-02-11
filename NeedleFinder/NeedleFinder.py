@@ -2777,24 +2777,6 @@ class NeedleFinderLogic:
         iRMax = max(fStepSize_mm/fvSpacing[0], iRadiusMax_mm / float(fvSpacing[0]))
         nRIter = max(15, min(20, int(round(iRMax)))) # / float(fvSpacing[0]))))
         
-        #>>>>>> exp.04
-        F0=63/1000.
-        rasA=np.array(self.ijk2ras(ijkA))
-        rasAPrevious=np.array(self.ijk2ras(ijkAPrevious))
-        rasSegmentVector=rasA-rasAPrevious
-        fLenSV=np.sqrt(np.dot(rasSegmentVector,rasSegmentVector))
-        if not fLenSV: msgbox("irr. vector"); break
-        rasSegmentVector/=fLenSV
-        fAngleZvSeg=np.arccos(np.dot(-fvZ,rasSegmentVector))
-        print "angle from -z-axis: ", np.rad2deg(fAngleZvSeg)
-        rasNeedlePlaneNormal = np.cross(-fvZ,rasSegmentVector)
-        
-        sangle=fAngleZvSeg
-        F=F0*np.cos(sangle)/3 #estimate
-        ijkSegmentVector=rasSegmentVector/np.array(fvSpacing)
-  
-        #<<<<<<
-        
       if 1: # show cone base markers
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         oFiducial.Initialize(slicer.mrmlScene)
