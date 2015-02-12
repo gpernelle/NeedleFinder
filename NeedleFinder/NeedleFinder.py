@@ -2749,6 +2749,7 @@ class NeedleFinderLogic:
     lvBestControlPoints.append(self.ijk2ras(ijkA))
 
     for iStep in range(0, nStepsNeedle):
+      print "---------------------------------"
       print "iStep, lengthNeedle: ", iStep, fEstNeedleLength_mm
       #fStepSize_mm = self.stepSize13(iStep+1,nStepsNeedle+1)*fEstNeedleLength_mm
       #fStepSize_mm = self.stepSizeAndre(iStep + 1, nStepsNeedle) * fEstNeedleLength_mm
@@ -2766,7 +2767,7 @@ class NeedleFinderLogic:
       
       # iStep 1,2,...
       #------------------------------------------------------------------------------
-      elif iStep==1:
+      elif iStep>0:
        
         ijkC0 = [ 2 * ijkA[0] - ijkAPrevious[0],  # ??? why do you go double iStep in xy-plane
                   2 * ijkA[1] - ijkAPrevious[1],
@@ -2779,10 +2780,10 @@ class NeedleFinderLogic:
 
         #>>>>>> exp.04
         
-        #<<<<<<
       elif iStep>1:
         #self.addPolyLineToScene(lvControlPointsRAS, (iColorVar+1)%64, 'Detection', True, bScript)
-        break
+        1
+        #break
 
       if 1: # show cone base markers
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
@@ -2798,10 +2799,11 @@ class NeedleFinderLogic:
       fEstimator = 0
       fMinEstimator = 0
       
-      ijkA=ijkC0 #<<<
-      ijkAPrevious = ijkA #<<<
-      lvControlPointsRAS.append(self.ijk2ras(ijkA)) #<<<
-      continue #<<<
+      if iStep>0: 
+        ijkAPrevious = ijkA #<<<
+        ijkA=ijkC0 #<<<
+        lvControlPointsRAS.append(self.ijk2ras(ijkA)) #<<<
+        continue #<<<
       # radius variation
       for iR in range(int(nRIter) + 1):
 
@@ -2905,7 +2907,7 @@ class NeedleFinderLogic:
         
            
       ijkAPrevious = ijkA
-      if True or ijkBestPoint == [0, 0, 0]:#<<<
+      if ijkBestPoint == [0, 0, 0]:
         ijkA = ijkC0
       elif ijkBestPoint != ijkAPrevious: 
         ijkA = ijkBestPoint
@@ -2923,7 +2925,7 @@ class NeedleFinderLogic:
       lvControlPointsRAS.append(self.ijk2ras(ijkA))
       lvControlPointsIJK.append(ijkA)
 
-      if 0 and widget.drawFiducialPoints.isChecked(): #<<<
+      if widget.drawFiducialPoints.isChecked():
         print "#lvControlPointsRAS: ", len(lvControlPointsRAS)
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         oFiducial.Initialize(slicer.mrmlScene)
@@ -2939,11 +2941,11 @@ class NeedleFinderLogic:
     # self.addNeedleToScene(lvControlPointsRAS,iColorVar)  
     for i in range(len(lvControlPointsRAS)): self.controlPoints.append(lvControlPointsRAS[i])
     if not bAutoStopTip:
-      self.addPolyLineToScene(lvControlPointsRAS, (iColorVar+1)%64, 'Detection', True, bScript)
+      self.addPolyLineToScene(lvControlPointsRAS, (iColorVar+1)%64, 'Detection', True, script=bScript)
       #self.addNeedleToScene(lvControlPointsRAS, iColorVar, 'Detection', bScript)
       self.controlPoints = []
     if bAutoStopTip and bUp:
-      self.addPolyLineToScene(self.controlPoints, (iColorVar+1)%64, 'Detection', True, bScript)
+      self.addPolyLineToScene(self.controlPoints, (iColorVar+1)%64, 'Detection', True, script=bScript)
       #self.addNeedleToScene(self.controlPoints, iColorVar, 'Detection', bScript)
       self.controlPoints = []
       
@@ -3430,7 +3432,7 @@ class NeedleFinderLogic:
         # print i
         pass
 
-  def addPolyLineToScene(self, controlPoint, colorVar, needleType='Detection', endMarker=False, script=False):
+  def addPolyLineToScene(self, controlPoint, colorVar, needleType='Detection', endMarker=False, name="^", script=False):
     """Just adds visual representation of linear (needle) segments to the scene. 
     Useful for drawing the control polygon of a smooth curve.
 
@@ -3532,7 +3534,7 @@ class NeedleFinderLogic:
     
     if endMarker:
       fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
-      fiducial.SetName('.^')
+      fiducial.SetName('.'+name)
       fiducial.Initialize(slicer.mrmlScene)
       fiducial.SetFiducialCoordinates(controlPointListSorted[-1])
       fiducial.SetAttribute('TemporaryFiducial', '1')
