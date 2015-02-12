@@ -609,7 +609,7 @@ class NeedleFinderWidget:
     vnJPG = slicer.util.getNode("Case *")  # the naming convention for the ground truth JPG files: "Case XXX.jpg"
     if vnJPG:
       print "showing ground 2d image truth in green view"
-      # show JPG image if available
+      # show JPG image if available in green segment
       sw = slicer.app.layoutManager().sliceWidget("Green")
       cn = sw.mrmlSliceCompositeNode()
       cn.SetBackgroundVolumeID(vnJPG.GetID())
@@ -622,6 +622,32 @@ class NeedleFinderWidget:
       sGreen.SetOrientationToAxial()
       sw.fitSliceToBackground()
       sGreen.Modified()
+    vn = slicer.util.getNode("Case*._.*")
+    if vn:
+      print "showing volume image in red/yellow view"      
+      # show vol. image if available in red segment
+      sw = slicer.app.layoutManager().sliceWidget("Red")
+      cn = sw.mrmlSliceCompositeNode()
+      cn.SetBackgroundVolumeID(vn.GetID())
+      sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
+      if sRed == None :
+        sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode0")
+      # set to axial view
+      sRed.SetSliceVisible(1)
+      sRed.SetOrientationToAxial()
+      sw.fitSliceToBackground()
+      
+      # ...yellow segment
+      sw = slicer.app.layoutManager().sliceWidget("Yellow")
+      cn = sw.mrmlSliceCompositeNode()
+      cn.SetBackgroundVolumeID(vn.GetID())
+      sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
+      if sYellow == None :
+        sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode1")
+      # set to coronal view
+      sRed.SetSliceVisible(0)
+      sRed.SetOrientationToCoronal()
+      sw.fitSliceToBackground()
  
     self.onResetParameters()
     self.setupShortcuts()
@@ -667,11 +693,11 @@ class NeedleFinderWidget:
       s.connect('activated()', f)
       s.connect('activatedAmbiguously()', f)
       print "'%s' -> '%s'" % (keys, f.__name__)
-      # convenient for the python console
-      globals()['nfw'] = nfw = slicer.modules.NeedleFinderWidget
-      globals()['nfl'] = nfl = slicer.modules.NeedleFinderWidget.logic
-      print "nfl -> NeedleFinderLogic"
-      print "nfw -> NeedleFinderWidget"
+    # convenient for the python console
+    globals()['nfw'] = nfw = slicer.modules.NeedleFinderWidget
+    globals()['nfl'] = nfl = slicer.modules.NeedleFinderWidget.logic
+    print "nfl -> NeedleFinderLogic"
+    print "nfw -> NeedleFinderWidget"
 
   def segmentNeedle(self):
       """
