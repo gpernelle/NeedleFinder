@@ -2704,7 +2704,7 @@ class NeedleFinderLogic:
     iSigmaValue = widget.sigmaValue.value
     bGaussianAttenuation = widget.gaussianAttenuationButton.isChecked()
     bGradient = widget.gradient.isChecked()
-    nPointsPerNeedle = widget.numberOfPointsPerNeedle.value
+    nPointsPerNeedle = 20 #<<< widget.numberOfPointsPerNeedle.value
     nRotatingIts = widget.nbRotatingIterations.value
     iRadiusNeedle_mm = widget.radiusNeedleParameter.value
     iAxialSegmentationLimit = widget.axialSegmentationLimit
@@ -2766,7 +2766,7 @@ class NeedleFinderLogic:
       
       # iStep 1,2,...
       #------------------------------------------------------------------------------
-      elif step== 1:
+      elif iStep==1:
        
         ijkC0 = [ 2 * ijkA[0] - ijkAPrevious[0],  # ??? why do you go double iStep in xy-plane
                   2 * ijkA[1] - ijkAPrevious[1],
@@ -2778,25 +2778,11 @@ class NeedleFinderLogic:
         nRIter = max(15, min(20, int(round(iRMax)))) #<<< / float(fvSpacing[0]))))
 
         #>>>>>> exp.04
-        fF0=63/1000.
-        rasA=np.array(self.ijk2ras(ijkA))
-        rasAPrevious=np.array(self.ijk2ras(ijkAPrevious))
-        rasSegmentVector=rasA-rasAPrevious
-        fLenSV=np.sqrt(np.dot(rasSegmentVector,rasSegmentVector))
-        if not fLenSV: msgbox("irr. vector"); break
-        rasSegmentVector/=fLenSV
-        fAngleZvSeg_rad=np.arccos(np.dot(-fvZ,rasSegmentVector))
-        print "angle from -z-axis: ", np.rad2deg(fAngleZvSeg_rad)
-        rasNeedlePlaneNormal = np.cross(-fvZ,rasSegmentVector)
-        fDeflection=np.sqrt(rasA[0]*rasA[0]+rasA[1]*rasA[1])
-        sangle=fAngleZvSeg
-        fF=fF0*np.cos(sangle)/(np.pi) #estimate
-        ijkSegmentVector=rasSegmentVector/np.array(fvSpacing)
-        
-      elif step>1:
-        1
         
         #<<<<<<
+      elif iStep>1:
+        #self.addPolyLineToScene(lvControlPointsRAS, (iColorVar+1)%64, 'Detection', True, bScript)
+        break
 
       if 1: # show cone base markers
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
@@ -2811,7 +2797,11 @@ class NeedleFinderLogic:
         
       fEstimator = 0
       fMinEstimator = 0
-
+      
+      ijkA=ijkC0 #<<<
+      ijkAPrevious = ijkA #<<<
+      lvControlPointsRAS.append(self.ijk2ras(ijkA)) #<<<
+      continue #<<<
       # radius variation
       for iR in range(int(nRIter) + 1):
 
@@ -2915,13 +2905,13 @@ class NeedleFinderLogic:
         
            
       ijkAPrevious = ijkA
-      if ijkBestPoint == [0, 0, 0]:
+      if True or ijkBestPoint == [0, 0, 0]:#<<<
         ijkA = ijkC0
       elif ijkBestPoint != ijkAPrevious: 
         ijkA = ijkBestPoint
 
       # drag back a too far low control point to the axial limit plane
-      if ijkA[2] < iAxialSegmentationLimit and ijkA != ijkA0:
+      if False and ijkA[2] < iAxialSegmentationLimit and ijkA != ijkA0: #<<<
         
         asl = iAxialSegmentationLimit
         l = (ijkA[2] - asl) / float(ijkAPrevious[2] - ijkA[2])
@@ -2933,7 +2923,7 @@ class NeedleFinderLogic:
       lvControlPointsRAS.append(self.ijk2ras(ijkA))
       lvControlPointsIJK.append(ijkA)
 
-      if widget.drawFiducialPoints.isChecked():
+      if 0 and widget.drawFiducialPoints.isChecked(): #<<<
         print "#lvControlPointsRAS: ", len(lvControlPointsRAS)
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         oFiducial.Initialize(slicer.mrmlScene)
@@ -2949,10 +2939,12 @@ class NeedleFinderLogic:
     # self.addNeedleToScene(lvControlPointsRAS,iColorVar)  
     for i in range(len(lvControlPointsRAS)): self.controlPoints.append(lvControlPointsRAS[i])
     if not bAutoStopTip:
-      self.addNeedleToScene(lvControlPointsRAS, iColorVar, 'Detection', bScript)
+      self.addPolyLineToScene(lvControlPointsRAS, (iColorVar+1)%64, 'Detection', True, bScript)
+      #self.addNeedleToScene(lvControlPointsRAS, iColorVar, 'Detection', bScript)
       self.controlPoints = []
     if bAutoStopTip and bUp:
-      self.addNeedleToScene(self.controlPoints, iColorVar, 'Detection', bScript)
+      self.addPolyLineToScene(self.controlPoints, (iColorVar+1)%64, 'Detection', True, bScript)
+      #self.addNeedleToScene(self.controlPoints, iColorVar, 'Detection', bScript)
       self.controlPoints = []
       
   #------------------------------------------------------------------------------ 
@@ -3438,6 +3430,120 @@ class NeedleFinderLogic:
         # print i
         pass
 
+  def addPolyLineToScene(self, controlPoint, colorVar, needleType='Detection', endMarker=False, script=False):
+    """Just adds visual representation of linear (needle) segments to the scene. 
+    Useful for drawing the control polygon of a smooth curve.
+
+    :param controlPoint: array of RAS coordinates of points of a needle (used as control point for the Bezier's curve
+    :param colorVar: color of the needle
+    :param needleType: 'validation' for a manually segmentated needle, 'detection' for an automatically segmented needle,
+    'obturator' for an obturator needle
+    :return: visually, needle added to the scene
+    """
+    #research
+    profprint()
+    """
+    Create a model of the linear needle segments
+    """
+    widget = slicer.modules.NeedleFinderWidget
+
+    realNeedleLength = widget.realNeedleLength.value
+    extendNeedle = widget.extendNeedle.isChecked()
+    
+    # sort the points in a decreasing order (from tip to bottom)
+    controlPointListSorted = controlPoint #self.sortTableReverse(controlPoint, (2, 1, 0))
+
+    # calculate the length of the list of ctr points
+    lenghtTotal = 0
+    for i in range(len(controlPoint) - 1):
+        lenghtTotal += self.distanceTwoPoints(controlPointListSorted[i + 1], controlPointListSorted[i])
+    print "Needle added to scene, ",
+    print 'lenght tube: ', lenghtTotal
+    
+    # in case we want to extend the needle to the wanted length
+    """
+    The extension is currently done by adding a point to the control point list.
+    """
+    if lenghtTotal < realNeedleLength and extendNeedle:
+      lastPoint = [controlPointListSorted[-1][0], controlPointListSorted[-1][1], controlPointListSorted[-1][2] - (realNeedleLength - lenghtTotal)]
+      controlPointListSorted.append(lastPoint)
+
+    scene = slicer.mrmlScene
+    points = vtk.vtkPoints()
+    polyData = vtk.vtkPolyData()
+    polyData.SetPoints(points)
+    lines = vtk.vtkCellArray()
+    polyData.SetLines(lines)
+    linesIDArray = lines.GetData()
+    linesIDArray.Reset()
+    linesIDArray.InsertNextTuple1(0)
+    polygons = vtk.vtkCellArray()
+    polyData.SetPolys(polygons)
+    idArray = polygons.GetData()
+    idArray.Reset()
+    idArray.InsertNextTuple1(0)
+    n = len(controlPointListSorted)
+    # start read out
+    for i in range(n):      
+      pointIndex = points.InsertNextPoint(*(controlPointListSorted[i]))
+      linesIDArray.InsertNextTuple1(pointIndex)
+      linesIDArray.SetTuple1(0, linesIDArray.GetNumberOfTuples() - 1)
+      lines.SetNumberOfCells(1)
+    # ## Create model node
+    model = slicer.vtkMRMLModelNode()
+    model.SetScene(scene)
+    model.SetAndObservePolyData(polyData)
+    # ## Create display node
+    modelDisplay = slicer.vtkMRMLModelDisplayNode()
+
+    modelDisplay.SetScene(scene)
+    scene.AddNode(modelDisplay)
+    model.SetAndObserveDisplayNodeID(modelDisplay.GetID())
+    # ## Add to scene
+    modelDisplay.SetInputPolyDataConnection(model.GetPolyDataConnection())
+    scene.AddNode(model)
+    # ##Create Tube around the line
+    tube = vtk.vtkTubeFilter()
+    polyData = model.GetPolyData()
+    tube.SetInputData(polyData)
+    tube.SetRadius(1)
+    tube.SetNumberOfSides(50)
+    tube.Update()
+    
+    model.SetAndObservePolyData(tube.GetOutput())
+    model.GetDisplayNode().SliceIntersectionVisibilityOn()
+    if needleType == 'Validation':
+      model.SetName('.manual-seg_' + str(colorVar))
+    elif needleType == 'Obturator':
+      model.SetName('.obturator-seg_' + str(colorVar))
+    else:
+      model.SetName('.python-catch-round_' + str(self.round) + '-ID-' + str(model.GetID()))
+    model.SetAttribute('type', needleType)
+    
+    if needleType == 'Validation':
+      nth = int(colorVar) % 64
+      modelDisplay.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
+      model.SetAttribute("nth", str(nth)) 
+    
+    else:
+      nth = int(model.GetID().strip('vtkMRMLModelNode')) % 64
+      modelDisplay.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
+      model.SetAttribute("nth", str(nth))
+    
+    if endMarker:
+      fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+      fiducial.SetName('.^')
+      fiducial.Initialize(slicer.mrmlScene)
+      fiducial.SetFiducialCoordinates(controlPointListSorted[-1])
+      fiducial.SetAttribute('TemporaryFiducial', '1')
+      fiducial.SetLocked(True)
+      displayNode = fiducial.GetDisplayNode()
+      displayNode.SetGlyphScale(2.1)
+      displayNode.SetColor(0, 0, 0)
+      textNode = fiducial.GetAnnotationTextDisplayNode()
+      textNode.SetTextScale(1)
+      textNode.SetColor(0, 0, 0)
+
   def addNeedleToScene(self, controlPoint, colorVar, needleType='Detection', script=False):
     """Computes the Bezier's curve and adds visual representation of a needle to the scene
 
@@ -3445,7 +3551,7 @@ class NeedleFinderLogic:
     :param colorVar: color of the needle
     :param needleType: 'validation' for a manually segmentated needle, 'detection' for an automatically segmented needle,
     'obturator' for an obturator needle
-    :return: needle added to the scene
+    :return: visually, needle added to the scene
     """
     # productive
     profprint()
