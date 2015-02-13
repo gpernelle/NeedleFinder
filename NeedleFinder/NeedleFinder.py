@@ -2693,10 +2693,10 @@ class NeedleFinderLogic:
     ### initialisation of the parameters
     ijkAPrevious=None
     ijk = [0, 0, 0]
-    ijkCBest = [0, 0, 0]
     widget = slicer.modules.NeedleFinderWidget
     fLabel = None
-    fvZ=np.array([0,0,1]); fvX=np.array([1,0,0]); fvY=np.array([0,1,0])
+    fvZ=np.array([0,0,1]); fvX=np.array([1,0,0]); fvY=np.array([0,1,0]) #<<<
+    sangle=None #<<<
 
     # ## load parameters from GUI
     iRadiusMax_mm = widget.radiusMax.value
@@ -2704,7 +2704,7 @@ class NeedleFinderLogic:
     iSigmaValue = widget.sigmaValue.value
     bGaussianAttenuation = widget.gaussianAttenuationButton.isChecked()
     bGradient = widget.gradient.isChecked()
-    nPointsPerNeedle = 20 #<<< widget.numberOfPointsPerNeedle.value
+    nPointsPerNeedle = widget.numberOfPointsPerNeedle.value
     nRotatingIts = widget.nbRotatingIterations.value
     iRadiusNeedle_mm = widget.radiusNeedleParameter.value
     iAxialSegmentationLimit = widget.axialSegmentationLimit
@@ -2770,7 +2770,7 @@ class NeedleFinderLogic:
       
       # iStep 1,2,...
       #------------------------------------------------------------------------------
-      elif iStep==1:
+      else:
        
         ijkB = [ 2 * ijkA[0] - ijkAPrevious[0],  # ??? why do you go double iStep in xy-plane
                   2 * ijkA[1] - ijkAPrevious[1],
@@ -2782,7 +2782,7 @@ class NeedleFinderLogic:
         nRIter = max(15, min(20, int(round(iRMax)))) #<<< / float(fvSpacing[0]))))
 
         #>>>>>> exp.04
-
+        
 
       if 0: # show cone base markers
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
@@ -2806,6 +2806,7 @@ class NeedleFinderLogic:
         lvControlPointsRAS.append(self.ijk2ras(ijkA)) #<<<
         continue #<<<
       # radius variation
+      ijkCBest = [0, 0, 0]
       print "searching cone:"
       for iR in range(int(nRIter) + 1):
 
@@ -2912,14 +2913,17 @@ class NeedleFinderLogic:
       
       #>>> model constraint: compare angles of model and found segment  
       fAngleA2CBest2StepVector=0
-      if iStep>1 and ijkCBest != [0, 0, 0]:
+      print "ijkCBest: ",ijkCBest
+      if iStep>0 and ijkCBest != [0, 0, 0]:
         rasCBest=self.ijk2ras(ijkCBest) 
         rasA2CBest=rasCBest-rasA
+        self.addPolyLineToScene([rasA,rasCBest], 1, "Detection",True,"rasA2CBest")
+        self.addPolyLineToScene([rasA,rasB], 1, "Detection",True,"rasStepVector1")
         rasA2CBest/=np.sqrt(np.dot(rasA2CBest,rasA2CBest))
         fAngleA2CBest2StepVector=np.arccos(np.dot(rasStepVector1,rasA2CBest)) 
       #<<<
       print "fAngleA2CBest2StepVector: ", np.rad2deg(fAngleA2CBest2StepVector)
-      if ijkCBest == [0, 0, 0] or np.rad2deg(fAngleA2CBest2StepVector)>3: #<<< or 1: # turn off cone search 
+      if ijkCBest == [0, 0, 0] or np.rad2deg(fAngleA2CBest2StepVector)>3*20/nPointsPerNeedle: #<<< or 1: # turn off cone search 
         ijkA = ijkB
         print "using B: ", ijkA
       elif ijkCBest != ijkAPrevious:
@@ -4947,6 +4951,7 @@ class NeedleFinderLogic:
     :return: print the results in the python interactor (CMD+3 or CTRL+3)
     """
     # productive #button
+    print "\n"*100
     profprint()
     widget = slicer.modules.NeedleFinderWidget
     self.deleteNeedleDetectionModelsFromScene()
