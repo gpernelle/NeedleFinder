@@ -2814,7 +2814,7 @@ class NeedleFinderLogic:
         print "iRMax, nRIter= %d, %d"%(iRMax,nRIter)
 
         #>>>>>> exp.04
-        
+
 
       if 0: # show cone base markers
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
