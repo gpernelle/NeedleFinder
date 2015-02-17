@@ -51,12 +51,26 @@ def whosdaddy():
     return inspect.stack()[2][3]
 def whosgranny():
     return inspect.stack()[3][3]
+def lineno():
+    """Returns the current line number in our program."""
+    return int(inspect.currentframe().f_back.f_lineno)
+def pause():
+  """
+  Pause execution of program. You can use the viewers! Press enter in console...
+  """
+  #research
+  try:
+    input("Press enter to continue")
+  except EOFError:
+    pass
+
 profiling = True
 frequent = False
-MAXNEEDLES = 1000
+MAXNEEDLES = 205 # we have no more than 205 colors
 
 def msgbox(text):
   qt.QMessageBox.about(0, 'Profiling:', text)
+  print text
 def profprint(className=""):
   if profiling: print "%s.%s -----------------------" % (className, whosdaddy())
 def profbox(className=""):  
@@ -288,7 +302,7 @@ class NeedleFinderWidget:
     #Validation Frame##########################################
     self.__validationFrame = ctk.ctkCollapsibleButton()
     self.__validationFrame.text = "Validation"
-    self.__validationFrame.collapsed = 1
+    self.__validationFrame.collapsed = 0 # <<<
     validationFrame = qt.QFormLayout(self.__validationFrame)
 
     self.startGivingControlPointsButton = qt.QPushButton('Start Giving Control Points')
@@ -312,6 +326,8 @@ class NeedleFinderWidget:
     self.startValidationButton.toolTip = "Launch tracking algo. from the tip of the manually segmented needles"
     validationFrame.addRow(self.startValidationButton)
     self.startValidationButton.connect('clicked()', logic.startValidation)
+    #self.startValidationButton.setStyleSheet("background-color: yellow")
+    self.startValidationButton.setStyleSheet("background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #f7f700, stop: 1 #dbdb00)");
 
     # Reset Needle Validation Button 
     self.resetValidationButton = qt.QPushButton('Reset Needles from Manual Segmentation')
@@ -553,6 +569,7 @@ class NeedleFinderWidget:
     self.setAsValNeedlesButton.checkable = False
     self.setAsValNeedlesButton.connect('clicked()', logic.setAllNeedleTubesAsValidationNeedles)
     self.setAsValNeedlesButton.setEnabled(1)
+    self.setAsValNeedlesButton.setStyleSheet("background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #f7f700, stop: 1 #dbdb00)");
     
     # ## create segmentation editor environment:
     editorWidgetParent = slicer.qMRMLWidget()
@@ -565,7 +582,7 @@ class NeedleFinderWidget:
     self.editUtil = None
     self.editUtil = self.editorWidget.editUtil  # EditorLib.EditUtil.EditUtil()
     self.currentLabel = None
-    self.setEffectOptions()  # has to be done before setup():
+    self.setWandEffectOptions()  # has to be done before setup():
     self.editUtil.setCurrentEffect("DefaultTool")
     self.editorWidget.setup()
     # our mouse mode button
@@ -609,7 +626,7 @@ class NeedleFinderWidget:
     vnJPG = slicer.util.getNode("Case *")  # the naming convention for the ground truth JPG files: "Case XXX.jpg"
     if vnJPG:
       print "showing ground 2d image truth in green view"
-      # show JPG image if available in green segment
+      # show JPG image if available
       sw = slicer.app.layoutManager().sliceWidget("Green")
       cn = sw.mrmlSliceCompositeNode()
       cn.SetBackgroundVolumeID(vnJPG.GetID())
@@ -622,56 +639,24 @@ class NeedleFinderWidget:
       sGreen.SetOrientationToAxial()
       sw.fitSliceToBackground()
       sGreen.Modified()
-    vn = slicer.util.getNode("Case*._.*")
-    if vn:
-      print "showing volume image in red/yellow view"      
-      # show vol. image if available in red segment
-      sw = slicer.app.layoutManager().sliceWidget("Red")
-      cn = sw.mrmlSliceCompositeNode()
-      cn.SetBackgroundVolumeID(vn.GetID())
-      sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
-      if sRed == None :
-        sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode0")
-      # set to axial view
-      sRed.SetSliceVisible(1)
-      sRed.SetOrientationToAxial()
-      sw.fitSliceToBackground()
-      
-      # ...yellow segment
-      sw = slicer.app.layoutManager().sliceWidget("Yellow")
-      cn = sw.mrmlSliceCompositeNode()
-      cn.SetBackgroundVolumeID(vn.GetID())
-      sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
-      if sYellow == None :
-        sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode1")
-      # set to coronal view
-      sRed.SetSliceVisible(0)
-      sRed.SetOrientationToCoronal()
-      sw.fitSliceToBackground()
  
     self.onResetParameters()
     self.setupShortcuts()
     
-  def setEffectOptions(self, tolerance=20, maxPixels=50, fillMode="Volume"):
+  def setWandEffectOptions(self, tolerance=20, maxPixels=50, fillMode="Volume"):
     """
     Set the wand logic parameters in parameter node
     """
-    #research
+    # research
     profprint()
     parameterNode = self.editUtil.getParameterNode()
-    # set useful options for wand tool
+    # set options 
     parameterNode.SetParameter("WandEffect,tolerance", str(tolerance))
     parameterNode.SetParameter("WandEffect,maxPixels", str(maxPixels))
     parameterNode.SetParameter("WandEffect,fillMode", fillMode)
     wandOpt = EditorLib.WandEffectOptions()
     wandOpt.setMRMLDefaults()
     wandOpt.__del__()
-    # set useful options for paint tool
-    parameterNode.SetParameter("PaintEffect,radius", "1")
-    parameterNode.SetParameter("PaintEffect,sphere", "1")
-    paintOpt = EditorLib.PaintEffectOptions()
-    paintOpt.setMRMLDefaults()
-    paintOpt.__del__()
     
   def keyPressEvent(self, event):
     print "You Pressed: " + event.text()
@@ -693,11 +678,11 @@ class NeedleFinderWidget:
       s.connect('activated()', f)
       s.connect('activatedAmbiguously()', f)
       print "'%s' -> '%s'" % (keys, f.__name__)
-    # convenient for the python console
-    globals()['nfw'] = nfw = slicer.modules.NeedleFinderWidget
-    globals()['nfl'] = nfl = slicer.modules.NeedleFinderWidget.logic
-    print "nfl -> NeedleFinderLogic"
-    print "nfw -> NeedleFinderWidget"
+      # convenient for the python console
+      globals()['nfw'] = nfw = slicer.modules.NeedleFinderWidget
+      globals()['nfl'] = nfl = slicer.modules.NeedleFinderWidget.logic
+      print "nfl -> NeedleFinderLogic"
+      print "nfw -> NeedleFinderWidget"
 
   def segmentNeedle(self):
       """
@@ -960,7 +945,7 @@ class NeedleFinderWidget:
                   wl.editUtil = self.editUtil
                   self.wandLogics[sliceLogic] = wl
                 print "wanding"
-                self.setEffectOptions()  # !! the parameter node can be altered/deleted from outside so re-create/reset option node
+                self.setWandEffectOptions()  # !! the parameter node can be altered/deleted from outside so re-create/reset option node
                 wl = self.wandLogics[sliceLogic]
                 xy = interactor.GetEventPosition()
                 print "xy: ", xy
@@ -1009,7 +994,7 @@ class NeedleFinderWidget:
         if self.labelMapNode:
           if 0: self.clearLabelMap()
           
-  def clearLabelMap(self):
+  def clearLabelMap(self,label=None):
     """
     Erase the contents of the label map.
     """
@@ -1021,7 +1006,10 @@ class NeedleFinderWidget:
     labelImage = self.labelMapNode.GetImageData()
     shape = list(labelImage.GetDimensions()).reverse()
     labelArray = vtk.util.numpy_support.vtk_to_numpy(labelImage.GetPointData().GetScalars()).reshape(shape)
-    labelArray[:] = 0
+    if not label:
+      labelArray[:] = 0
+    else: # clean a certail label
+      labelArray[labelArray==label]=0
     self.editUtil.markVolumeNodeAsModified(widget.labelMapNode)
 
   def processEventNeedleValidation(self, observee, event=None):
@@ -1907,7 +1895,7 @@ class NeedleFinderLogic:
 
     fiducial.SetAttribute('NeedleNumber', str(needleNumber))
     fiducial.SetAttribute('NeedleStep', str(needleStep))
-    fiducial.SetName(".obtu-" + str(needleNumber)) 
+    fiducial.SetName('.obtu-' + str(needleNumber)) 
     
     nth = int(needleNumber)
 
@@ -2136,14 +2124,14 @@ class NeedleFinderLogic:
     if widget.algoVersParameter.value == 1:
       self.needleDetectionThread13_1(A, imageData, colorVar, spacing, script)
     if widget.algoVersParameter.value == 2:
-      print "/!\ unused algoVersion 2"
+      self.needleDetectionThread13_2(A, imageData, colorVar, spacing, script)
     if widget.algoVersParameter.value == 3:
       if widget.labelMapNode:
-        self.needleDetectionThread13_3(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, bUp=False, bScript=script)
+        msgbox( "/!\ currently unusable algoVersion 3") #self.needleDetectionThread13_3(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, bUp=False, bScript=script)
       else:
-        self.needleDetectionThread13_3(A, imageData, None, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script)
+        msgbox( "/!\ currently unusable algoVersion 3") #self.needleDetectionThread13_3(A, imageData, None, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script)
       
-  def needleDetectionThreadCurrentDev(self, A, imageData, colorVar, spacing, script=False):
+  def needleDetectionThreadCurrentDev(self, A, imageData, colorVar, spacing, script=False, imgLabelData=None):
     """
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
     The second extremity of this segment is saved as a control point (in controlPoints), used later. 
@@ -2240,7 +2228,7 @@ class NeedleFinderLogic:
     if drawFiducialPoints:
       oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
       oFiducial.Initialize(slicer.mrmlScene)
-      oFiducial.SetName('.c0')
+      oFiducial.SetName('.c0_'+str(colorVar))
       oFiducial.SetFiducialCoordinates(self.ijk2ras(A))
       oFiducial.GetDisplayNode().SetColor(0,0,1)
       """
@@ -2322,7 +2310,7 @@ class NeedleFinderLogic:
       if drawFiducialPoints and 1: # show cone base markers b
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         oFiducial.Initialize(slicer.mrmlScene)
-        oFiducial.SetName('.b'+str(iStep+1))
+        oFiducial.SetName('.b'+str(step+1)+'_'+str(colorVar))
         oFiducial.SetFiducialCoordinates(self.ijk2ras(C0))
         oFiducial.GetDisplayNode().SetColor(0,0,1)
   
@@ -2407,7 +2395,14 @@ class NeedleFinderLogic:
                 total += (8 * center - ((g1 + g2 + g3 + g4) / float(4)) * gradientPonderation) / float(tIter)
                
                 # total = self.objectiveFunctionLOG(imageData, ijk, radiusNeedleParameter, spacing, 1)
-
+              # >>>>>>>>>>>>>>>>>>>>>> exp.02
+              if imgLabelData: 
+                fLabel = imgLabelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0) 
+                if fLabel and fLabel < 300:
+                  #print "# force high influence of found label: ",fLabel
+                  fTotal -= 10000
+                imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, 306) #mark the search cones in fLabel volume
+              # <<<<<<<<<<<<<<<<<<<<
           if R == 0:
             
             initialIntensity = total
@@ -2432,7 +2427,7 @@ class NeedleFinderLogic:
                               + (C[2] - C0[2]) ** 2) ** 0.5
 
               gaussianAttenuation = math.exp(-(rgauss / float(rMax)) ** 2 / float((2 * (sigmaValue / float(10)) ** 2)))  # 1 for x=0, 0.2 for x=5
-              estimator = (total) * gaussianAttenuation
+              estimator = (total) * gaussianAttenuation # ??? this doesn't work as intended for negative values (they get larger!)
             else:
               estimator = total
 
@@ -2475,7 +2470,7 @@ class NeedleFinderLogic:
       if drawFiducialPoints:
         fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         fiducial.Initialize(slicer.mrmlScene)
-        fiducial.SetName('.' + str(minEstimator))
+        fiducial.SetName('.c' +str(step)+'_'+ str(colorVar))
         fiducial.SetFiducialCoordinates(self.controlPoints[step + 1])
 
       if A[2] <= axialSegmentationLimit and A != A0:
@@ -2484,8 +2479,8 @@ class NeedleFinderLogic:
     if not autoStopTip:
       self.addNeedleToScene(self.controlPoints, colorVar, 'Detection', script)
   
-  def needleDetectionThread13_1(self, A, imageData, colorVar, spacing, script=False):
-    '''MICCAI2013 suspect version variant 1, 3/11/13
+  def needleDetectionThread13_1(self, A, imageData, colorVar, spacing, script=False, imgLabelData=None):
+    '''MICCAI2013 suspect version, 3/11/13
     iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
     https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
     
@@ -2537,7 +2532,7 @@ class NeedleFinderLogic:
     if widget.drawFiducialPoints.isChecked():
       oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
       oFiducial.Initialize(slicer.mrmlScene)
-      oFiducial.SetName('.c0')
+      oFiducial.SetName('.c0_'+str(colorVar))
       oFiducial.SetFiducialCoordinates(self.ijk2ras(A))
       oFiducial.GetDisplayNode().SetColor(0,0,1)
     
@@ -2579,7 +2574,7 @@ class NeedleFinderLogic:
       if widget.drawFiducialPoints.isChecked() and 1: # show cone base markers b
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         oFiducial.Initialize(slicer.mrmlScene)
-        oFiducial.SetName('.b'+str(iStep+1))
+        oFiducial.SetName('.b'+str(step+1)+'_'+str(colorVar))
         oFiducial.SetFiducialCoordinates(self.ijk2ras(C0))
         oFiducial.GetDisplayNode().SetColor(0,0,1)
   
@@ -2636,7 +2631,14 @@ class NeedleFinderLogic:
                 g8 = imageData.GetScalarComponentAsDouble(ijk[0] + radiusNeedleCorner, ijk[1] - radiusNeedleCorner, ijk[2], 0)
                 
                 total += 8 * center - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8) * gradientPonderation
-              
+              # >>>>>>>>>>>>>>>>>>>>>> exp.02
+              if imgLabelData: 
+                fLabel = imgLabelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0) 
+                if fLabel and fLabel < 300:
+                  #print "# force high influence of found label: ",fLabel
+                  fTotal -= 10000
+                imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, 306) #mark the search cones in fLabel volume
+              # <<<<<<<<<<<<<<<<<<<<
           if R == 0:
             
             initialIntensity = total
@@ -2658,7 +2660,7 @@ class NeedleFinderLogic:
                                 + (C[2] - X[2]) ** 2) ** 0.5
 
                 gaussianAttenuation = math.exp(-(rgauss / float(rMax)) ** 2 / float((2 * (sigmaValue / float(10)) ** 2)))  # 1 for x=0, 0.2 for x=5
-                estimator = (total) * gaussianAttenuation
+                estimator = (total) * gaussianAttenuation # ??? this doesn't work as intended for negative values (they get larger!)
             else:
                 estimator = total
 
@@ -2696,7 +2698,7 @@ class NeedleFinderLogic:
       if widget.drawFiducialPoints.isChecked():
         fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         fiducial.Initialize(slicer.mrmlScene)
-        fiducial.SetName('.')
+        fiducial.SetName('.c_'+str(colorVar))
         fiducial.SetFiducialCoordinates(controlPoints[step + 1])
 
       if A[2] <= axialSegmentationLimit and A != A0:
@@ -2705,267 +2707,109 @@ class NeedleFinderLogic:
     # self.addNeedleToScene(controlPoints,colorVar)  
     if not autoStopTip:
       self.addNeedleToScene(controlPoints, colorVar, 'Detection', script)
-  
-  def needleDetectionThread13_3(self, ijkA, imgData, imgLabelData, lrasTempPoints, iColorVar, fvSpacing, bUp=False, bScript=False):
-    '''MICCAI2013 version variant 1, 3/11/13
+      
+  def needleDetectionThread13_2(self, A, imageData, colorVar, spacing, script=False, imgLabelData=None):
+    '''MICCAI2013 suspect version, 3/11/13
     iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
     https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
     
-    >>>> Andre's bug fixes & experiments here: e.g. use additional user information to fix outliers. <<<<
+    >>> same as 13_1, with bugfix concerning down stepSize (stepSize or L /spacing[2]) <<<
     
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
-    The second extremity of this segment is saved as a control point (in lvControlPointsRAS), used later. 
-    Then, this iStep is iterated, replacing the needle tip by the latest control point. 
-    The height of the new conic region (stepsize) is increased as well as its base diameter (iRMax) and its normal is collinear to the previous computed segment. (cf. ijkC0) 
-    nStepsNeedle iterations give nStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
-    From these nStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
+    The second extremity of this segment is saved as a control point (in controlPoints), used later. 
+    Then, this step is iterated, replacing the needle tip by the latest control point. 
+    The height of the new conic region (stepsize) is increased as well as its base diameter (rMax) and its normal is collinear to the previous computed segment. (cf. C0) 
+    NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
+    From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
     '''
+    # productive #probablyMiccai
     profprint()
-    # research
-    ### initialisation of the parameters
-    ijkAPrevious=None
+    # ## initialisation of the parameters
     ijk = [0, 0, 0]
-    ijkBestPoint = [0, 0, 0]
+    bestPoint = [0, 0, 0]
     widget = slicer.modules.NeedleFinderWidget
-    fLabel = None
-    fvZ=np.array([0,0,1]); fvX=np.array([1,0,0]); fvY=np.array([0,1,0])
 
     # ## load parameters from GUI
-    iRadiusMax_mm = widget.radiusMax.value
-    iGradientPonderation = widget.gradientPonderation.value
-    iSigmaValue = widget.sigmaValue.value
-    bGaussianAttenuation = widget.gaussianAttenuationButton.isChecked()
-    bGradient = widget.gradient.isChecked()
-    nPointsPerNeedle = widget.numberOfPointsPerNeedle.value
-    nRotatingIts = widget.nbRotatingIterations.value
-    iRadiusNeedle_mm = widget.radiusNeedleParameter.value
-    iAxialSegmentationLimit = widget.axialSegmentationLimit
-    bAutoStopTip = widget.autoStopTip.isChecked()
+    distanceMax = widget.radiusMax.value
+    gradientPonderation = widget.gradientPonderation.value
+    sigmaValue = widget.sigmaValue.value
+    stepsize = widget.stepsize.value
+    gaussianAttenuationChecked = widget.gaussianAttenuationButton.isChecked()
+    gradient = widget.gradient.isChecked()
+    numberOfPointsPerNeedle = widget.numberOfPointsPerNeedle.value
+    nbRotatingIterations = widget.nbRotatingIterations.value
+    radiusNeedleParameter = widget.radiusNeedleParameter.value
+    axialSegmentationLimit = widget.axialSegmentationLimit
+    autoStopTip = widget.autoStopTip.isChecked()
 
     # ## length needle = distance Aijk[2]*0.9
-    # fEstNeedleLength_mm = abs(self.ijk2ras(ijkA)[2]*0.9)
+    # lenghtNeedle = abs(self.ijk2ras(A)[2]*0.9)
 
-    if iAxialSegmentationLimit != None:
-      fEstNeedleLength_mm = abs(ijkA[2] - iAxialSegmentationLimit) * 1.*fvSpacing[2]  # ??? why was there: prologn the needle length guess 15%
+    if axialSegmentationLimit != None:
+      lenghtNeedle = abs(A[2] - axialSegmentationLimit) * 1.15 * spacing[2]
     else:
-      fEstNeedleLength_mm = ijkA[2] * 1 * fvSpacing[2]  # ??? why was shortening of the needle length guess here
-
-    nStepsNeedle = nPointsPerNeedle - 1 # one point (mouse click on tip) is already there
-    if bUp:
-      print "searching upwards"
-      iZDirectionSign = 1
-    else:
-      print "searching downwards"
-      iZDirectionSign = -1
-
-    ivDims = [0, 0, 0]
-    imgData.GetDimensions(ivDims)
+      lenghtNeedle = A[2] * 0.9 * spacing[2]
     
-    ijkA0 = ijkA
-    print "ijkA0: ", ijkA0
+    rMax = distanceMax / float(spacing[0])
+    NbStepsNeedle = numberOfPointsPerNeedle - 1
+    nbRotatingStep = nbRotatingIterations
+
+    dims = [0, 0, 0]
+    imageData.GetDimensions(dims)
+    pixelValue = numpy.zeros(shape=(dims[0], dims[1], dims[2]))
+    
+    A0 = A
+    print A0
     if widget.drawFiducialPoints.isChecked():
       oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
       oFiducial.Initialize(slicer.mrmlScene)
-      oFiducial.SetName('.c0')
-      oFiducial.SetFiducialCoordinates(self.ijk2ras(ijkA))
+      oFiducial.SetName('.c0_'+str(colorVar))
+      oFiducial.SetFiducialCoordinates(self.ijk2ras(A))
       oFiducial.GetDisplayNode().SetColor(0,0,1)
     
-    if not bUp: 
-      self.controlPoints = [] # in up mode, more interpol. points will be added to this array
-    lvControlPointsRAS = []
-    lvControlPointsIJK = []
-    lvBestControlPoints = []
+    controlPoints = []
+    controlPointsIJK = []
+    bestControlPoints = []
+          
+    controlPoints.append(self.ijk2ras(A))
+    controlPointsIJK.append(A)
+    bestControlPoints.append(self.ijk2ras(A))
 
-    lvControlPointsRAS.append(self.ijk2ras(ijkA))
-    lvControlPointsIJK.append(ijkA)
-    lvBestControlPoints.append(self.ijk2ras(ijkA))
-
-    for iStep in range(0, nStepsNeedle):
-      print "iStep, lengthNeedle: ", iStep, fEstNeedleLength_mm
-      #fStepSize_mm = self.stepSize13(iStep+1,nStepsNeedle+1)*fEstNeedleLength_mm
-      fStepSize_mm = self.stepSizeAndre(iStep + 1, nStepsNeedle) * fEstNeedleLength_mm
-      #fStepSize_mm = fEstNeedleLength_mm / nStepsNeedle  # <<<<< this is better on average over MICCAI13 cases
-      print "fStepSize_mm: ", fStepSize_mm
-      
-      # iStep 0
+    for step in range(0, NbStepsNeedle + 2):
+      print "length", lenghtNeedle
+      # step 0
       #------------------------------------------------------------------------------
-      if iStep == 0:
-        
-        ijkC0 = [ijkA[0], ijkA[1], ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))]
-        iRMax = iRadiusMax_mm / float(fvSpacing[0])
-        nRIter = iRMax
-        #nTIter = max(1, int(round(iStep)))  ### ??? L can be smaller 1 and it is in mm not int index coordinates
-      
-      # iStep 1,2,...
+      if step == 0:
+
+        L = self.stepSize13(step + 1, NbStepsNeedle + 1) * lenghtNeedle
+        C0 = [A[0], A[1], A[2] - L /spacing[2]] #<<< /spacing[2] fix
+        rMax = distanceMax / float(spacing[0])
+        rIter = rMax
+        tIter = int(round(L))  # ??? L can be smaller 1 and it is in mm not int index coordinates
+
+      # step 1,2,...
       #------------------------------------------------------------------------------
       else:
-       
-        ijkC0 = [ 2 * ijkA[0] - ijkAPrevious[0],  # ??? why do you go double iStep in xy-plane
-                  2 * ijkA[1] - ijkAPrevious[1],
-                  ijkA[2] + iZDirectionSign * int(round(fStepSize_mm / fvSpacing[2]))   ]  # ??? this is buggy vector calculus, now its a feature ;-)
 
-        ijkC0 = [ijkA[0], ijkA[1], ijkA[2]+iZDirectionSign*int(round(fStepSize_mm/fvSpacing[2])) ] #<<< cons. going down along z-axis performs better on average on MICCAI13 cases
+        stepSize = self.stepSize13(step + 1, NbStepsNeedle + 1) * lenghtNeedle
+        print stepSize
 
-        iRMax = max(fStepSize_mm/fvSpacing[0], iRadiusMax_mm / float(fvSpacing[0]))
-        nRIter = max(15, min(20, int(round(iRMax/ float(fvSpacing[0]))))) # ??? why /fvSpacing again
-        
-      if 1: # show cone base markers
+        C0 = [ 2 * A[0] - tip0[0],
+                    2 * A[1] - tip0[1],
+                    A[2] - stepSize /spacing[2]   ]  #<<< /spacing[2] fix # ??? this is buggy vector calculus, now its a feature ;-)
+
+        rMax = max(stepSize, distanceMax / float(spacing[0]))
+        rIter = max(15, min(20, int(rMax / float(spacing[0])))) # ??? why divide again by spacing[0]
+        tIter = stepSize  # ## ??? stepSize can be smaller 1 and it is in mm not int index coordinates
+      
+      if widget.drawFiducialPoints.isChecked() and 1: # show cone base markers b
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         oFiducial.Initialize(slicer.mrmlScene)
-        if not bUp: oFiducial.SetName('.b'+str(iStep+1))
-        else: oFiducial.SetName('.^b'+str(iStep+1))
-        rasC0 = self.ijk2ras(ijkC0)
-        oFiducial.SetFiducialCoordinates(rasC0)
+        oFiducial.SetName('.b'+str(step+1)+'_'+str(colorVar))
+        oFiducial.SetFiducialCoordinates(self.ijk2ras(C0))
         oFiducial.GetDisplayNode().SetColor(0,0,1)
-      
-      nTIter = max(1, int(round(fStepSize_mm/fvSpacing[2]))) # <<<< /min(fvSpacing) consider smaller step size
-        
-      fEstimator = 0
-      fMinEstimator = 0
-
-      # radius variation
-      for iR in range(int(nRIter) + 1):
-
-        fR = iR * (iRMax / float(nRIter))
-        
-        # ## angle variation from 0 to 360
-        for iThetaStep in xrange(int(nRotatingIts)):
-          
-          fAngle_deg = (iThetaStep * 360.) / float(nRotatingIts)
-          fThetaStep_rad = math.radians(fAngle_deg)
-
-          ijkC = [ ijkC0[0] + fR * (math.cos(fThetaStep_rad)),
-                            ijkC0[1] + fR * (math.sin(fThetaStep_rad)),
-                            ijkC0[2]]
-
-          fTotal = 0
-          lijkM = [[0, 0, 0] for i in xrange(int(nTIter) + 1)]
-          
-          fLabel = 0
-          # calculates nTIter = number of points per segment 
-          for iTStep in xrange(int(nTIter) + 1):
-
-            fTStep = iTStep / float(nTIter)
-            
-            # x,y,z coordinates
-            for i in range(3):
-              
-              lijkM[iTStep][i] = (1 - fTStep) * ijkA[i] + fTStep * ijkC[i]
-              ijk[i] = int(round(lijkM[iTStep][i]))
-              
-            # first, test if points are in the image space 
-            if ijk[0] < ivDims[0] and ijk[0] > 0 and  ijk[1] < ivDims[1] and ijk[1] > 0 and ijk[2] < ivDims[2] and ijk[2] > 0:
-              
-              dCenter = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
-                            
-              if bGradient == 1 : # <<< iStep>nStepsNeedle/2 and
-
-                iRadiusNeedle = int(round(iRadiusNeedle_mm / float(fvSpacing[0])))
-                iRadiusNeedleCorner = int(round((iRadiusNeedle_mm / float(fvSpacing[0]) / 1.414)))
-                
-                g1 = imgData.GetScalarComponentAsDouble(ijk[0] + iRadiusNeedle, ijk[1], ijk[2], 0)
-                g2 = imgData.GetScalarComponentAsDouble(ijk[0] - iRadiusNeedle, ijk[1], ijk[2], 0)
-                g3 = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1] + iRadiusNeedle, ijk[2], 0)
-                g4 = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1] - iRadiusNeedle, ijk[2], 0)
-                g5 = imgData.GetScalarComponentAsDouble(ijk[0] + iRadiusNeedleCorner, ijk[1] + iRadiusNeedleCorner, ijk[2], 0)                    
-                g6 = imgData.GetScalarComponentAsDouble(ijk[0] - iRadiusNeedleCorner, ijk[1] - iRadiusNeedleCorner, ijk[2], 0)
-                g7 = imgData.GetScalarComponentAsDouble(ijk[0] - iRadiusNeedleCorner, ijk[1] + iRadiusNeedleCorner, ijk[2], 0)
-                g8 = imgData.GetScalarComponentAsDouble(ijk[0] + iRadiusNeedleCorner, ijk[1] - iRadiusNeedleCorner, ijk[2], 0)
-                
-                fTotal += 8 * dCenter - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8) * iGradientPonderation
-              
-              fTotal += dCenter
-              
-              # >>>>>>>>>>>>>>>>>>>>>> exp.02
-              if imgLabelData: 
-                #print "looking for user hints"
-                fLabel = imgLabelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0) 
-
-                if fLabel>0 and fLabel < 300: # higher labels are reserved for debugging
-                  #print "found needle guide fLabel marker"
-                  # force high influence of labels
-                  fTotal -= 10000
-
-                #imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, 306) #mark the search cones in fLabel volume
-              # <<<<<<<<<<<<<<<<<<<<
-          
-          if iR == 0:
-            
-            fInitialIntensity = fEstimator = fTotal
-            
-          if bGaussianAttenuation == 1 and iStep >= 2 :
-            
-            if ijkAPrevious[2] - ijkA[2] != 0:
-            
-                fK = (ijkA[2] - ijkC0[2]) / float(ijkAPrevious[2] - ijkA[2])
-
-                ijkX = [ ijkA[0] + fK * (ijkA[0] - ijkAPrevious[0]),
-                                ijkA[1] + fK * (ijkA[1] - ijkAPrevious[1]),
-                                ijkA[2] + fK * (ijkA[2] - ijkAPrevious[2]) ]
-
-                fRgauss = ((ijkC[0] - ijkX[0]) ** 2 
-                                + (ijkC[1] - ijkX[1]) ** 2
-                                + (ijkC[2] - ijkX[2]) ** 2) ** 0.5
-
-                fGaussianAttenuation = math.exp(-(fRgauss / float(iRMax)) ** 2 / float((2 * (iSigmaValue / float(10)) ** 2)))  # 1 for x=0, 0.2 for x=5
-                fEstimator = (fTotal) * fGaussianAttenuation
-            else:
-                fEstimator = fTotal
-
-
-          else:
-            fEstimator = (fTotal)
-       
-          if fEstimator < fInitialIntensity:
-
-            if fEstimator < fMinEstimator or fMinEstimator == 0:
-              fMinEstimator = fEstimator
-              if fMinEstimator != 0:  
-                # print "best fEstimator value: ",fEstimator
-                ijkBestPoint = ijkC
-        
-           
-      ijkAPrevious = ijkA
-      if ijkBestPoint == [0, 0, 0]:
-        ijkA = ijkC0
-      elif ijkBestPoint != ijkAPrevious: 
-        ijkA = ijkBestPoint
-
-      # drag back a too far low control point to the axial limit plane
-      if ijkA[2] < iAxialSegmentationLimit and ijkA != ijkA0:
-        
-        asl = iAxialSegmentationLimit
-        l = (ijkA[2] - asl) / float(ijkAPrevious[2] - ijkA[2])
-
-        ijkA = [  ijkA[0] - l * (ijkAPrevious[0] - ijkA[0]),
-                ijkA[1] - l * (ijkAPrevious[1] - ijkA[1]),
-                ijkA[2] - l * (ijkAPrevious[2] - ijkA[2])]
-
-      lvControlPointsRAS.append(self.ijk2ras(ijkA))
-      lvControlPointsIJK.append(ijkA)
-
-      if widget.drawFiducialPoints.isChecked():
-        print "#lvControlPointsRAS: ", len(lvControlPointsRAS)
-        oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
-        oFiducial.Initialize(slicer.mrmlScene)
-        if not bUp: oFiducial.SetName('.c'+str(iStep+1))
-        else: oFiducial.SetName('.^c'+str(iStep+1))
-        oFiducial.SetFiducialCoordinates(lvControlPointsRAS[iStep + 1])
-        if bUp: oFiducial.GetDisplayNode().SetColor(1, 1, 0)
-
-      if ijkA[2] <= iAxialSegmentationLimit and ijkA != ijkA0:
-        print "/!\ needle too long" 
-        break
-
-    # self.addNeedleToScene(lvControlPointsRAS,iColorVar)  
-    for i in range(len(lvControlPointsRAS)): self.controlPoints.append(lvControlPointsRAS[i])
-    if not bAutoStopTip:
-      self.addNeedleToScene(lvControlPointsRAS, iColorVar, 'Detection', bScript)
-      self.controlPoints = []
-    if bAutoStopTip and bUp:
-      self.addNeedleToScene(self.controlPoints, iColorVar, 'Detection', bScript)
-      self.controlPoints = []
-      
+  
+  
   #------------------------------------------------------------------------------ 
   #
   #
@@ -2985,9 +2829,9 @@ class NeedleFinderLogic:
     if widget.algoVersParameter.value == 0:
       self.needleDetectionUPThreadCurrentDev(A, imageData, colorVar, spacing, script)
     if widget.algoVersParameter.value == 1:
-      print "/!\ N/A for algoVersion 1"
+      msgbox ("/!\ needleDetectionUPThread N/A for algoVersion 1"); print "/!\ needleDetectionUPThread N/A for algoVersion 1" 
     if widget.algoVersParameter.value == 2:
-      print "/!\ unused algoVersion 2"
+      msgbox ("/!\ needleDetectionUPThread N/A for algoVersion 2"); print "/!\ needleDetectionUPThread N/A for algoVersion 2"
     if widget.algoVersParameter.value == 3:
       if widget.labelMapNode:
         self.needleDetectionThread13_3(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, bUp=True, bScript=script)
@@ -3321,7 +3165,7 @@ class NeedleFinderLogic:
       if widget.drawFiducialPoints.isChecked():
         fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         fiducial.Initialize(slicer.mrmlScene)
-        fiducial.SetName('..' + str(step) + '.' + str(self.objectiveFunction(imageData, A, 3, spacing, 1)))
+        fiducial.SetName('..' + str(step) + '.' + str(self.objectiveFunction(imageData, A, 3, spacing, 1))+'_'+str(colorVar))
         fiducial.SetFiducialCoordinates(controlPointsUP[step + 1])
         fiducial.GetDisplayNode().SetColor(1, 1, 0)
         
@@ -3448,6 +3292,240 @@ class NeedleFinderLogic:
       else:
         # print i
         pass
+        
+  def addCSplineToScene(self, controlPoint, colorVar, needleType='Detection', endMarker=False, name="^", script=False):
+    """Adds visual needle representation as interpolating cardinal spline to the scene. 
+    Alternative to Bezier curves.
+
+    :param controlPoint: array of RAS coordinates of points of a needle (used as control point for the Bezier's curve
+    :param colorVar: color of the needle
+    :param needleType: 'validation' for a manually segmentated needle, 'detection' for an automatically segmented needle,
+    'obturator' for an obturator needle
+    :return: visually, needle added to the scene
+    """
+    #research
+    #profprint()
+    """
+    Create a model of the linear needle segments
+    """
+    widget = slicer.modules.NeedleFinderWidget
+
+    realNeedleLength = widget.realNeedleLength.value
+    extendNeedle = widget.extendNeedle.isChecked()
+    
+    # sort the points in a decreasing order (from tip to bottom)
+    controlPointListSorted = controlPoint #self.sortTableReverse(controlPoint, (2, 1, 0))
+
+    # calculate the length of the list of ctr points
+    lenghtTotal = 0
+    for i in range(len(controlPoint) - 1):
+        lenghtTotal += self.distanceTwoPoints(controlPointListSorted[i + 1], controlPointListSorted[i])
+    #print "Polygon added to scene, length of tube: ", lenghtTotal
+    
+    # in case we want to extend the needle to the wanted length
+    """
+    The extension is currently done by adding a point to the control point list.
+    """
+    if lenghtTotal < realNeedleLength and extendNeedle:
+      lastPoint = [controlPointListSorted[-1][0], controlPointListSorted[-1][1], controlPointListSorted[-1][2] - (realNeedleLength - lenghtTotal)]
+      controlPointListSorted.append(lastPoint)
+
+    scene = slicer.mrmlScene
+    # One spline for each direction.
+    aSplineX = vtk.vtkCardinalSpline()
+    aSplineY = vtk.vtkCardinalSpline()
+    aSplineZ = vtk.vtkCardinalSpline()
+    numberOfInputPoints = len(controlPointListSorted)
+    inputPoints = vtk.vtkPoints()
+    # start read out
+    for i in range(numberOfInputPoints):      
+      x,y,z = controlPointListSorted[i][0], controlPointListSorted[i][1], controlPointListSorted[i][2]
+      aSplineX.AddPoint(i, x)
+      aSplineY.AddPoint(i, y)
+      aSplineZ.AddPoint(i, z)
+      inputPoints.InsertPoint(i, x, y, z)
+    # Generate the polyline for the spline.
+    points = vtk.vtkPoints()
+    profileData = vtk.vtkPolyData()
+    # Number of points on the spline
+    numberOfOutputPoints = 50
+    # Interpolate x, y and z by using the three spline filters and
+    # create new points
+    for i in range(0, numberOfOutputPoints):
+      t = (numberOfInputPoints-1.0)/(numberOfOutputPoints-1.0)*i
+      points.InsertPoint(i, aSplineX.Evaluate(t), aSplineY.Evaluate(t), aSplineZ.Evaluate(t))
+    # Create the polyline.
+    lines = vtk.vtkCellArray()
+    lines.InsertNextCell(numberOfOutputPoints)
+    for i in range(0, numberOfOutputPoints): lines.InsertCellPoint(i)
+    profileData.SetPoints(points)
+    profileData.SetLines(lines)
+    # Add thickness to the resulting line.
+    profileTubes = vtk.vtkTubeFilter()
+    profileTubes.SetNumberOfSides(8)
+    profileTubes.SetInputData(profileData)
+    profileTubes.SetRadius(1)
+    profileTubes.SetNumberOfSides(50)
+    profileTubes.Update()
+
+    # ## Create model node
+    model = slicer.vtkMRMLModelNode()
+    model.SetScene(scene)
+    model.SetAndObservePolyData(profileTubes.GetOutput())
+    # ## Create display node
+    modelDisplay = slicer.vtkMRMLModelDisplayNode()
+
+    modelDisplay.SetScene(scene)
+    scene.AddNode(modelDisplay)
+    model.SetAndObserveDisplayNodeID(modelDisplay.GetID())
+    # ## Add to scene
+    modelDisplay.SetInputPolyDataConnection(model.GetPolyDataConnection())
+    scene.AddNode(model)
+    model.GetDisplayNode().SliceIntersectionVisibilityOn()
+    if needleType == 'Validation':
+      model.SetName('.manual-seg_' + str(colorVar))
+    elif needleType == 'Obturator':
+      model.SetName('.obturator-seg_' + str(colorVar))
+    else:
+      model.SetName('.python-catch-round_' + str(self.round) + '-ID-' + str(model.GetID()))
+    model.SetAttribute('type', needleType)
+    
+    if needleType == 'Validation':
+      nth = int(colorVar) % 64
+      modelDisplay.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
+      model.SetAttribute("nth", str(nth)) 
+    
+    else:
+      nth = int(model.GetID().strip('vtkMRMLModelNode')) % 64
+      modelDisplay.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
+      model.SetAttribute("nth", str(nth))
+    
+    if endMarker:
+      fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+      fiducial.SetName('.'+name+'_'+str(colorVar))
+      fiducial.Initialize(slicer.mrmlScene)
+      fiducial.SetFiducialCoordinates(controlPointListSorted[-1])
+      fiducial.SetAttribute('TemporaryFiducial', '1')
+      fiducial.SetLocked(True)
+      displayNode = fiducial.GetDisplayNode()
+      displayNode.SetGlyphScale(2.1)
+      displayNode.SetColor(0, 0, 0)
+      textNode = fiducial.GetAnnotationTextDisplayNode()
+      textNode.SetTextScale(3)
+      textNode.SetColor(0, 0, 0)
+      
+  def addPolyLineToScene(self, controlPoint, colorVar, needleType='Detection', endMarker=False, name="^", script=False):
+    """Just adds visual representation of linear (needle) segments to the scene. 
+    Useful for drawing the control polygon of a smooth curve.
+
+    :param controlPoint: array of RAS coordinates of points of a needle (used as control point for the Bezier's curve
+    :param colorVar: color of the needle
+    :param needleType: 'validation' for a manually segmentated needle, 'detection' for an automatically segmented needle,
+    'obturator' for an obturator needle
+    :return: visually, needle added to the scene
+    """
+    #research
+    #profprint()
+    """
+    Create a model of the linear needle segments
+    """
+    widget = slicer.modules.NeedleFinderWidget
+
+    realNeedleLength = widget.realNeedleLength.value
+    extendNeedle = widget.extendNeedle.isChecked()
+    
+    # sort the points in a decreasing order (from tip to bottom)
+    controlPointListSorted = controlPoint #self.sortTableReverse(controlPoint, (2, 1, 0))
+
+    # calculate the length of the list of ctr points
+    lenghtTotal = 0
+    for i in range(len(controlPoint) - 1):
+        lenghtTotal += self.distanceTwoPoints(controlPointListSorted[i + 1], controlPointListSorted[i])
+    #print "Polygon added to scene, length of tube: ", lenghtTotal
+    
+    # in case we want to extend the needle to the wanted length
+    """
+    The extension is currently done by adding a point to the control point list.
+    """
+    if lenghtTotal < realNeedleLength and extendNeedle:
+      lastPoint = [controlPointListSorted[-1][0], controlPointListSorted[-1][1], controlPointListSorted[-1][2] - (realNeedleLength - lenghtTotal)]
+      controlPointListSorted.append(lastPoint)
+
+    scene = slicer.mrmlScene
+    points = vtk.vtkPoints()
+    polyData = vtk.vtkPolyData()
+    polyData.SetPoints(points)
+    lines = vtk.vtkCellArray()
+    polyData.SetLines(lines)
+    linesIDArray = lines.GetData()
+    linesIDArray.Reset()
+    linesIDArray.InsertNextTuple1(0)
+    polygons = vtk.vtkCellArray()
+    polyData.SetPolys(polygons)
+    idArray = polygons.GetData()
+    idArray.Reset()
+    idArray.InsertNextTuple1(0)
+    n = len(controlPointListSorted)
+    # start read out
+    for i in range(n):      
+      pointIndex = points.InsertNextPoint(*(controlPointListSorted[i]))
+      linesIDArray.InsertNextTuple1(pointIndex)
+      linesIDArray.SetTuple1(0, linesIDArray.GetNumberOfTuples() - 1)
+      lines.SetNumberOfCells(1)
+    # ## Create model node
+    model = slicer.vtkMRMLModelNode()
+    model.SetScene(scene)
+    model.SetAndObservePolyData(polyData)
+    # ## Create display node
+    modelDisplay = slicer.vtkMRMLModelDisplayNode()
+
+    modelDisplay.SetScene(scene)
+    scene.AddNode(modelDisplay)
+    model.SetAndObserveDisplayNodeID(modelDisplay.GetID())
+    # ## Add to scene
+    modelDisplay.SetInputPolyDataConnection(model.GetPolyDataConnection())
+    scene.AddNode(model)
+    # ##Create Tube around the line
+    tube = vtk.vtkTubeFilter()
+    polyData = model.GetPolyData()
+    tube.SetInputData(polyData)
+    tube.SetRadius(1)
+    tube.SetNumberOfSides(50)
+    tube.Update()
+    
+    model.SetAndObservePolyData(tube.GetOutput())
+    model.GetDisplayNode().SliceIntersectionVisibilityOn()
+    if needleType == 'Validation':
+      model.SetName('.manual-seg_' + str(colorVar))
+    elif needleType == 'Obturator':
+      model.SetName('.obturator-seg_' + str(colorVar))
+    else:
+      model.SetName('.python-catch-round_' + str(self.round) + '-ID-' + str(model.GetID()))
+    model.SetAttribute('type', needleType)
+    
+    if needleType == 'Validation':
+      nth = int(colorVar) % 64
+      modelDisplay.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
+      model.SetAttribute("nth", str(nth)) 
+    
+    else:
+      nth = int(model.GetID().strip('vtkMRMLModelNode')) % 64
+      modelDisplay.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
+      model.SetAttribute("nth", str(nth))
+    
+    if endMarker:
+      fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+      fiducial.SetName('.'+name+'_'+str(colorVar))
+      fiducial.Initialize(slicer.mrmlScene)
+      fiducial.SetFiducialCoordinates(controlPointListSorted[-1])
+      fiducial.SetAttribute('TemporaryFiducial', '1')
+      fiducial.SetLocked(True)
+      displayNode = fiducial.GetDisplayNode()
+      displayNode.SetGlyphScale(.5) # "arrow head"
+      displayNode.SetColor(0, 0, 0)
+      textNode = fiducial.GetAnnotationTextDisplayNode()
+      textNode.SetTextScale(3)
+      textNode.SetColor(0, 0, 0)
 
   def addNeedleToScene(self, controlPoint, colorVar, needleType='Detection', script=False):
     """Computes the Bezier's curve and adds visual representation of a needle to the scene
@@ -3456,7 +3534,7 @@ class NeedleFinderLogic:
     :param colorVar: color of the needle
     :param needleType: 'validation' for a manually segmentated needle, 'detection' for an automatically segmented needle,
     'obturator' for an obturator needle
-    :return: needle added to the scene
+    :return: visually, needle added to the scene
     """
     # productive
     profprint()
@@ -3630,17 +3708,7 @@ class NeedleFinderLogic:
     # productive #onButton
     profprint()
     widget = slicer.modules.NeedleFinderWidget
-    # remove artifacts from segmentation editor
-    # label volumes
-    if 0 and widget.labelMapNode:
-      slicer.mrmlScene.RemoveNode(widget.labelMapNode.GetDisplayNode())
-      slicer.mrmlScene.RemoveNode(widget.labelMapNode)
-      widget.labelMapNode = None
-    while 0 and slicer.util.getNodes('*-label') != {}:
-      nodes = slicer.util.getNodes('*-label')
-      for node in nodes.values():
-        slicer.mrmlScene.RemoveNode(node)
-    # 3d models (from SE's model builder)
+    # remove artifacts from segmentation editor, 3d models (from SE's model builder)
     if widget.currentLabel:
       for i in range(widget.currentLabel + 1):
         while slicer.util.getNodes(str(i)) != {}:
@@ -4009,7 +4077,7 @@ class NeedleFinderLogic:
           l.startValidation(script=True)
           results = l.evaluate(script=True)  # calculate HD distances
           l.exportEvaluation(results, '/tmp/AP-' + str(id) + '.csv')
-          #slicer.util.saveScene()
+          slicer.util.saveScene('/tmp/AP-' + str(id) + '.mrb')
           # stats
           HD = np.array(results)
           # HD.shape = (int(len(results)/float(3)),3)
@@ -4032,7 +4100,7 @@ class NeedleFinderLogic:
         l.startValidation(script=True)
         results = l.evaluate(script=True)  # calculate HD distances
         l.exportEvaluation(results, '/tmp/BF-' + str(id) + '.csv')
-        #slicer.util.saveScene()
+        slicer.util.saveScene('/tmp/BF-' + str(id) + '.mrb')
         # stats
         HD = np.array(results)
         # HD.shape = (int(len(results)/float(3)),3)
@@ -4063,7 +4131,7 @@ class NeedleFinderLogic:
             l.startValidation(script=True)
             results = l.evaluate(script=True)  # calculate HD distances
             l.exportEvaluation(results, '/tmp/RS-' + str(id) + '.csv')
-            #slicer.util.saveScene()
+            slicer.util.saveScene('/tmp/RS-' + str(id) + '.mrb')
             # stats
             HD = np.array(results)
             maxHD = HD[:, 0].max()
@@ -4844,16 +4912,11 @@ class NeedleFinderLogic:
     :return: print the results in the python interactor (CMD+3 or CTRL+3)
     """
     # productive #button
+    print "\n"*100 # cls()
     profprint()
     widget = slicer.modules.NeedleFinderWidget
-    if not script and widget.labelMapNode:
-      dialog = qt.QDialog()
-      ret = messageBox = qt.QMessageBox.question(dialog, 'Question', """
-          Do you want to clear the label hint map and fiducials?
-          """, qt.QMessageBox.Yes, qt.QMessageBox.No)
-      if ret==qt.QMessageBox.Yes: 
-        widget.clearLabelMap()
-        self.deleteControlPoints()
+    #if widget.labelMapNode:
+    #  widget.clearLabelMap()
     self.deleteNeedleDetectionModelsFromScene()
     tips = self.returnTipsFromNeedleModels()
     # delete old needles as they will be recalculated
@@ -5258,7 +5321,7 @@ class NeedleFinderLogic:
     """
     # productive
     # used by addNeedleToScene
-    profprint()
+    if frequent: profprint()
     length = ((A[0] - B[0]) ** 2 + (A[1] - B[1]) ** 2 + (A[2] - B[2]) ** 2) ** 0.5
     return length
   
