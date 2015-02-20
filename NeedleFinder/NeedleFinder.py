@@ -67,6 +67,7 @@ def pause():
 profiling = True
 frequent = False
 MAXNEEDLES = 205 # we have no more than 205 colors
+conesColor=300 # color for visualizing the search cones (for debugging, None turns it off)
 
 def msgbox(text):
   qt.QMessageBox.about(0, 'Profiling:', text)
@@ -165,7 +166,7 @@ class NeedleFinderWidget:
     self.validationNeedleNumber = 1
     self.stepNeedle = 0
     self.fileName = None
-    self.fileDialog = None
+    self.dirDialog = None
     self.logic = NeedleFinderLogic() 
     self.needleValidationClicks = 1
     self.addManualTipClicks = 2
@@ -248,7 +249,7 @@ class NeedleFinderWidget:
     #Report Frame########################################
     self.__reportFrame = ctk.ctkCollapsibleButton()
     self.__reportFrame.text = "Segmentation Report"
-    self.__reportFrame.collapsed = 0
+    self.__reportFrame.collapsed = 1
     reportFrame = qt.QFormLayout(self.__reportFrame)
 
     # segmentation report
@@ -346,7 +347,7 @@ class NeedleFinderWidget:
     # Needle detection parameters#################################
     self.__parameterFrame = ctk.ctkCollapsibleButton()
     self.__parameterFrame.text = "Needle Detection Parameters (Developers)"
-    self.__parameterFrame.collapsed = 1
+    self.__parameterFrame.collapsed = 0
     parameterFrame = qt.QFormLayout(self.__parameterFrame)
     
     # Load/Save/Reset
@@ -524,7 +525,7 @@ class NeedleFinderWidget:
     # Research/dev. area#################################
     self.__devFrame = ctk.ctkCollapsibleButton()
     self.__devFrame.text = "R&&D (Developers)"
-    self.__devFrame.collapsed = 1
+    self.__devFrame.collapsed = 0
     devFrame = qt.QFormLayout(self.__devFrame)
 
     # #Segment Needle Button 
@@ -1119,14 +1120,14 @@ class NeedleFinderWidget:
     # productive #onButton
     profprint()
     
-    self.fileDialog = qt.QFileDialog(self.parent)
-    self.fileDialog.setDirectory(slicer.modules.needlefinder.path.replace("NeedleFinder.py", "Config"))
-    self.fileDialog.options = self.fileDialog.DontUseNativeDialog
-    self.fileDialog.acceptMode = self.fileDialog.AcceptSave
-    self.fileDialog.defaultSuffix = "cfg"
-    self.fileDialog.setNameFilter("Configuration file (*.cfg)")
-    self.fileDialog.connect("fileSelected(QString)", self.saveFileSelected)
-    self.fileDialog.show()
+    self.dirDialog = qt.QFileDialog(self.parent)
+    self.dirDialog.setDirectory(slicer.modules.needlefinder.path.replace("NeedleFinder.py", "Config"))
+    self.dirDialog.options = self.dirDialog.DontUseNativeDialog
+    self.dirDialog.acceptMode = self.dirDialog.AcceptSave
+    self.dirDialog.defaultSuffix = "cfg"
+    self.dirDialog.setNameFilter("Configuration file (*.cfg)")
+    self.dirDialog.connect("fileSelected(QString)", self.saveFileSelected)
+    self.dirDialog.show()
 
   def saveFileSelected(self, fileName):
     """
@@ -1142,14 +1143,14 @@ class NeedleFinderWidget:
     """
     # productive #onButton
     profprint()
-    self.fileDialog = qt.QFileDialog(self.parent)
-    self.fileDialog.setDirectory(slicer.modules.needlefinder.path.replace("NeedleFinder.py", "Config"))
-    self.fileDialog.options = self.fileDialog.DontUseNativeDialog
-    self.fileDialog.acceptMode = self.fileDialog.AcceptOpen
-    self.fileDialog.defaultSuffix = "cfg"
-    self.fileDialog.setNameFilter("Configuration File (*.cfg)")
-    self.fileDialog.connect("fileSelected(QString)", self.onLoadFileSelected)
-    self.fileDialog.show()
+    self.dirDialog = qt.QFileDialog(self.parent)
+    self.dirDialog.setDirectory(slicer.modules.needlefinder.path.replace("NeedleFinder.py", "Config"))
+    self.dirDialog.options = self.dirDialog.DontUseNativeDialog
+    self.dirDialog.acceptMode = self.dirDialog.AcceptOpen
+    self.dirDialog.defaultSuffix = "cfg"
+    self.dirDialog.setNameFilter("Configuration File (*.cfg)")
+    self.dirDialog.connect("fileSelected(QString)", self.onLoadFileSelected)
+    self.dirDialog.show()
 
   def onLoadFileSelected(self, fileName):
     """
@@ -2119,19 +2120,20 @@ class NeedleFinderLogic:
     profprint()
     widget = slicer.modules.NeedleFinderWidget
     widget.axialSegmentationLimit, widget.axialSegmentationLimitRAS = self.findAxialSegmentationLimitFromMarker()
+    if widget.labelMapNode:
+      labelData=widget.labelMapNode.GetImageData()
+    else:
+      labelData=None
     # select algo version
     if widget.algoVersParameter.value == 0:
-      self.needleDetectionThreadCurrentDev(A, imageData, colorVar, spacing, script)
-    if widget.algoVersParameter.value == 1:
-      self.needleDetectionThread13_1(A, imageData, colorVar, spacing, script)
-    if widget.algoVersParameter.value == 2:
-      self.needleDetectionThread13_2(A, imageData, colorVar, spacing, script)
-    if widget.algoVersParameter.value == 3:
-      if widget.labelMapNode:
-        self.needleDetectionThread13_3(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, bUp=False, bScript=script)
-      else:
-        self.needleDetectionThread13_3(A, imageData, None, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script)
-      
+      self.needleDetectionThreadCurrentDev(A, imageData, colorVar, spacing, script, labelData)
+    elif widget.algoVersParameter.value == 1:
+      self.needleDetectionThread13_1(A, imageData, colorVar, spacing, script, labelData)
+    elif widget.algoVersParameter.value == 2:
+      self.needleDetectionThread13_2(A, imageData, colorVar, spacing, script, labelData)
+    elif widget.algoVersParameter.value == 3:
+      self.needleDetectionThread13_3(A, imageData, labelData, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script)
+
   def needleDetectionThreadCurrentDev(self, A, imageData, colorVar, spacing, script=False, imgLabelData=None):
     """
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
@@ -2150,6 +2152,9 @@ class NeedleFinderLogic:
     """
     # research
     profprint()
+    global conesColor
+    if conesColor: conesColor=(conesColor+1)%308; 
+    if conesColor==0: conesColor=300
     # ## initialisation of the parameters
     ijk = [0, 0, 0]
     bestPoint = [0, 0, 0]
@@ -2402,7 +2407,7 @@ class NeedleFinderLogic:
                 if fLabel and fLabel < 300:
                   #print "# force high influence of found label: ",fLabel
                   fTotal -= 10000
-                imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, 306) #mark the search cones in fLabel volume
+                if conesColor: imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, conesColor) #mark the search cones in fLabel volume
               # <<<<<<<<<<<<<<<<<<<<
           if R == 0:
             
@@ -2494,6 +2499,9 @@ class NeedleFinderLogic:
     '''
     # productive #probablyMiccai
     profprint()
+    global conesColor
+    if conesColor: conesColor=(conesColor+1)%308; 
+    if conesColor==0: conesColor=300
     # ## initialisation of the parameters
     ijk = [0, 0, 0]
     bestPoint = [0, 0, 0]
@@ -2638,7 +2646,7 @@ class NeedleFinderLogic:
                 if fLabel and fLabel < 300:
                   #print "# force high influence of found label: ",fLabel
                   fTotal -= 10000
-                imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, 306) #mark the search cones in fLabel volume
+                if conesColor: imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, conesColor) #mark the search cones in fLabel volume
               # <<<<<<<<<<<<<<<<<<<<
           if R == 0:
             
@@ -2714,7 +2722,7 @@ class NeedleFinderLogic:
     iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
     https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
     
-    >>> same as 13_1, with bugfix concerning down stepSize (stepSize or L /spacing[2]) <<<
+    >>> same as 13_1, with bugfixes (e.g. concerning down stepSize or L "/spacing[2]") <<<
     
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
     The second extremity of this segment is saved as a control point (in controlPoints), used later. 
@@ -2723,8 +2731,11 @@ class NeedleFinderLogic:
     NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
     From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
     '''
-    # productive #probablyMiccai
+    #productive #probablyMiccai #smallChanges
     profprint()
+    global conesColor
+    if conesColor: conesColor=(conesColor+1)%308; 
+    if conesColor==0: conesColor=300
     # ## initialisation of the parameters
     ijk = [0, 0, 0]
     bestPoint = [0, 0, 0]
@@ -2783,25 +2794,27 @@ class NeedleFinderLogic:
       if step == 0:
 
         L = self.stepSize13(step + 1, NbStepsNeedle + 1) * lenghtNeedle
-        C0 = [A[0], A[1], A[2] - L /spacing[2]] #<<< /spacing[2] fix
+        #L=lenghtNeedle/NbStepsNeedle #<<< equal step size: better!
+        C0 = [A[0], A[1], A[2] - L /spacing[2]] #<<< /spacing[2] bugfix
         rMax = distanceMax / float(spacing[0])
         rIter = rMax
-        tIter = int(round(L))  # ??? L can be smaller 1 and it is in mm not int index coordinates
+        tIter = int(round(L))  ## /spacing[2] worse at beginnng! more steps??? L can be smaller 1 and it is in mm not int index coordinates
 
       # step 1,2,...
       #------------------------------------------------------------------------------
       else:
 
         stepSize = self.stepSize13(step + 1, NbStepsNeedle + 1) * lenghtNeedle
+        #stepSize=lenghtNeedle/NbStepsNeedle #<<< equal step size: better!
         print stepSize
 
         C0 = [ 2 * A[0] - tip0[0],
                     2 * A[1] - tip0[1],
-                    A[2] - stepSize /spacing[2]   ]  #<<< /spacing[2] fix # ??? this is buggy vector calculus, now its a feature ;-)
-
+                    A[2] - stepSize /spacing[2]   ]  #<<< /spacing[2] bugfix # ??? this is buggy vector calculus, now its a feature ;-)
+        #C0 = [A[0], A[1], A[2]+int(round(stepSize/spacing[2])) ] #<<< TODO test simply going down along z-axis
         rMax = max(stepSize, distanceMax / float(spacing[0]))
         rIter = max(15, min(20, int(rMax / float(spacing[0])))) # ??? why divide again by spacing[0]
-        tIter = stepSize  # ## ??? stepSize can be smaller 1 and it is in mm not int index coordinates
+        #tIter = stepSize      /spacing[2]  #more steps, slightly better! ??? stepSize can be smaller 1 and it is in mm not int index coordinates
       
       if widget.drawFiducialPoints.isChecked() and 1: # show cone base markers b
         oFiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
@@ -2869,7 +2882,7 @@ class NeedleFinderLogic:
                 if fLabel and fLabel < 300:
                   #print "# force high influence of found label: ",fLabel
                   fTotal -= 10000
-                imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, 306) #mark the search cones in fLabel volume
+                if conesColor: imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, conesColor) #mark the search cones in fLabel volume
               # <<<<<<<<<<<<<<<<<<<<
           if R == 0:
             
@@ -2892,7 +2905,12 @@ class NeedleFinderLogic:
                                 + (C[2] - X[2]) ** 2) ** 0.5
 
                 gaussianAttenuation = math.exp(-(rgauss / float(rMax)) ** 2 / float((2 * (sigmaValue / float(10)) ** 2)))  # 1 for x=0, 0.2 for x=5
-                estimator = (total) * gaussianAttenuation # ??? this doesn't work as intended for negative values (they get larger!)
+                estimator = (total) * gaussianAttenuation # ??? this might not work as intended for negative values (they get larger!)
+                # >>> bugfix ? makes it even worse on average: bugfixbug ;-)
+                #estimator=total
+                #estimatorAtt = total * gaussianAttenuation 
+                #estimator-=np.abs(estimator-estimatorAtt)
+                # <<< xifgub
             else:
                 estimator = total
 
@@ -2939,6 +2957,25 @@ class NeedleFinderLogic:
     # self.addNeedleToScene(controlPoints,colorVar)  
     if not autoStopTip:
       self.addNeedleToScene(controlPoints, colorVar, 'Detection', script)
+      
+  def needleDetectionThread13_3(self, ijkA, imgData, imgLabelData, lrasTempPoints, iColorVar, fvSpacing, bUp=False, bScript=False):
+    '''MICCAI2013 version, 3/11/13
+    iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
+    https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
+    
+    >>> Andre's bug fixes & experiments here: e.g. use additional user information to fix outliers.
+    >>> /!\ This site is under heavy construction. /!\
+    From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region. 
+    The second extremity of this segment is saved as a control point (in lvControlPointsRAS), used later. 
+    Then, this iStep is iterated, replacing the needle tip by the latest control point. 
+    The height of the new conic region (stepsize) is increased as well as its base diameter (iRMax) and its normal is collinear to the previous computed segment. (cf. ijkB) 
+    nStepsNeedle iterations give nStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
+    From these nStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
+    '''
+    #research
+    profprint()
+    msgbox("/!\ Detour: Heavy construction site. /!\ "); return
+
       
   #------------------------------------------------------------------------------ 
   #
@@ -3544,7 +3581,7 @@ class NeedleFinderLogic:
       textNode.SetTextScale(3)
       textNode.SetColor(0, 0, 0)
       
-  def addPolyLineToScene(self, controlPoint, colorVar, needleType='Detection', endMarker=False, name="^", script=False):
+  def addPolyLineToScene(self, controlPoint, colorVar, needleType='Detection',script=False, endMarker=False, name="^", trans=0):
     """Just adds visual representation of linear (needle) segments to the scene. 
     Useful for drawing the control polygon of a smooth curve.
 
@@ -3625,6 +3662,7 @@ class NeedleFinderLogic:
     
     model.SetAndObservePolyData(tube.GetOutput())
     model.GetDisplayNode().SliceIntersectionVisibilityOn()
+    model.GetDisplayNode().SetOpacity(1-trans)
     if needleType == 'Validation':
       model.SetName('.manual-seg_' + str(colorVar))
     elif needleType == 'Obturator':
@@ -3654,7 +3692,7 @@ class NeedleFinderLogic:
       displayNode.SetGlyphScale(.5) # "arrow head"
       displayNode.SetColor(0, 0, 0)
       textNode = fiducial.GetAnnotationTextDisplayNode()
-      textNode.SetTextScale(3)
+      textNode.SetTextScale(1)
       textNode.SetColor(0, 0, 0)
 
   def addNeedleToScene(self, controlPoint, colorVar, needleType='Detection', script=False):
@@ -3715,7 +3753,7 @@ class NeedleFinderLogic:
     n = len(controlPointListSorted) - 1
     Q = [[0, 0, 0] for t in range(nbEvaluationPoints + 1)]
     # start calculation
-    for t in range(nbEvaluationPoints):
+    for t in range(nbEvaluationPoints+1):  #<<< lil bug
       tt = float(t) / (1 * nbEvaluationPoints)
       for j in range(3):
         for i in range(n + 1):
@@ -3780,7 +3818,7 @@ class NeedleFinderLogic:
     elif not script:
       self.addNeedleToTable(int(model.GetID().strip('vtkMRMLModelNode')), label)
 
-  def deleteControlPoints(self):
+  def deleteTempModels(self):
     """
     Delete control points from needle bezier curves.
     """
@@ -3825,7 +3863,7 @@ class NeedleFinderLogic:
       for node in nodes.values():
         slicer.mrmlScene.RemoveNode(node)
     # bezier control points
-    self.deleteControlPoints()
+    self.deleteTempModels()
     while slicer.util.getNodes('template slice position*') != {}:
       nodes = slicer.util.getNodes('template slice position*')
       for node in nodes.values():
@@ -3866,7 +3904,7 @@ class NeedleFinderLogic:
       if node:
         slicer.mrmlScene.RemoveNode(node)
     # bezier control points
-    self.deleteControlPoints()
+    self.deleteTempModels()
     sYellow.Modified()
         
   def deleteLastNeedle(self):
@@ -4143,6 +4181,7 @@ class NeedleFinderLogic:
                         'gaussianAttenuationButton',
                         'sigma',
                         'algoV',
+                        'case',
                         t.strftime("%d/%m/%Y"), t.strftime("%H:%M:%S")
                         ], fileName)
     else:
@@ -4158,12 +4197,13 @@ class NeedleFinderLogic:
                         'gaussianAttenuationButton',
                         'sigma',
                         'algoV',
+                        'case',
                         t.strftime("%d/%m/%Y"), t.strftime("%H:%M:%S")
                         ], fileName)
   
   def parSearch(self, mode=False):
     """
-    Parameter optimization using brute-force/random-search algo...
+    Parameter evaluation/optimization using no, grid brute-force or random-search algo.
     """
     # research
     profprint()
@@ -4194,20 +4234,29 @@ class NeedleFinderLogic:
     path[38] = '/home/amastmeyer/Pictures/MICCAI13/Case  038/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
     path[40] = '/home/amastmeyer/Pictures/MICCAI13/Case  040/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
 
+    # show a directory selector for saving the results
+    self.dirDialog = qt.QFileDialog(w.parent)
+    self.dirDialog.setDirectory('/tmp')
+    self.dirDialog.options = self.dirDialog.ShowDirsOnly
+    self.dirDialog.acceptMode = self.dirDialog.AcceptSave
+    #self.dirDialog.show()
+    dir=self.dirDialog.getExistingDirectory()
+    print "saving results to ", dir
+    
     if mode == 0:
       # simple run with current parameters/algo over several patients
-      self.writeTableHeader('/tmp/AP-All_stats.csv')
+      self.writeTableHeader(dir+'/AP-All_stats.csv')
       for id in range(100):
         if path[id]:
           print "processing ", path[id]
-          self.writeTableHeader('/tmp/AP-' + str(id) + '.csv', 1)
+          self.writeTableHeader(dir+'/AP-' + str(id) + '.csv', 1)
           slicer.mrmlScene.Clear(0)
           slicer.util.loadScene(path[id])
           # l.resetNeedleDetection(script=True) # ??? this resets the parameters to default
           l.startValidation(script=True)
           results = l.evaluate(script=True)  # calculate HD distances
-          l.exportEvaluation(results, '/tmp/AP-' + str(id) + '.csv')
-          slicer.util.saveScene('/tmp/AP-' + str(id) + '.mrb')
+          l.exportEvaluation(results, dir+'/AP-' + str(id) + '.csv')
+          #slicer.util.saveScene(dir+'/AP-' + str(id) + '.mrb') # may use lots of disk space
           # stats
           HD = np.array(results)
           # HD.shape = (int(len(results)/float(3)),3)
@@ -4217,20 +4266,22 @@ class NeedleFinderLogic:
           sl = np.sort(HD[:, 0])
           medHD = sl[sl.size / 2]
           resultsEval = [maxHD, avgHD, stdHD, medHD] + l.valuesExperience + [id]
-          l.exportEvaluation(resultsEval, '/tmp/AP-All_stats.csv')
+          l.exportEvaluation(resultsEval, dir+'/AP-All_stats.csv')
           #msgbox("Pause")
+          #pause()
+      msgbox("parSearch mode 0 done, results in "+dir)
     elif mode == 1:
       id = 'Current'
       # simple brute force search in the dimensions (Guillaumes parameterSearch.py)
-      self.writeTableHeader('/tmp/BF-' + str(id) + '.csv', 1)
-      self.writeTableHeader('/tmp/BF-' + str(id) + '_stats.csv')
+      self.writeTableHeader(dir+'/BF-' + str(id) + '.csv', 1)
+      self.writeTableHeader(dir+'/BF-' + str(id) + '_stats.csv')
       for i in range(3, 12):
         # l.resetNeedleDetection(script=True) # ??? this resets the parameters to default
         w.numberOfPointsPerNeedle.setValue(i)  # change parameter control points
         l.startValidation(script=True)
         results = l.evaluate(script=True)  # calculate HD distances
-        l.exportEvaluation(results, '/tmp/BF-' + str(id) + '.csv')
-        slicer.util.saveScene('/tmp/BF-' + str(id) + '.mrb')
+        l.exportEvaluation(results, dir+'/BF-' + str(id) + '.csv')
+        slicer.util.saveScene(dir+'/BF-' + str(id) + '.mrb') # may use lots of disk space
         # stats
         HD = np.array(results)
         # HD.shape = (int(len(results)/float(3)),3)
@@ -4240,7 +4291,9 @@ class NeedleFinderLogic:
         sl = np.sort(HD[:, 0])
         medHD = sl[sl.size / 2]
         resultsEval = [maxHD, avgHD, stdHD, medHD] + l.valuesExperience
-        l.exportEvaluation(resultsEval, '/tmp/BF-' + str(id) + '_stats.csv')
+        l.exportEvaluation(resultsEval, dir+'/BF-' + str(id) + '_stats.csv')
+        #pause()
+      msgbox("parSearch mode 1 done, results in "+dir)
     elif mode == 2:
       # code piece from Guillaumes (bruteForce.py) multi patient mode search  
       for id in range(100):
@@ -4248,8 +4301,8 @@ class NeedleFinderLogic:
           print "processing ", path[id]
           slicer.mrmlScene.Clear(0)
           slicer.util.loadScene(path[id])
-          self.writeTableHeader('/tmp/RS-' + str(id) + '.csv', 1)
-          self.writeTableHeader('/tmp/RS-' + str(id) + '_stats.csv')
+          self.writeTableHeader(dir+'/RS-' + str(id) + '.csv', 1)
+          self.writeTableHeader(dir+'/RS-' + str(id) + '_stats.csv')
           for i in range(1, 10000):
             # l.resetNeedleDetection(script=True) # ??? this resets the parameters to default
             w.radiusNeedleParameter.setValue(np.random.randint(1, 6))
@@ -4260,8 +4313,8 @@ class NeedleFinderLogic:
             w.numberOfPointsPerNeedle.setValue(np.random.randint(3, 11))
             l.startValidation(script=True)
             results = l.evaluate(script=True)  # calculate HD distances
-            l.exportEvaluation(results, '/tmp/RS-' + str(id) + '.csv')
-            slicer.util.saveScene('/tmp/RS-' + str(id) + '.mrb')
+            l.exportEvaluation(results, dir+'/RS-' + str(id) + '.csv')
+            slicer.util.saveScene(dir+'/RS-' + str(id) + '.mrb') # may use lots of disk space
             # stats
             HD = np.array(results)
             maxHD = HD[:, 0].max()
@@ -4270,10 +4323,12 @@ class NeedleFinderLogic:
             sl = np.sort(HD[:, 0])
             medHD = sl[sl.size / 2]
             resultsEval = [maxHD, avgHD, stdHD, medHD] + l.valuesExperience
-            l.exportEvaluation(resultsEval, '/tmp/RS-' + str(id) + '_stats.csv')
+            l.exportEvaluation(resultsEval, dir+'/RS-' + str(id) + '_stats.csv')
             # end = time.time()
             # print 'processing time: ', end-start
             # start = time.time()
+            #pause()
+        msgbox("parSearch mode 2 done, results in "+dir)
 
   #----------------------------------------------------------------------------------------------
   """ Needle segmentation report"""
@@ -5068,11 +5123,12 @@ class NeedleFinderLogic:
     # print tips
     if script == False:
         t = self.evaluate()
-        print '###############################'
-        print 'New HD Validation Results [mm]:'
+        print '--------------------------'
+        print 'New HD Validation Results:'
+        print 'i\tman.-seg_\tHD [mm]'
         for i in range(len(t)):
-            print t[i][0]
-
+            print i,'\t', slicer.util.getNode("vtkMRMLModelNode"+str(int(t[i][1]))).GetName().strip("manual-seg_"),'\t',t[i][0]
+        print '=========================='
   def placeAxialLimitMarker(self, assign=True):
     """
     Get the K (of IJK) value of the current axial slice. 
@@ -5119,6 +5175,7 @@ class NeedleFinderLogic:
     # research
     profprint()
     if not os.path.exists(url):
+      print "creating new results file: ",url
       open(url, 'w').close()
     myfile = open(url, 'a')
 
@@ -5399,7 +5456,7 @@ class NeedleFinderLogic:
     This is used for testing, R&D. It sets the needles to validation type.
     E.g. you load vtk needle models and want to use them as validation needles...
     """
-    # test #research #button
+    # #test #research #button
     profprint()
     modelNodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLModelNode')
     nbNode = modelNodes.GetNumberOfItems()
@@ -5412,6 +5469,7 @@ class NeedleFinderLogic:
         nth = int(colorVar) % 64
         displayNode.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
         displayNode.SetSliceIntersectionVisibility(True)
+        displayNode.SetSliceIntersectionThickness(2)
     
   def distance(self, pt1, pt2):
     """3D distance between two points
