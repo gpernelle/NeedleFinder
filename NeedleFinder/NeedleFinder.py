@@ -40,6 +40,7 @@ import sitkUtils
 import os.path
 import time as t
 import vtk, qt, ctk, slicer
+import shutil
 
 import EditorLib
 from EditorLib.EditUtil import EditUtil
@@ -3001,7 +3002,9 @@ class NeedleFinderLogic:
     '''
     #research
     profprint()
+    msgbox("Detour: \!/ This site is under heavy construction. /!\ ")
     
+      
   #------------------------------------------------------------------------------ 
   #
   #
@@ -4211,6 +4214,7 @@ class NeedleFinderLogic:
     l = w.logic
     if not variant:
       l.exportEvaluation(['maxHD', 'avgHD', 'stdHD', 'medHD',
+                        'nOutliers','outliers',
                         'radiusNeedle',
                         'lenghtNeedle',
                         'radiusMax',
@@ -4227,6 +4231,7 @@ class NeedleFinderLogic:
                         ], fileName)
     else:
       l.exportEvaluation(['HD', 'man.-seg_', 'ID1', 'ID2',
+                        'outlier?',
                         'radiusNeedle',
                         'lenghtNeedle',
                         'radiusMax',
@@ -4284,14 +4289,16 @@ class NeedleFinderLogic:
     dir=self.dirDialog.getExistingDirectory()
     w.logDir=dir
     print "saving results to ", dir
-    
+    try: shutil.copyfile('/home/amast/WualaDrive/mastmeyer/Homes/NeedleFinder/NeedleFinder/NeedleFinder.py',dir+'/NeedleFinder_ref.py')
+    except: breakbox("/!\ reference source NeedleFinder.py not found!")
     if mode == 0:
+      #save a copy of the source file as reference
       # simple run with current parameters/algo over several patients
       self.writeTableHeader(dir+'/AP-All_stats.csv')
       filLog=open(dir+'/allog.tsv', 'w')
-      #filLog.write("case\tman.-seg_\tiStep\tcrit\tresult\tvalue\tlimit\n")
+      #filLog.write("case\tman.-seg_\tiStep\tcrit\treject\tvalue\tlimit\n")
       filLog.close()
-      for id in range(100): #<o>
+      for id in range(100):
         if path[id]:
           w.caseNr=id
           print "processing ", path[id]
@@ -4301,9 +4308,9 @@ class NeedleFinderLogic:
           slicer.util.loadScene(path[id])
           # l.resetNeedleDetection(script=True) # ??? this resets the parameters to default
           l.startValidation(script=True)
-          results = l.evaluate(script=True)  # calculate HD distances
+          results, outliers = l.evaluate(script=True)  # calculate HD distances
           l.exportEvaluation(results, dir+'/AP-' + str(id) + '.csv')
-          slicer.util.saveScene(dir+'/AP-' + str(id) + '.mrb') # may use lots of disk space
+          #slicer.util.saveScene(dir+'/AP-' + str(id) + '.mrb') # may use lots of disk space
           # stats
           HD = np.array(results)
           # HD.shape = (int(len(results)/float(3)),3)
@@ -4312,7 +4319,7 @@ class NeedleFinderLogic:
           stdHD = HD[:, 0].std()
           sl = np.sort(HD[:, 0])
           medHD = sl[sl.size / 2]
-          resultsEval = [maxHD, avgHD, stdHD, medHD] + l.valuesExperience + [id]
+          resultsEval = [maxHD, avgHD, stdHD, medHD]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
           l.exportEvaluation(resultsEval, dir+'/AP-All_stats.csv')
           #msgbox("Pause")
           #pause()
@@ -4326,7 +4333,7 @@ class NeedleFinderLogic:
         # l.resetNeedleDetection(script=True) # ??? this resets the parameters to default
         w.numberOfPointsPerNeedle.setValue(i)  # change parameter control points
         l.startValidation(script=True)
-        results = l.evaluate(script=True)  # calculate HD distances
+        results, outliers = l.evaluate(script=True)  # calculate HD distances
         l.exportEvaluation(results, dir+'/BF-' + str(id) + '.csv')
         slicer.util.saveScene(dir+'/BF-' + str(id) + '.mrb') # may use lots of disk space
         # stats
@@ -4360,7 +4367,7 @@ class NeedleFinderLogic:
             w.exponent.setValue(np.random.randint(1, 20))
             w.numberOfPointsPerNeedle.setValue(np.random.randint(3, 11))
             l.startValidation(script=True)
-            results = l.evaluate(script=True)  # calculate HD distances
+            results, outliers = l.evaluate(script=True)  # calculate HD distances
             l.exportEvaluation(results, dir+'/RS-' + str(id) + '.csv')
             slicer.util.saveScene(dir+'/RS-' + str(id) + '.mrb') # may use lots of disk space
             # stats
@@ -5409,6 +5416,7 @@ class NeedleFinderLogic:
     profprint()
     result = self.needleMatching()
     HD = []
+    outliers=[]
     widget = slicer.modules.NeedleFinderWidget
     self.valuesExperience = [ widget.radiusNeedleParameter.value,
                             widget.lenghtNeedleParameter.value,
@@ -5430,14 +5438,15 @@ class NeedleFinderLogic:
       try: needleNrFromFilename=int(result[i][3].strip('manual-seg_'))
       except: needleNrFromFilename=-1
       if script == True:
-        results = [float(val), int(needleNrFromFilename), int(result[i][1].strip('vtkMRMLModelNode')), int(result[i][2].strip('vtkMRMLModelNode'))] + self.valuesExperience
+        results = [float(val), int(needleNrFromFilename), int(result[i][1].strip('vtkMRMLModelNode')), int(result[i][2].strip('vtkMRMLModelNode'))]+[val>4] + self.valuesExperience
       else:
-        results = [float(val), int(needleNrFromFilename), int(result[i][1].strip('vtkMRMLModelNode')), int(result[i][2].strip('vtkMRMLModelNode'))]
+        results = [float(val), int(needleNrFromFilename), int(result[i][1].strip('vtkMRMLModelNode')), int(result[i][2].strip('vtkMRMLModelNode'))]+[val>4]
       HD.append(results)
+      if val>4: outliers.append(needleNrFromFilename) #CONST 4 mm
     if script == False:
       return numpy.array(HD).astype(numpy.double)
     else:
-      return HD
+      return HD, outliers
 
   def distTip(self, id1, id2):
     """ Returns the axial distance between the tip of two needles
@@ -5529,6 +5538,7 @@ class NeedleFinderLogic:
         displayNode.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
         displayNode.SetSliceIntersectionVisibility(True)
         displayNode.SetSliceIntersectionThickness(2)
+        displayNode.SetOpacity(0.7)
     
   def distance(self, pt1, pt2):
     """3D distance between two points
