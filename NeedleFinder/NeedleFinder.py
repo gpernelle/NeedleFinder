@@ -650,7 +650,7 @@ class NeedleFinderWidget:
     self.onResetParameters()
     self.setupShortcuts()
 
-  def setWandEffectOptions(self, tolerance=20, maxPixels=50, fillMode="Volume"):
+  def setWandEffectOptions(self, tolerance=20, maxPixels=200, fillMode="Volume"):
     """
     Set the wand logic parameters in parameter node
     """
@@ -677,6 +677,7 @@ class NeedleFinderWidget:
     macros = (
       ("Ctrl+Return", self.segmentNeedle),
       ("Ctrl+z", self.logic.deleteLastNeedle),
+      ("Ctrl+y", self.acceptNeedleTipEstimate),
       )
 
     for keys, f in macros:
@@ -700,6 +701,39 @@ class NeedleFinderWidget:
       if self.fiducialButton.isEnabled():
         print "new checked state: ", not self.fiducialButton.checked
         self.onStartStopGivingNeedleTipsToggled(not self.fiducialButton.checked)
+
+  def acceptNeedleTipEstimate(self):
+      """
+      helper function for Ctrl+y
+      """
+      # productive #event
+      profprint()
+      volumeNode = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
+      imageData = volumeNode.GetImageData()
+      spacing = volumeNode.GetSpacing()
+      colorVar = random.randrange(50, 100, 1)  # ???/(100.)
+      tempFidNodes = slicer.mrmlScene.GetNodesByName('.tip? [Ctrl+y]')
+      coord = [0, 0, 0]
+      for i in range(tempFidNodes.GetNumberOfItems()):
+        node = tempFidNodes.GetItemAsObject(i)
+        if node:
+          node.GetFiducialCoordinates(coord)
+      if sum(coord): self.logic.needleDetectionThread(self.logic.ras2ijk(coord), imageData, colorVar, spacing)
+      if self.autoStopTip.isChecked():
+          self.logic.needleDetectionUPThread(ijk, imageData, colorVar, spacing)
+      # change requested by Lauren: remove temp marker after detection
+      print "deleting temp marker and segmentation"
+      tempFidNodes = slicer.mrmlScene.GetNodesByName('.temp')
+      for i in range(tempFidNodes.GetNumberOfItems()):
+        node = tempFidNodes.GetItemAsObject(i)
+        if node:
+          slicer.mrmlScene.RemoveNode(node)
+      tempFidNodes = slicer.mrmlScene.GetNodesByName('.tip? [Ctrl+y]')
+      for i in range(tempFidNodes.GetNumberOfItems()):
+        node = tempFidNodes.GetItemAsObject(i)
+        if node:
+          slicer.mrmlScene.RemoveNode(node)
+      self.tempPointList = []
 
   def cleanup(self):
     """
@@ -780,7 +814,7 @@ class NeedleFinderWidget:
       self.fiducialButton.text = "2. Start Giving Needle Tips [CTRL + ENTER]"
       widget.editUtil.setCurrentEffect("DefaultTool")
       widget.resetDetectionButton.setEnabled(1)
-      tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
+      tempFidNodes = slicer.mrmlScene.GetNodesByName('.temp')
       for i in range(tempFidNodes.GetNumberOfItems()):
         node = tempFidNodes.GetItemAsObject(i)
         if node:
@@ -884,7 +918,7 @@ class NeedleFinderWidget:
     Observe events in the needle segmentation mode:
     - a mouse click starts a needle segmentation from the position of the cursor
     - if shift is released, a temporary fiducial node is created at the position of the cursor
-    - if shift is pressed, all the temporary fiducial node named 'Temp' are removed from the MRML scence
+    - if shift is pressed, all the temporary fiducial node named '.temp' are removed from the MRML scence
     """
     # productive #frequent #event-handler
     if frequent: profprint();
@@ -911,7 +945,7 @@ class NeedleFinderWidget:
         if event == "KeyPressEvent":  # shift pressed
           print 'key pressed: ', key
           if key == 'Shift_L' or key == 'Shift_R':
-            tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
+            tempFidNodes = slicer.mrmlScene.GetNodesByName('.temp')
             for i in range(tempFidNodes.GetNumberOfItems()):
               node = tempFidNodes.GetItemAsObject(i)
               if node:
@@ -921,7 +955,7 @@ class NeedleFinderWidget:
           print 'key released: ', key
           if key == 'Shift_L' or key == 'Shift_R':
             fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
-            fiducial.SetName('Temp')
+            fiducial.SetName('.temp')
             fiducial.Initialize(slicer.mrmlScene)
             fiducial.SetFiducialCoordinates(ras)
             fiducial.SetAttribute('TemporaryFiducial', '1')
@@ -935,7 +969,7 @@ class NeedleFinderWidget:
 
       if event == "KeyReleaseEvent" and key == 'Shift_L' or key == 'Shift_R':
         # print event
-        tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
+        tempFidNodes = slicer.mrmlScene.GetNodesByName('.temp')
         # if fiducial exists, move it to new location
         if tempFidNodes.GetNumberOfItems() > 0:
           for i in range(tempFidNodes.GetNumberOfItems()):
@@ -968,17 +1002,17 @@ class NeedleFinderWidget:
                 slRed=slicer.app.layoutManager().sliceWidget("Red").sliceLogic()
                 slYel=slicer.app.layoutManager().sliceWidget("Yellow").sliceLogic()
                 slGrn=slicer.app.layoutManager().sliceWidget("Green").sliceLogic()
-                # ---8<--- get ijk of clicked point (code from wand tool apply)
+                # ---8<--- get ijk of clicked point (code borrowed from wand tool apply())
                 labelLogic=sliceLogic.GetLabelLayer()
                 xyToIJK = labelLogic.GetXYToIJKTransform()
                 ijkFloat = xyToIJK.TransformDoublePoint(xy+(0,))
                 ijk = []
                 for element in ijkFloat:
-                    try:
-                        intElement = int(round(element))
-                    except ValueError:
-                        intElement = 0
-                    ijk.append(intElement)
+                  try:
+                    intElement = int(round(element))
+                  except ValueError:
+                    intElement = 0
+                  ijk.append(intElement)
                 ijk.reverse()
                 ijk = tuple(ijk)
                 # --->8---
@@ -993,7 +1027,7 @@ class NeedleFinderWidget:
                 shape.reverse()
                 ijkMid=None
                 labelArray = vtk.util.numpy_support.vtk_to_numpy(labelImage.GetPointData().GetScalars()).reshape(shape)
-                labelArray[labelArray!=self.currentLabel] = 0 #clear old chips
+                #labelArray[labelArray!=self.currentLabel] = 0 #slow, clear old chips
                 for kx in range(max(int(kxStart)-0,0),min(int(kxStart+20),shape[0])):
                   print "kx",kx
                   #scan xy slice
@@ -1004,12 +1038,12 @@ class NeedleFinderWidget:
                     for jx in range(max(int(jxStart)-20,0),min(int(jxStart)+20,shape[1])):
                       #try: labelArray[kx,jx,ix]
                       #except: print "range error ix,jx:", ix, jx
-                      if labelArray[kx,jx,ix]==self.currentLabel: #??? strange, doesnt work
+                      if labelArray[kx,jx,ix]==self.currentLabel:
                         print "curLab, labelArr[x]= ",self.currentLabel,labelArray[kx,jx,ix]
                         ijkMid+=[ix,jx,kx]
                         midPtCtr+=1
+                      if labelArray[kx,jx,ix] and labelArray[kx,jx,ix]!=self.currentLabel: labelArray[kx,jx,ix]=0 # delete old chip?
                       #labelArray[kx,jx,ix]=306 # display in label volume for debugging
-                      #labelArray[kx,jx,ix]=0 # delete old chip?
                   if not midPtCtr:
                     print "empty slice found ijkMidPrev=", ijkMidPrev
                     break
@@ -1027,10 +1061,29 @@ class NeedleFinderWidget:
                 slRed.SnapSliceOffsetToIJK()
                 slYel.SnapSliceOffsetToIJK()
                 slGrn.SnapSliceOffsetToIJK()
+                #look for old tip marker
+                tempFidNodes = slicer.mrmlScene.GetNodesByName('.tip? [Ctrl+y]')
+                for i in range(tempFidNodes.GetNumberOfItems()):
+                  node = tempFidNodes.GetItemAsObject(i)
+                  if node:
+                    node.SetFiducialCoordinates(logic.ijk2ras(ijkMidPrev))
+                if not tempFidNodes.GetNumberOfItems(): # create new ".tip? [Ctrl+y]" node
+                  fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+                  fiducial.SetName('.tip? [Ctrl+y]')
+                  fiducial.Initialize(slicer.mrmlScene)
+                  fiducial.SetFiducialCoordinates(logic.ijk2ras(ijkMidPrev))
+                  fiducial.SetAttribute('TemporaryTip', '1')
+                  fiducial.SetLocked(True)
+                  displayNode = fiducial.GetDisplayNode()
+                  displayNode.SetGlyphScale(2)
+                  displayNode.SetColor(0, 1, 0)
+                  textNode = fiducial.GetAnnotationTextDisplayNode()
+                  textNode.SetTextScale(4)
+                  textNode.SetColor(0, 1, 0)
                 # <<< 50pxe
         else:  # create temp fiducial
           fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
-          fiducial.SetName('Temp')
+          fiducial.SetName('.temp')
           fiducial.Initialize(slicer.mrmlScene)
           fiducial.SetFiducialCoordinates(ras)
           fiducial.SetAttribute('TemporaryFiducial', '1')
@@ -1055,7 +1108,12 @@ class NeedleFinderWidget:
           self.logic.needleDetectionUPThread(ijk, imageData, colorVar, spacing)
         # change requested by Lauren: remove temp marker after detection
         print "deleting temp marker and segmentation"
-        tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
+        tempFidNodes = slicer.mrmlScene.GetNodesByName('.temp')
+        for i in range(tempFidNodes.GetNumberOfItems()):
+          node = tempFidNodes.GetItemAsObject(i)
+          if node:
+            slicer.mrmlScene.RemoveNode(node)
+        tempFidNodes = slicer.mrmlScene.GetNodesByName('.tip? [Ctrl+y]')
         for i in range(tempFidNodes.GetNumberOfItems()):
           node = tempFidNodes.GetItemAsObject(i)
           if node:
@@ -2715,7 +2773,7 @@ class NeedleFinderLogic:
                 fLabel = imgLabelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0)
                 if fLabel and fLabel < 300:
                   #print "# force high influence of found label: ",fLabel
-                  fTotal -= 10000
+                  total -= 10000
                 if conesColor: imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, conesColor) #mark the search cones in fLabel volume
               # <<<<<<<<<<<<<<<<<<<<
           if R == 0:
@@ -2954,7 +3012,7 @@ class NeedleFinderLogic:
                 fLabel = imgLabelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0)
                 if fLabel and fLabel < 300:
                   #print "# force high influence of found label: ",fLabel
-                  fTotal -= 10000
+                  total -= 10000
                 if conesColor: imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, conesColor) #mark the search cones in fLabel volume
               # <<<<<<<<<<<<<<<<<<<<
           if R == 0:
@@ -4002,7 +4060,7 @@ class NeedleFinderLogic:
     sYellow.SetSliceVisible(0)
     reformatLogic = slicer.vtkSlicerReformatLogic()
     reformatLogic.SetSliceNormal(sYellow, 1, 0, 0)
-    tempFidNodes = slicer.mrmlScene.GetNodesByName('Temp')
+    tempFidNodes = slicer.mrmlScene.GetNodesByName('.temp')
     for i in range(tempFidNodes.GetNumberOfItems()):
       node = tempFidNodes.GetItemAsObject(i)
       if node:
