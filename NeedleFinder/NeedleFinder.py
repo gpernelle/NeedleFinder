@@ -890,6 +890,7 @@ class NeedleFinderWidget:
     if frequent: profprint();
     # print event
     widget = slicer.modules.NeedleFinderWidget
+    logic=slicer.modules.NeedleFinderWidget.logic
     # GET mouse position
     insideView = False
     ras = [0.0, 0.0, 0.0]
@@ -963,6 +964,70 @@ class NeedleFinderWidget:
                   self.currentLabel += 1
                   self.editUtil.setLabel(self.currentLabel)
                 self.wandLogics[sliceLogic].apply(xy)
+                #>>> exp05 walk up (proximal) the found chip from wanding
+                slRed=slicer.app.layoutManager().sliceWidget("Red").sliceLogic()
+                slYel=slicer.app.layoutManager().sliceWidget("Yellow").sliceLogic()
+                slGrn=slicer.app.layoutManager().sliceWidget("Green").sliceLogic()
+                # ---8<--- get ijk of clicked point (code from wand tool apply)
+                labelLogic=sliceLogic.GetLabelLayer()
+                xyToIJK = labelLogic.GetXYToIJKTransform()
+                ijkFloat = xyToIJK.TransformDoublePoint(xy+(0,))
+                ijk = []
+                for element in ijkFloat:
+                    try:
+                        intElement = int(round(element))
+                    except ValueError:
+                        intElement = 0
+                    ijk.append(intElement)
+                ijk.reverse()
+                ijk = tuple(ijk)
+                # --->8---
+                ixStart=ijk[2] #awkward CAVEAT here, the x vs z coordinates are switched
+                jxStart=ijk[1]
+                kxStart=ijk[0]
+                labelImage = self.labelMapNode.GetImageData()
+                shape = list(labelImage.GetDimensions())
+                spacg=self.labelMapNode.GetSpacing()
+                org=self.labelMapNode.GetOrigin()
+                print "shape: ",shape
+                shape.reverse()
+                ijkMid=None
+                labelArray = vtk.util.numpy_support.vtk_to_numpy(labelImage.GetPointData().GetScalars()).reshape(shape)
+                labelArray[labelArray!=self.currentLabel] = 0 #clear old chips
+                for kx in range(max(int(kxStart)-0,0),min(int(kxStart+20),shape[0])):
+                  print "kx",kx
+                  #scan xy slice
+                  ijkMidPrev=ijkMid
+                  ijkMid=np.array([0,0,0]) # center of mass of pixels in a slice
+                  midPtCtr=0
+                  for ix in range(max(int(ixStart)-20,0),min(int(ixStart)+20,shape[2])):
+                    for jx in range(max(int(jxStart)-20,0),min(int(jxStart)+20,shape[1])):
+                      #try: labelArray[kx,jx,ix]
+                      #except: print "range error ix,jx:", ix, jx
+                      if labelArray[kx,jx,ix]==self.currentLabel: #??? strange, doesnt work
+                        print "curLab, labelArr[x]= ",self.currentLabel,labelArray[kx,jx,ix]
+                        ijkMid+=[ix,jx,kx]
+                        midPtCtr+=1
+                      #labelArray[kx,jx,ix]=306 # display in label volume for debugging
+                      #labelArray[kx,jx,ix]=0 # delete old chip?
+                  if not midPtCtr:
+                    print "empty slice found ijkMidPrev=", ijkMidPrev
+                    break
+                  else:
+                    print "non-empty slice found"
+                    #pause()
+                    ijkMid/=float(midPtCtr)
+                #update slice positions
+                print "z slice off.: ",(kx-1)*spacg[2]+org[2]
+                slRed.SetSliceOffset((kx-1)*spacg[2]+org[2])
+                print "x slice off.: ",org[0]-ijkMidPrev[0]*spacg[0]
+                slYel.SetSliceOffset(org[0]-ijkMidPrev[0]*spacg[0])
+                print "y slice off.: ",org[1]-ijkMidPrev[1]*spacg[1]#+
+                slGrn.SetSliceOffset(org[1]-ijkMidPrev[1]*spacg[1])#+org[1])
+                slRed.SnapSliceOffsetToIJK()
+                slYel.SnapSliceOffsetToIJK()
+                slGrn.SnapSliceOffsetToIJK()
+                # <<< 50pxe
         else:  # create temp fiducial
           fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
           fiducial.SetName('Temp')
@@ -1011,7 +1076,7 @@ class NeedleFinderWidget:
     print "clearing label map"
     self.undoRedo.saveState()
     labelImage = self.labelMapNode.GetImageData()
-    shape = list(labelImage.GetDimensions()).reverse()
+    shape = list(labelImage.GetDimensions()).reverse() # ??? this code has no effect, shape=None !!!
     labelArray = vtk.util.numpy_support.vtk_to_numpy(labelImage.GetPointData().GetScalars()).reshape(shape)
     if not label:
       labelArray[:] = 0
@@ -3263,8 +3328,6 @@ class NeedleFinderLogic:
                 center = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
                 total += center / float(tIter)
                 if lookNeighborhood == 1 :
-
-
 
                   g1 = imageData.GetScalarComponentAsDouble(ijk[0] + radiusNeedle, ijk[1], ijk[2], 0)
                   g2 = imageData.GetScalarComponentAsDouble(ijk[0] - radiusNeedle, ijk[1], ijk[2], 0)
