@@ -1002,6 +1002,9 @@ class NeedleFinderWidget:
                 slRed=slicer.app.layoutManager().sliceWidget("Red").sliceLogic()
                 slYel=slicer.app.layoutManager().sliceWidget("Yellow").sliceLogic()
                 slGrn=slicer.app.layoutManager().sliceWidget("Green").sliceLogic()
+                volumeNode =slRed.GetBackgroundLayer().GetVolumeNode()
+                imageData = volumeNode.GetImageData()
+                labelImage = self.labelMapNode.GetImageData()
                 # ---8<--- get ijk of clicked point (code borrowed from wand tool apply())
                 labelLogic=sliceLogic.GetLabelLayer()
                 xyToIJK = labelLogic.GetXYToIJKTransform()
@@ -1013,13 +1016,13 @@ class NeedleFinderWidget:
                   except ValueError:
                     intElement = 0
                   ijk.append(intElement)
+                ijkOri=list(ijk)
                 ijk.reverse()
                 ijk = tuple(ijk)
                 # --->8---
                 ixStart=ijk[2] #awkward CAVEAT here, the x vs z coordinates are switched
                 jxStart=ijk[1]
                 kxStart=ijk[0]
-                labelImage = self.labelMapNode.GetImageData()
                 shape = list(labelImage.GetDimensions())
                 spacg=self.labelMapNode.GetSpacing()
                 org=self.labelMapNode.GetOrigin()
@@ -1028,36 +1031,44 @@ class NeedleFinderWidget:
                 ijkMid=None
                 labelArray = vtk.util.numpy_support.vtk_to_numpy(labelImage.GetPointData().GetScalars()).reshape(shape)
                 #labelArray[labelArray!=self.currentLabel] = 0 #slow, clear old chips
-                for kx in range(max(int(kxStart)-0,0),min(int(kxStart+20),shape[0])):
-                  print "kx",kx
-                  #scan xy slice
-                  ijkMidPrev=ijkMid
-                  ijkMid=np.array([0,0,0]) # center of mass of pixels in a slice
-                  midPtCtr=0
-                  for ix in range(max(int(ixStart)-20,0),min(int(ixStart)+20,shape[2])):
-                    for jx in range(max(int(jxStart)-20,0),min(int(jxStart)+20,shape[1])):
-                      #try: labelArray[kx,jx,ix]
-                      #except: print "range error ix,jx:", ix, jx
-                      if labelArray[kx,jx,ix]==self.currentLabel:
-                        print "curLab, labelArr[x]= ",self.currentLabel,labelArray[kx,jx,ix]
-                        ijkMid+=[ix,jx,kx]
-                        midPtCtr+=1
-                      if labelArray[kx,jx,ix] and labelArray[kx,jx,ix]!=self.currentLabel: labelArray[kx,jx,ix]=0 # delete old chip?
-                      #labelArray[kx,jx,ix]=306 # display in label volume for debugging
-                  if not midPtCtr:
-                    print "empty slice found ijkMidPrev=", ijkMidPrev
-                    break
-                  else:
-                    print "non-empty slice found"
-                    #pause()
-                    ijkMid/=float(midPtCtr)
+                # replace this part by better algo
+                if 0:
+                  for kx in range(max(int(kxStart)-0,0),min(int(kxStart+10/spcg[2]),shape[0])):
+                    print "kx",kx
+                    #scan xy slice
+                    ijkTipEstimate=ijkMid
+                    ijkMid=np.array([0,0,0]) # center of mass of pixels in a slice
+                    midPtCtr=0
+                    for ix in range(max(int(ixStart)-20,0),min(int(ixStart)+10/spcg[0],shape[2])):
+                      for jx in range(max(int(jxStart)-20,0),min(int(jxStart)+10/spcg[1],shape[1])):
+                        #try: labelArray[kx,jx,ix]
+                        #except: print "range error ix,jx:", ix, jx
+                        if labelArray[kx,jx,ix]==self.currentLabel:
+                          print "curLab, labelArr[x]= ",self.currentLabel,labelArray[kx,jx,ix]
+                          ijkMid+=[ix,jx,kx]
+                          midPtCtr+=1
+                        if labelArray[kx,jx,ix] and labelArray[kx,jx,ix]!=self.currentLabel: labelArray[kx,jx,ix]=0 # delete old chip?
+                        #labelArray[kx,jx,ix]=306 # display in label volume for debugging
+                    if not midPtCtr:
+                      print "empty slice found ijkTipEstimate=", ijkTipEstimate
+                      break
+                    else:
+                      print "non-empty slice found"
+                      #pause()
+                      ijkMid/=float(midPtCtr)
+                # TODO: place better alg. here:
+                colorVar = random.randrange(50, 100, 1)  # ???/(100.)
+                #logic.needleDetectionThread(ijkOri, imageData, colorVar, spacg)
+                ijkTipEstimate=logic.needleDetectionUPThread(ijkOri, imageData, colorVar, spacg, tipOnly=True)
+                kx=1+ijkTipEstimate[2]
+                #org=[0,0,0]
                 #update slice positions
                 print "z slice off.: ",(kx-1)*spacg[2]+org[2]
                 slRed.SetSliceOffset((kx-1)*spacg[2]+org[2])
-                print "x slice off.: ",org[0]-ijkMidPrev[0]*spacg[0]
-                slYel.SetSliceOffset(org[0]-ijkMidPrev[0]*spacg[0])
-                print "y slice off.: ",org[1]-ijkMidPrev[1]*spacg[1]#+
-                slGrn.SetSliceOffset(org[1]-ijkMidPrev[1]*spacg[1])#+org[1])
+                print "x slice off.: ",org[0]-ijkTipEstimate[0]*spacg[0]
+                slYel.SetSliceOffset(org[0]-ijkTipEstimate[0]*spacg[0])
+                print "y slice off.: ",org[1]-ijkTipEstimate[1]*spacg[1]#+
+                slGrn.SetSliceOffset(org[1]-ijkTipEstimate[1]*spacg[1])#+org[1])
                 slRed.SnapSliceOffsetToIJK()
                 slYel.SnapSliceOffsetToIJK()
                 slGrn.SnapSliceOffsetToIJK()
@@ -1066,12 +1077,12 @@ class NeedleFinderWidget:
                 for i in range(tempFidNodes.GetNumberOfItems()):
                   node = tempFidNodes.GetItemAsObject(i)
                   if node:
-                    node.SetFiducialCoordinates(logic.ijk2ras(ijkMidPrev))
+                    node.SetFiducialCoordinates(logic.ijk2ras(ijkTipEstimate))
                 if not tempFidNodes.GetNumberOfItems(): # create new ".tip? [Ctrl+y]" node
                   fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
                   fiducial.SetName('.tip? [Ctrl+y]')
                   fiducial.Initialize(slicer.mrmlScene)
-                  fiducial.SetFiducialCoordinates(logic.ijk2ras(ijkMidPrev))
+                  fiducial.SetFiducialCoordinates(logic.ijk2ras(ijkTipEstimate))
                   fiducial.SetAttribute('TemporaryTip', '1')
                   fiducial.SetLocked(True)
                   displayNode = fiducial.GetDisplayNode()
@@ -1341,6 +1352,8 @@ class NeedleFinderLogic:
     self.lastNeedleNames = []
     self.enableScreenshots = 0
     self.screenshotScaleFactor = 1
+    self.estimatorReference = 0
+    self.controlPoints = []
 
     self.previousValues = [[0, 0, 0]]
     self.tableValueCtrPt = [[[999, 999, 999] for i in range(100)] for j in range(100)]
@@ -2534,7 +2547,7 @@ class NeedleFinderLogic:
                 fLabel = imgLabelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0)
                 if fLabel and fLabel < 300:
                   #print "# force high influence of found label: ",fLabel
-                  fTotal -= 10000
+                  total -= 10000
                 if conesColor: imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, conesColor) #mark the search cones in fLabel volume
               # <<<<<<<<<<<<<<<<<<<<
           if R == 0:
@@ -3132,7 +3145,7 @@ class NeedleFinderLogic:
   #
   #
   #------------------------------------------------------------------------------
-  def needleDetectionUPThread(self, A, imageData, colorVar, spacing, script=False):
+  def needleDetectionUPThread(self, A, imageData, colorVar, spacing, script=False, tipOnly=False):
     """
     Call different versions of needle detection up thread.
     """
@@ -3142,18 +3155,18 @@ class NeedleFinderLogic:
     widget.axialSegmentationLimit, widget.axialSegmentationLimitRAS = self.findAxialSegmentationLimitFromMarker()
     # select algo version
     if widget.algoVersParameter.value == 0:
-      self.needleDetectionUPThreadCurrentDev(A, imageData, colorVar, spacing, script)
+      return self.needleDetectionUPThreadCurrentDev(A, imageData, colorVar, spacing, script, tipOnly)
     if widget.algoVersParameter.value == 1:
-      msgbox ("/!\ needleDetectionUPThread N/A for algoVersion 1"); print "/!\ needleDetectionUPThread N/A for algoVersion 1"
+      msgbox ("/!\ needleDetectionUPThread N/A for algoVersion 1")
     if widget.algoVersParameter.value == 2:
-      msgbox ("/!\ needleDetectionUPThread N/A for algoVersion 2"); print "/!\ needleDetectionUPThread N/A for algoVersion 2"
+      msgbox ("/!\ needleDetectionUPThread N/A for algoVersion 2")
     if widget.algoVersParameter.value == 3:
       if widget.labelMapNode:
-        self.needleDetectionThread13_3(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, bUp=True, bScript=script)
+        return self.needleDetectionThread13_3(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, bUp=True, bScript=script)
       else:
-        self.needleDetectionThread13_3(A, imageData, None, widget.tempPointList, colorVar, spacing, bUp=True, bScript=script)
+        return self.needleDetectionThread13_3(A, imageData, None, widget.tempPointList, colorVar, spacing, bUp=True, bScript=script)
 
-  def needleDetectionUPThreadCurrentDev(self, A, imageData, colorVar, spacing, script=False):
+  def needleDetectionUPThreadCurrentDev(self, A, imageData, colorVar, spacing, script=False, tipOnly=False):
     """
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region.
     The second extremity of this segment is saved as a control point (in controlPoints), used later.
@@ -3487,8 +3500,9 @@ class NeedleFinderLogic:
 
     for i in range(len(controlPointsUP)):
       self.controlPoints.append(controlPointsUP[i])
-    self.addNeedleToScene(self.controlPoints, colorVar, 'Detection', script)
+    if not tipOnly: self.addNeedleToScene(self.controlPoints, colorVar, 'Detection', script)
     # print 'length:',tot
+    return controlPointsIJK[-1] #return last control point as tip estimate
 
   def drawObturatorNeedles(self):
     """
@@ -5237,7 +5251,6 @@ class NeedleFinderLogic:
 
   def returnTipsFromNeedleModels(self):
     """ Returns the IJK coordinates of the tips of manually segmented needle polygon models
-
     :return: array of IJK coordinates of validation needle tips
     """
     # productive
