@@ -997,7 +997,7 @@ class NeedleFinderWidget:
                   print "new label"
                   self.currentLabel += 1
                   self.editUtil.setLabel(self.currentLabel)
-                self.wandLogics[sliceLogic].apply(xy)
+                if widget.algoVersParameter.value !=0: self.wandLogics[sliceLogic].apply(xy)
                 #>>> exp05 walk up (proximal) the found chip from wanding
                 slRed=slicer.app.layoutManager().sliceWidget("Red").sliceLogic()
                 slYel=slicer.app.layoutManager().sliceWidget("Yellow").sliceLogic()
@@ -1024,7 +1024,7 @@ class NeedleFinderWidget:
                 jxStart=ijk[1]
                 kxStart=ijk[0]
                 shape = list(labelImage.GetDimensions())
-                spacg=self.labelMapNode.GetSpacing()
+                spcg=self.labelMapNode.GetSpacing()
                 org=self.labelMapNode.GetOrigin()
                 print "shape: ",shape
                 shape.reverse()
@@ -1032,15 +1032,15 @@ class NeedleFinderWidget:
                 labelArray = vtk.util.numpy_support.vtk_to_numpy(labelImage.GetPointData().GetScalars()).reshape(shape)
                 #labelArray[labelArray!=self.currentLabel] = 0 #slow, clear old chips
                 # replace this part by better algo
-                if 0:
+                if widget.algoVersParameter.value !=0:
                   for kx in range(max(int(kxStart)-0,0),min(int(kxStart+10/spcg[2]),shape[0])):
                     print "kx",kx
                     #scan xy slice
                     ijkTipEstimate=ijkMid
                     ijkMid=np.array([0,0,0]) # center of mass of pixels in a slice
                     midPtCtr=0
-                    for ix in range(max(int(ixStart)-20,0),min(int(ixStart)+10/spcg[0],shape[2])):
-                      for jx in range(max(int(jxStart)-20,0),min(int(jxStart)+10/spcg[1],shape[1])):
+                    for ix in range(max(int(ixStart-10/spcg[0]),0),min(int(ixStart+10/spcg[0]),shape[2])):
+                      for jx in range(max(int(jxStart-10/spcg[1]),0),min(int(jxStart+10/spcg[1]),shape[1])):
                         #try: labelArray[kx,jx,ix]
                         #except: print "range error ix,jx:", ix, jx
                         if labelArray[kx,jx,ix]==self.currentLabel:
@@ -1056,19 +1056,20 @@ class NeedleFinderWidget:
                       print "non-empty slice found"
                       #pause()
                       ijkMid/=float(midPtCtr)
-                # TODO: place better alg. here:
-                colorVar = random.randrange(50, 100, 1)  # ???/(100.)
-                #logic.needleDetectionThread(ijkOri, imageData, colorVar, spacg)
-                ijkTipEstimate=logic.needleDetectionUPThread(ijkOri, imageData, colorVar, spacg, tipOnly=True)
-                kx=1+ijkTipEstimate[2]
+                else:
+                  # TODO: place better alg. here:
+                  colorVar = random.randrange(50, 100, 1)  # ???/(100.)
+                  #logic.needleDetectionThread(ijkOri, imageData, colorVar, spcg)
+                  ijkTipEstimate=logic.needleDetectionUPThread(ijkOri, imageData, colorVar, spcg, tipOnly=True)
+                  kx=1+ijkTipEstimate[2]
                 #org=[0,0,0]
                 #update slice positions
-                print "z slice off.: ",(kx-1)*spacg[2]+org[2]
-                slRed.SetSliceOffset((kx-1)*spacg[2]+org[2])
-                print "x slice off.: ",org[0]-ijkTipEstimate[0]*spacg[0]
-                slYel.SetSliceOffset(org[0]-ijkTipEstimate[0]*spacg[0])
-                print "y slice off.: ",org[1]-ijkTipEstimate[1]*spacg[1]#+
-                slGrn.SetSliceOffset(org[1]-ijkTipEstimate[1]*spacg[1])#+org[1])
+                print "z slice off.: ",(kx-1)*spcg[2]+org[2]
+                slRed.SetSliceOffset((kx-1)*spcg[2]+org[2])
+                print "x slice off.: ",org[0]-ijkTipEstimate[0]*spcg[0]
+                slYel.SetSliceOffset(org[0]-ijkTipEstimate[0]*spcg[0])
+                print "y slice off.: ",org[1]-ijkTipEstimate[1]*spcg[1]#+
+                slGrn.SetSliceOffset(org[1]-ijkTipEstimate[1]*spcg[1])#+org[1])
                 slRed.SnapSliceOffsetToIJK()
                 slYel.SnapSliceOffsetToIJK()
                 slGrn.SnapSliceOffsetToIJK()
@@ -4346,7 +4347,7 @@ class NeedleFinderLogic:
     l = w.logic
     if not variant:
       l.exportEvaluation(['maxHD', 'avgHD', 'stdHD', 'medHD',
-                        'nOutliers','outliers',
+                        'nNeedles','nOutliers','outliers',
                         'radiusNeedle',
                         'lenghtNeedle',
                         'radiusMax',
@@ -4399,19 +4400,29 @@ class NeedleFinderLogic:
     path[38] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 38 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
     path[40] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 40 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
 
-    # Andre's file system (cases copies from AMIGO share) MICCAI13 results (LB/AM)
+    # Andre's file system (case copies from AMIGO share)
     path = [ 0 for i in range(100)]
-    path[24] = '/home/amast/Pictures/MICCAI13/Case  024/NRRD/Auto-Eval-LB/2013-02-28-Scene.mrml'
-    path[28] = '/home/amast/Pictures/MICCAI13/Case  028/NRRD/Auto-Eval-LB/2013-02-28-Scene.mrml'
-    path[29] = '/home/amast/Pictures/MICCAI13/Case  029/NRRD/Auto-Eval-LB/2013-02-26-Scene.mrml'
-    path[30] = '/home/amast/Pictures/MICCAI13/Case  030/NRRD/Auto-Eval-LB/2013-02-26-Scene.mrml'
-    path[31] = '/home/amast/Pictures/MICCAI13/Case  031/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
-    path[33] = '/home/amast/Pictures/MICCAI13/Case  033/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
-    path[34] = '/home/amast/Pictures/MICCAI13/Case  034/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
-    path[37] = '/home/amast/Pictures/MICCAI13/Case  037/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
-    path[38] = '/home/amast/Pictures/MICCAI13/Case  038/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
-    path[40] = '/home/amast/Pictures/MICCAI13/Case  040/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
-
+    path[ 8] = '/home/amast/Pictures/OTHER/Case  008/NRRD/Auto-Eval-LB/2013-05-07-Scene.mrml'
+    path[12] = '/home/amast/Pictures/OTHER/Case  012/NRRD/Auto-Eval-LB/2013-04-22-Scene.mrml'
+    path[16] = '/home/amast/Pictures/OTHER/Case  016/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
+    path[21] = '/home/amast/Pictures/OTHER/Case  021/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
+    path[22] = '/home/amast/Pictures/OTHER/Case  022/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
+    path[25] = '/home/amast/Pictures/OTHER/Case  025/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
+    path[26] = '/home/amast/Pictures/OTHER/Case  026/NRRD/Auto-Eval-LB/2013-04-17-Scene.mrml'
+    path[27] = '/home/amast/Pictures/OTHER/Case  027/NRRD/Auto-Eval-LB/2013-04-17-Scene.mrml'
+    #MICCAI13 cases (manual seg. by LB/AM)
+    if 1:
+      path[24] = '/home/amast/Pictures/MICCAI13/Case  024/NRRD/Auto-Eval-LB/2013-02-28-Scene.mrml'
+      path[28] = '/home/amast/Pictures/MICCAI13/Case  028/NRRD/Auto-Eval-LB/2013-02-28-Scene.mrml'
+      path[29] = '/home/amast/Pictures/MICCAI13/Case  029/NRRD/Auto-Eval-LB/2013-02-26-Scene.mrml'
+      path[30] = '/home/amast/Pictures/MICCAI13/Case  030/NRRD/Auto-Eval-LB/2013-02-26-Scene.mrml'
+      path[31] = '/home/amast/Pictures/MICCAI13/Case  031/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
+      path[33] = '/home/amast/Pictures/MICCAI13/Case  033/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
+      path[34] = '/home/amast/Pictures/MICCAI13/Case  034/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
+      path[37] = '/home/amast/Pictures/MICCAI13/Case  037/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
+      path[38] = '/home/amast/Pictures/MICCAI13/Case  038/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
+      path[40] = '/home/amast/Pictures/MICCAI13/Case  040/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
+    #end Miccai13 cases
     # show a directory selector for saving the results
     self.dirDialog = qt.QFileDialog(w.parent)
     self.dirDialog.setDirectory('/tmp')
@@ -4436,7 +4447,6 @@ class NeedleFinderLogic:
           print "processing ", path[id]
           self.writeTableHeader(dir+'/AP-' + str(id) + '.csv', 1)
           slicer.mrmlScene.Clear(0)
-          #pause()
           slicer.util.loadScene(path[id])
           # l.resetNeedleDetection(script=True) # ??? this resets the parameters to default
           l.startValidation(script=True)
@@ -4451,9 +4461,8 @@ class NeedleFinderLogic:
           stdHD = HD[:, 0].std()
           sl = np.sort(HD[:, 0])
           medHD = sl[sl.size / 2]
-          resultsEval = [maxHD, avgHD, stdHD, medHD]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
+          resultsEval = [maxHD, avgHD, stdHD, medHD]+[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
           l.exportEvaluation(resultsEval, dir+'/AP-All_stats.csv')
-          #msgbox("Pause")
           #pause()
       msgbox("parSearch mode 0 done, results in "+dir)
     elif mode == 1:
@@ -4476,7 +4485,7 @@ class NeedleFinderLogic:
         stdHD = HD[:, 0].std()
         sl = np.sort(HD[:, 0])
         medHD = sl[sl.size / 2]
-        resultsEval = [maxHD, avgHD, stdHD, medHD] + l.valuesExperience
+        resultsEval = [maxHD, avgHD, stdHD, medHD] +[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
         l.exportEvaluation(resultsEval, dir+'/BF-' + str(id) + '_stats.csv')
         #pause()
       msgbox("parSearch mode 1 done, results in "+dir)
@@ -4509,7 +4518,7 @@ class NeedleFinderLogic:
             stdHD = HD[:, 0].std()
             sl = np.sort(HD[:, 0])
             medHD = sl[sl.size / 2]
-            resultsEval = [maxHD, avgHD, stdHD, medHD] + l.valuesExperience
+            resultsEval = [maxHD, avgHD, stdHD, medHD] +[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
             l.exportEvaluation(resultsEval, dir+'/RS-' + str(id) + '_stats.csv')
             # end = time.time()
             # print 'processing time: ', end-start
