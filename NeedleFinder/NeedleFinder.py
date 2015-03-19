@@ -228,12 +228,26 @@ class NeedleFinderWidget:
       selectionNode = slicer.app.applicationLogic().GetSelectionNode()
       selectionNode.SetReferenceActiveLabelVolumeID(self.labelMapNode.GetID())
       slicer.app.applicationLogic().PropagateVolumeSelection(0)
+      #set half transparency
       scRed=slicer.app.layoutManager().sliceWidget("Red").sliceController()
       scRed.setLabelMapOpacity(.5)
       scYel=slicer.app.layoutManager().sliceWidget("Yellow").sliceController()
       scYel.setLabelMapOpacity(.5)
       scGrn=slicer.app.layoutManager().sliceWidget("Green").sliceController()
       scGrn.setLabelMapOpacity(.5)
+      #enable label map outline display mode
+      sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
+      if sRed == None :
+        sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode1")
+      sRed.SetUseLabelOutline(1)
+      sYel = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
+      if sYel == None :
+        sYel = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
+      sYel.SetUseLabelOutline(1)
+      sGrn = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
+      if sGrn == None :
+        sGrn = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode3")
+      sGrn.SetUseLabelOutline(1)
     self.editorWidget.setMasterNode(vn)
     self.editorWidget.setMergeNode(self.labelMapNode)
 
