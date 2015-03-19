@@ -84,6 +84,7 @@ profiling = True
 frequent = False
 MAXNEEDLES = MAXCOL = 205 # we have no more than 205 distinct colors defines here for display
 conesColor=300 # color for visualizing the search cones in label volume (for debugging, None turns it off)
+conesColor=None
 
 #
 # NeedleFinder
@@ -227,6 +228,12 @@ class NeedleFinderWidget:
       selectionNode = slicer.app.applicationLogic().GetSelectionNode()
       selectionNode.SetReferenceActiveLabelVolumeID(self.labelMapNode.GetID())
       slicer.app.applicationLogic().PropagateVolumeSelection(0)
+      scRed=slicer.app.layoutManager().sliceWidget("Red").sliceController()
+      scRed.setLabelMapOpacity(.5)
+      scYel=slicer.app.layoutManager().sliceWidget("Yellow").sliceController()
+      scYel.setLabelMapOpacity(.5)
+      scGrn=slicer.app.layoutManager().sliceWidget("Green").sliceController()
+      scGrn.setLabelMapOpacity(.5)
     self.editorWidget.setMasterNode(vn)
     self.editorWidget.setMergeNode(self.labelMapNode)
 
