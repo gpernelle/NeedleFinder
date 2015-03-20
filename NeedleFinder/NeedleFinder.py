@@ -1366,7 +1366,7 @@ class NeedleFinderLogic:
     self.round = 1
     self.fiducialNode = None
     # widget.stepNeedle         = 0
-    self.ptNumber = 0
+    self.ptNumber = 1
     self.table = None
     self.view = None
     self.model = None
@@ -4325,7 +4325,7 @@ class NeedleFinderLogic:
         sRed.Modified()
         sRed.UpdateMatrices()
     elif self.ptNumber != 0:
-        self.ptNumber = 0
+        self.ptNumber = 1
         self.scrollPoint()
 
   def validationNeedle(self):
