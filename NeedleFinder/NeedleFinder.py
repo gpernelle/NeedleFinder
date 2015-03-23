@@ -2958,7 +2958,7 @@ class NeedleFinderLogic:
       if step == 0:
 
         L = self.stepSize13(step + 1, NbStepsNeedle + 1) * lenghtNeedle
-        L = self.stepSizeAndre(step + 1, NbStepsNeedle + 2) * lenghtNeedle #<<< not better
+        #L = self.stepSizeAndre(step + 1, NbStepsNeedle + 2) * lenghtNeedle #<<< not better
         #L=lenghtNeedle/NbStepsNeedle #<o><< equal step size: better!
         C0 = [A[0], A[1], A[2] - L /spacing[2]] #<<< /spacing[2] bugfix
         rMax = distanceMax / float(spacing[0])
@@ -2970,9 +2970,9 @@ class NeedleFinderLogic:
       else:
 
         stepSize = self.stepSize13(step + 1, NbStepsNeedle + 1) * lenghtNeedle
-        stepSize = self.stepSizeAndre(step + 1, NbStepsNeedle + 2) * lenghtNeedle #<<< not better
+        #stepSize = self.stepSizeAndre(step + 1, NbStepsNeedle + 2) * lenghtNeedle #<<< not better
         #stepSize=lenghtNeedle/NbStepsNeedle #<o><< equal step size: better!
-        print stepSize
+        print "stepSize: ",stepSize
 
         C0 = [ 2 * A[0] - tip0[0],
                     2 * A[1] - tip0[1],
