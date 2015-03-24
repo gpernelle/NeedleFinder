@@ -227,7 +227,7 @@ class NeedleFinderWidget:
     if not script: #TODO guess there is a bug here (at least while testing with parSearch): also changes the main volume!!
       selectionNode = slicer.app.applicationLogic().GetSelectionNode()
       selectionNode.SetReferenceActiveLabelVolumeID(self.labelMapNode.GetID())
-      slicer.app.applicationLogic().PropagateVolumeSelection(0)
+      #slicer.app.applicationLogic().PropagateVolumeSelection() #<<< slicer BUG, this line causes unpredictable main volume switching
       #set half transparency
       scRed=slicer.app.layoutManager().sliceWidget("Red").sliceController()
       scRed.setLabelMapOpacity(.5)
