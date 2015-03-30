@@ -2303,19 +2303,19 @@ class NeedleFinderLogic:
       labelData=None
     # select algo version
     if widget.algoVersParameter.value == 0:
-      self.needleDetectionThreadCurrentDev(A, imageData, colorVar, spacing, script, labelData)
+      self.needleDetectionThreadCurrentDev(A, imageData, colorVar, spacing, script, labelData, manualName=strName)
     elif widget.algoVersParameter.value == 1:
-      self.needleDetectionThread13_1(A, imageData, colorVar, spacing, script, labelData)
+      self.needleDetectionThread13_1(A, imageData, colorVar, spacing, script, labelData, manName=strName)
     elif widget.algoVersParameter.value == 2:
-      self.needleDetectionThread13_2(A, imageData, colorVar, spacing, script, labelData)
+      self.needleDetectionThread13_2(A, imageData, colorVar, spacing, script, labelData,manualName=strName)
     elif widget.algoVersParameter.value == 3:
-      self.needleDetectionThread13_3(A, imageData, labelData, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script, strName=strName)
+      self.needleDetectionThread13_3(A, imageData, labelData, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script, strManualName=strName)
     elif widget.algoVersParameter.value == 4:
-      self.needleDetectionThread13_4(A, imageData, labelData, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script, strName=strName)
+      self.needleDetectionThread13_4(A, imageData, labelData, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script, strManualName=strName)
     else:
       msgbox ("/!\ needleDetectionThread not defined")
 
-  def needleDetectionThreadCurrentDev(self, A, imageData, colorVar, spacing, script=False, imgLabelData=None):
+  def needleDetectionThreadCurrentDev(self, A, imageData, colorVar, spacing, script=False, imgLabelData=None, manualName=""):
     """
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region.
     The second extremity of this segment is saved as a control point (in controlPoints), used later.
@@ -2664,9 +2664,9 @@ class NeedleFinderLogic:
         break
 
     if not autoStopTip:
-      self.addNeedleToScene(self.controlPoints, colorVar, 'Detection', script)
+      self.addNeedleToScene(self.controlPoints, colorVar, 'Detection', script, manualName=manualName)
 
-  def needleDetectionThread13_1(self, A, imageData, colorVar, spacing, script=False, imgLabelData=None):
+  def needleDetectionThread13_1(self, A, imageData, colorVar, spacing, script=False, imgLabelData=None,manName=""):
     '''MICCAI2013 suspect version, 3/11/13
     iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
     https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
@@ -2896,9 +2896,9 @@ class NeedleFinderLogic:
 
     # self.addNeedleToScene(controlPoints,colorVar)
     if not autoStopTip:
-      self.addNeedleToScene(controlPoints, colorVar, 'Detection', script)
+      self.addNeedleToScene(controlPoints, colorVar, 'Detection', script,manualName=manName)
 
-  def needleDetectionThread13_2(self, A, imageData, colorVar, spacing, script=False, imgLabelData=None):
+  def needleDetectionThread13_2(self, A, imageData, colorVar, spacing, script=False, imgLabelData=None,manualName=""):
     '''MICCAI2013 suspect version, 3/11/13
     iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
     https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
@@ -3140,7 +3140,7 @@ class NeedleFinderLogic:
 
     # self.addNeedleToScene(controlPoints,colorVar)
     if not autoStopTip:
-      self.addNeedleToScene(controlPoints, colorVar, 'Detection', script)
+      self.addNeedleToScene(controlPoints, colorVar, 'Detection', script, manualName=manualName)
     print time.clock() - t0, "seconds process time"
 
   def addFiducialToScene(self, ijk, name, rgbColor=(1,1,0), glyphScale=2, textScale=2):
@@ -3159,7 +3159,7 @@ class NeedleFinderLogic:
     fid.GetDisplayNode().SetGlyphScale(glyphScale)
     fid.GetAnnotationTextDisplayNode().SetTextScale(textScale)
 
-  def needleDetectionThread13_3(self, ijkA, imgData, imgLabelData, lrasTempPoints, iColorVar, fvSpacing, bUp=False, bScript=False, strName="", tipOnly=False):
+  def needleDetectionThread13_3(self, ijkA, imgData, imgLabelData, lrasTempPoints, iColorVar, fvSpacing, bUp=False, bScript=False, strManualName="", tipOnly=False):
     '''MICCAI2013 version, 3/11/13
     iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
     https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
@@ -3177,9 +3177,9 @@ class NeedleFinderLogic:
     profprint()
     t0 = time.clock()
     msgbox("Detour: \!/ This site is under heavy construction. /!\ ")
-    
 
-  def needleDetectionThread13_4(self, ijkA, imgData, imgLabelData, lrasTempPoints, iColorVar, fvSpacing, bUp=False, bScript=False, strName=""):
+
+  def needleDetectionThread13_4(self, ijkA, imgData, imgLabelData, lrasTempPoints, iColorVar, fvSpacing, bUp=False, bScript=False, strManualName=""):
     '''MICCAI2013 version, 3/11/13
     iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
     https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
@@ -3212,16 +3212,16 @@ class NeedleFinderLogic:
     widget.axialSegmentationLimit, widget.axialSegmentationLimitRAS = self.findAxialSegmentationLimitFromMarker()
     # select algo version
     if widget.algoVersParameter.value == 0:
-      return self.needleDetectionUPThreadCurrentDev(A, imageData, colorVar, spacing, script=script, tipOnly=tipOnly)
+      return self.needleDetectionUPThreadCurrentDev(A, imageData, colorVar, spacing, script=script, tipOnly=tipOnly, manualName=strName)
     if widget.algoVersParameter.value == 1:
       msgbox ("/!\ needleDetectionUPThread N/A for algoVersion 1")
     if widget.algoVersParameter.value == 2:
       msgbox ("/!\ needleDetectionUPThread N/A for algoVersion 2")
     if widget.algoVersParameter.value == 3:
       if widget.labelMapNode:
-        return self.needleDetectionThread13_3(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, bUp=True, bScript=script, strName=strName)
+        return self.needleDetectionThread13_3(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, bUp=True, bScript=script, strManualName=strName)
       else:
-        return self.needleDetectionThread13_3(A, imageData, None, widget.tempPointList, colorVar, spacing, bUp=True, bScript=script, strName=strName)
+        return self.needleDetectionThread13_3(A, imageData, None, widget.tempPointList, colorVar, spacing, bUp=True, bScript=script, strManualName=strName)
     if widget.algoVersParameter.value == 4:
       if widget.labelMapNode:
         return self.needleDetectionThread13_4(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, bUp=True, bScript=script, strName=strName)
@@ -3230,7 +3230,7 @@ class NeedleFinderLogic:
     else: 
       msgbox ("/!\ needleDetectionUPThread not defined")
 
-  def needleDetectionUPThreadCurrentDev(self, A, imageData, colorVar, spacing, script=False, tipOnly=False):
+  def needleDetectionUPThreadCurrentDev(self, A, imageData, colorVar, spacing, script=False, tipOnly=False, manualName=""):
     """
     From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region.
     The second extremity of this segment is saved as a control point (in controlPoints), used later.
@@ -3564,7 +3564,7 @@ class NeedleFinderLogic:
 
     for i in range(len(controlPointsUP)):
       self.controlPoints.append(controlPointsUP[i])
-    if not tipOnly: self.addNeedleToScene(self.controlPoints, colorVar, 'Detection', script)
+    if not tipOnly: self.addNeedleToScene(self.controlPoints, colorVar, 'Detection', script,manualName=manualName)
     # print 'length:',tot
     return controlPointsIJK[-1] #return last control point as tip estimate
 
@@ -3684,7 +3684,7 @@ class NeedleFinderLogic:
         # print i
         pass
 
-  def addCSplineToScene(self, controlPoint, colorVar, needleType='Detection', endMarker=False, name="^", script=False):
+  def addCSplineToScene(self, controlPoint, colorVar, needleType='Detection', endMarker=False, name="^", script=False, manualName=""):
     """Adds visual needle representation as interpolating cardinal spline to the scene.
     Alternative to Bezier curves.
 
@@ -3778,7 +3778,7 @@ class NeedleFinderLogic:
     elif needleType == 'Obturator':
       model.SetName('.obturator-seg_' + str(colorVar))
     else:
-      model.SetName('.python-catch-round_' + str(self.round) + '-ID-' + str(model.GetID()))
+      model.SetName('.python-catch-round_' + str(self.round) + '-ID-' + str(model.GetID())+'-'+manualName)
     model.SetAttribute('type', needleType)
 
     if needleType == 'Validation':
@@ -3805,7 +3805,7 @@ class NeedleFinderLogic:
       textNode.SetTextScale(3)
       textNode.SetColor(0, 0, 0)
 
-  def addPolyLineToScene(self, controlPoint, colorVar, needleType='Detection',script=False, endMarker=False, name="^", trans=0):
+  def addPolyLineToScene(self, controlPoint, colorVar, needleType='Detection',script=False, endMarker=False, name="^", trans=0, manualName=""):
     """Just adds visual representation of linear (needle) segments to the scene.
     Useful for drawing the control polygon of a smooth curve.
 
@@ -3892,7 +3892,7 @@ class NeedleFinderLogic:
     elif needleType == 'Obturator':
       model.SetName('.obturator-seg_' + str(colorVar))
     else:
-      model.SetName('.python-catch-round_' + str(self.round) + '-ID-' + str(model.GetID()))
+      model.SetName('.python-catch-round_' + str(self.round) + '-ID-' + str(model.GetID())+'-'+manualName)
     model.SetAttribute('type', needleType)
 
     if needleType == 'Validation' or needleType =='Debug':
@@ -3919,7 +3919,7 @@ class NeedleFinderLogic:
       textNode.SetTextScale(1)
       textNode.SetColor(0, 0, 0)
 
-  def addNeedleToScene(self, controlPoint, colorVar, needleType='Detection', script=False, trans=0):
+  def addNeedleToScene(self, controlPoint, colorVar, needleType='Detection', script=False, trans=0, manualName=""):
     """Computes the Bezier's curve and adds visual representation of a needle to the scene
 
     :param controlPoint: array of RAS coordinates of points of a needle (used as control point for the Bezier's curve
@@ -4016,7 +4016,7 @@ class NeedleFinderLogic:
     elif needleType == 'Obturator':
       model.SetName('obturator-seg_' + str(colorVar))
     else:
-      model.SetName('python-catch-round_' + str(self.round) + '-ID-' + str(model.GetID()))
+      model.SetName('python-catch-round_' + str(self.round) + '-ID-' + str(model.GetID())+'-'+manualName)
     model.SetAttribute('type', needleType)
 
     self.lastNeedleNames.append(model.GetName())
@@ -4162,7 +4162,7 @@ class NeedleFinderLogic:
         for node in nodes.values():
           slicer.mrmlScene.RemoveNode(node)
       # rebuild report table
-      ID = name.lstrip('python-catch-round_').lstrip('manual-seg_').lstrip('obturator-seg_').lstrip('0123456789').lstrip('-ID-vtkMRMLModelNode')
+      ID = name.lstrip('python-catch-round_').lstrip('manual-seg_').lstrip('obturator-seg_').lstrip('0123456789').lstrip('-ID-vtkMRMLModelNode').rstrip('manual-seg_').rstrip('0123456789')
       print "needle ID: <%s>" % ID
       self.deleteNeedleFromTable(int(ID))
 
@@ -4409,7 +4409,7 @@ class NeedleFinderLogic:
     w = slicer.modules.NeedleFinderWidget
     l = w.logic
     if not variant:
-      l.exportEvaluation(['maxHD', 'avgHD', 'stdHD', 'medHD',
+      l.exportEvaluation(['user','maxTipHD','maxHD', 'avgHD', 'stdHD', 'medHD',
                         'nNeedles','nOutliers','outliers',
                         'radiusNeedle',
                         'lenghtNeedle',
@@ -4426,7 +4426,7 @@ class NeedleFinderLogic:
                         t.strftime("%d/%m/%Y"), t.strftime("%H:%M:%S")
                         ], fileName)
     else:
-      l.exportEvaluation(['HD', 'man.-seg_', 'ID1', 'ID2',
+      l.exportEvaluation(['tipHD','HD', 'man.-seg_', 'ID1', 'ID2',
                         'outlier?',
                         'radiusNeedle',
                         'lenghtNeedle',
@@ -4451,21 +4451,24 @@ class NeedleFinderLogic:
     profprint()
     w = slicer.modules.NeedleFinderWidget
     l = w.logic
-
-    path = [ 0 for i in range(100)]
-    path[24] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 24 NRRD/Manual/2013-02-25-Scene-without-CtrPt.mrml'
-    path[29] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 29 NRRD/Manual/2013-02-26-Scene-without-CtrPts.mrml'
-    path[30] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 30 NRRD/Manual/2013-02-26-Scene-without-CtrPt.mrml'
-    path[31] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 31 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
-    path[34] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 34 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
-    path[35] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 35 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
-    path[37] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 37 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
-    path[38] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 38 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
-    path[40] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 40 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+    
+    #Guillaumes files
+    if 0:
+      path = [ 0 for i in range(100)]
+      path[24] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 24 NRRD/Manual/2013-02-25-Scene-without-CtrPt.mrml'
+      path[29] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 29 NRRD/Manual/2013-02-26-Scene-without-CtrPts.mrml'
+      path[30] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 30 NRRD/Manual/2013-02-26-Scene-without-CtrPt.mrml'
+      path[31] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 31 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+      path[34] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 34 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+      path[35] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 35 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+      path[37] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 37 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+      path[38] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 38 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+      path[40] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 40 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
 
     #Andre's file system (case copies from AMIGO share)
     # stripped OTHER cases
-    if 1:
+    if 1: path[ 8] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  008/NRRD/Auto-Eval-LB/2013-05-07-Scene.mrml'
+    if 0:
       path = [ 0 for i in range(100)]
       path[ 8] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  008/NRRD/Auto-Eval-LB/2013-05-07-Scene.mrml'
       path[12] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  012/NRRD/Auto-Eval-LB/2013-04-22-Scene.mrml'
@@ -4476,7 +4479,7 @@ class NeedleFinderLogic:
       path[26] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  026/NRRD/Auto-Eval-LB/2013-04-17-Scene.mrml'
       path[27] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  027/NRRD/Auto-Eval-LB/2013-04-17-Scene.mrml'
     #stripped MICCAI13 cases (just manual seg. by LB/AM)
-    if 1:
+    if 0:
       path[24] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  024/NRRD/Auto-Eval-LB/2013-02-28-Scene.mrml'
       path[28] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  028/NRRD/Auto-Eval-LB/2013-02-28-Scene.mrml'
       path[29] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  029/NRRD/Auto-Eval-LB/2013-02-26-Scene.mrml'
@@ -4506,29 +4509,33 @@ class NeedleFinderLogic:
       filLog=open(dir+'/allog.tsv', 'w')
       #filLog.write("case\tman.-seg_\tiStep\tcrit\treject\tvalue\tlimit\n")
       filLog.close()
-      for id in range(100): #<o> range(100)
-        if path[id]:
-          w.caseNr=id
-          print "processing ", path[id]
-          self.writeTableHeader(dir+'/AP-' + str(id) + '.csv', 1)
-          slicer.mrmlScene.Clear(0)
-          slicer.util.loadScene(path[id])
-          # l.resetNeedleDetection(script=True) # ??? this resets the parameters to default
-          l.startValidation(script=True)
-          results, outliers = l.evaluate(script=True)  # calculate HD distances
-          l.exportEvaluation(results, dir+'/AP-' + str(id) + '.csv')
-          #slicer.util.saveScene(dir+'/AP-' + str(id) + '.mrb') # may use lots of disk space
-          # stats
-          HD = np.array(results)
-          # HD.shape = (int(len(results)/float(3)),3)
-          maxHD = HD[:, 0].max()
-          avgHD = HD[:, 0].mean()
-          stdHD = HD[:, 0].std()
-          sl = np.sort(HD[:, 0])
-          medHD = sl[sl.size / 2]
-          resultsEval = [maxHD, avgHD, stdHD, medHD]+[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
-          l.exportEvaluation(resultsEval, dir+'/AP-All_stats.csv')
-          #pause()
+      nUsers=3 #CONST
+      for user in range(nUsers): 
+        print "simulated user (offset): ",user
+        for id in range(100): #<o> range(100)
+          if path[id]:
+            w.caseNr=id
+            print "processing ", path[id]
+            self.writeTableHeader(dir+'/User-'+str(user)+'_AP-' + str(id) + '.csv', 1)
+            ##slicer.mrmlScene.Clear(0)
+            ##slicer.util.loadScene(path[id])
+            # l.resetNeedleDetection(script=True) # ??? this resets the parameters to default
+            l.startValidation(script=True, offset=user*50/nUsers)
+            results, outliers = l.evaluate(script=True)  # calculate HD distances
+            l.exportEvaluation(results, dir+'/User-'+str(user)+'_AP-' + str(id) + '.csv')
+            #slicer.util.saveScene(dir+'/AP-' + str(id) + '.mrb') # may use lots of disk space
+            # stats
+            HD = np.array(results)
+            # HD.shape = (int(len(results)/float(3)),3)
+            maxTipHD = HD[:, 0].max()
+            maxHD = HD[:, 1].max()
+            avgHD = HD[:, 1].mean()
+            stdHD = HD[:, 1].std()
+            sl = np.sort(HD[:, 1])
+            medHD = sl[sl.size / 2]
+            resultsEval = [user,maxTipHD, maxHD, avgHD, stdHD, medHD]+[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
+            l.exportEvaluation(resultsEval, dir+'/AP-All_stats.csv')
+            #pause()
       msgbox("parSearch mode 0 done, results in "+dir)
     elif mode == 1:
       id = 'Current'
@@ -4545,12 +4552,13 @@ class NeedleFinderLogic:
         # stats
         HD = np.array(results)
         # HD.shape = (int(len(results)/float(3)),3)
-        maxHD = HD[:, 0].max()
-        avgHD = HD[:, 0].mean()
-        stdHD = HD[:, 0].std()
-        sl = np.sort(HD[:, 0])
+        maxTipHD = HD[:, 0].max()
+        maxHD = HD[:, 1].max()
+        avgHD = HD[:, 1].mean()
+        stdHD = HD[:, 1].std()
+        sl = np.sort(HD[:, 1])
         medHD = sl[sl.size / 2]
-        resultsEval = [maxHD, avgHD, stdHD, medHD] +[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
+        resultsEval = [user,maxTipHD,maxHD, avgHD, stdHD, medHD] +[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
         l.exportEvaluation(resultsEval, dir+'/BF-' + str(id) + '_stats.csv')
         #pause()
       msgbox("parSearch mode 1 done, results in "+dir)
@@ -4578,13 +4586,14 @@ class NeedleFinderLogic:
             slicer.util.saveScene(dir+'/RS-' + str(id) + '.mrb') # may use lots of disk space
             # stats
             HD = np.array(results)
-            maxHD = HD[:, 0].max()
-            avgHD = HD[:, 0].mean()
-            stdHD = HD[:, 0].std()
-            sl = np.sort(HD[:, 0])
+            maxTipHD = HD[:, 0].max()
+            maxHD = HD[:, 1].max()
+            avgHD = HD[:, 1].mean()
+            stdHD = HD[:, 1].std()
+            sl = np.sort(HD[:, 1])
             medHD = sl[sl.size / 2]
-            resultsEval = [maxHD, avgHD, stdHD, medHD] +[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
-            l.exportEvaluation(resultsEval, dir+'/RS-' + str(id) + '_stats.csv')
+            resultsEval = [maxTipHD,maxHD, avgHD, stdHD, medHD] +[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
+            l.exportEvaluation(user,resultsEval, dir+'/RS-' + str(id) + '_stats.csv')
             # end = time.time()
             # print 'processing time: ', end-start
             # start = time.time()
@@ -5323,7 +5332,7 @@ class NeedleFinderLogic:
   """
   #----------------------------------------------------------------------------------------------
 
-  def returnTipsFromNeedleModels(self, type="Validation"):
+  def returnTipsFromNeedleModels(self, type="Validation", offset=0):
     """ Returns the IJK coordinates of the tips of manually segmented needle polygon models
     :return: array of IJK coordinates of validation needle tips
     """
@@ -5343,18 +5352,18 @@ class NeedleFinderLogic:
             if not polydata: breakbox("needle tube not found in scene")
             if polydata.GetNumberOfPoints() > 100:  # ??? this is risky when u have other models in the scene (not only neeedles(
                 if not widget.autoStopTip.isChecked():
-                  polydata.GetPoint(0, p)
-                  polydata.GetPoint(int(polydata.GetNumberOfPoints() - 1), pbis)
+                  polydata.GetPoint(0+offset, p)
+                  polydata.GetPoint(int(polydata.GetNumberOfPoints() - 1 - offset), pbis)
                   if pbis[2] > p[2]:
                       p = pbis
                 else:
-                  # get a point from the middle of the needle shaft polygon model
-                  polydata.GetPoint(int(polydata.GetNumberOfPoints() / 2), p)
+                  # get a point from the middle (low=/4, high=/4*3) of the needle shaft polygon model
+                  polydata.GetPoint(int(polydata.GetNumberOfPoints() / 2)+ offset, p) #CONST
                 returnTips.append(self.ras2ijk(p))
                 names.append(node.GetName())
     return returnTips, names
 
-  def startValidation(self, script=False):
+  def startValidation(self, script=False, offset=0):
     """Start the evaluation process:
     * Calls returnTipsFromNeedleModels() to build an array of the tip of manually segmented needles
     * Use theses tips to generate auto segmented needles
@@ -5367,7 +5376,7 @@ class NeedleFinderLogic:
     profprint()
     widget = slicer.modules.NeedleFinderWidget
     self.deleteNeedleDetectionModelsFromScene()
-    tips, names = self.returnTipsFromNeedleModels()
+    tips, names = self.returnTipsFromNeedleModels(offset=offset)
     # delete old needles as they will be recalculated
     self.deleteAllAutoNeedlesFromScene()
     # select the image node from the Red slice viewer
@@ -5392,11 +5401,11 @@ class NeedleFinderLogic:
         t = self.evaluate()
         print '----------Alg.#%d---------'%widget.algoVersParameter.value
         print 'New HD Validation Results:'
-        print 'i\tman.-seg_\tHD [mm]'
+        print 'i\tman.-seg_\ttipHD [mm]\tHD [mm]'
         for i in range(len(t)):
-          try: strI=str(int(t[i][1]))
-          except: strI=str(t[i][1])
-          print i,'\t', strI,'\t',t[i][0]
+          try: strI=str(int(t[i][2]))
+          except: strI=str(t[i][2])
+          print i,'\t', strI,'\t',t[i][0],'\t',t[i][1]
         print '=========================='
 
   def placeAxialLimitMarker(self, assign=True):
@@ -5644,9 +5653,9 @@ class NeedleFinderLogic:
       try: needleNrFromFilename=int(result[i][3].strip('manual-seg_'))
       except: needleNrFromFilename=-1
       if script == True:
-        results = [float(val), int(needleNrFromFilename), int(result[i][1].strip('vtkMRMLModelNode')), int(result[i][2].strip('vtkMRMLModelNode'))]+[val>outlierThresh_mm] + self.valuesExperience
+        results = [result[i][0], float(val), int(needleNrFromFilename), int(result[i][1].strip('vtkMRMLModelNode')), int(result[i][2].strip('vtkMRMLModelNode'))]+[val>outlierThresh_mm] + self.valuesExperience
       else:
-        results = [float(val), int(needleNrFromFilename), int(result[i][1].strip('vtkMRMLModelNode')), int(result[i][2].strip('vtkMRMLModelNode'))]+[val>outlierThresh_mm]
+        results = [result[i][0], float(val), int(needleNrFromFilename), int(result[i][1].strip('vtkMRMLModelNode')), int(result[i][2].strip('vtkMRMLModelNode'))]+[val>outlierThresh_mm]
       HD.append(results)
       if val>outlierThresh_mm: outliers.append(needleNrFromFilename) #CONST 4 mm
     if script == False:
@@ -5655,7 +5664,7 @@ class NeedleFinderLogic:
       return HD, outliers
 
   def distTip(self, id1, id2):
-    """ Returns the axial distance between the tip of two needles
+    """ Returns the distance between the tip of two needles
 
     :param id1: ID number for the needle 1 (vtkMRMLModelNode)
     :param id2: ID number for the needle 2 (vtkMRMLModelNode)
@@ -5670,7 +5679,7 @@ class NeedleFinderLogic:
     p, pbis = [0, 0, 0], [0, 0, 0]
     p2 = [0, 0, 0]
     p2bis = [0, 0, 0]
-    axialDistance = []
+    tipDistance = []
     for i in range(100):
         polydata.GetPoint(i, p)
         polydata.GetPoint(2499 - i, pbis)
@@ -5680,8 +5689,8 @@ class NeedleFinderLogic:
         polydata2.GetPoint(i, p2bis)
         if p2bis[2] > p2[2]:
           p2 = p2bis
-        axialDistance.append(((p2[0] - p[0]) ** 2 + (p2[1] - p[1]) ** 2 + (p2[2] - p[2]) ** 2) ** 0.5)
-    return min(axialDistance)
+        tipDistance.append(((p2[0] - p[0]) ** 2 + (p2[1] - p[1]) ** 2 + (p2[2] - p[2]) ** 2) ** 0.5)
+    return min(tipDistance)
 
   def needleMatching(self):
     """This functions associates manually segmented needles to their automatically segmented version. To do so,
@@ -5710,12 +5719,11 @@ class NeedleFinderLogic:
             if node2.GetID() not in found and node2.GetAttribute('type') == 'Validation':
               polydata2 = node2.GetPolyData()
               if polydata2 != None and polydata2.GetNumberOfPoints() > 100 and polydata.GetNumberOfPoints() > 100:
-
-                axialDistance = self.distTip(int(node.GetID().strip('vtkMRMLModelNode')) , int(node2.GetID().strip('vtkMRMLModelNode')))
-
-                dist.append([axialDistance, node2.GetID(), node2.GetName()])
-                # print axialDistance
-
+                tipDistance = self.distTip(int(node.GetID().strip('vtkMRMLModelNode')) , int(node2.GetID().strip('vtkMRMLModelNode')))
+                name = node.GetName()
+                manualName = name.lstrip('python-catch-round_').lstrip('manual-seg_').lstrip('obturator-seg_').lstrip('0123456789').lstrip('-ID-vtkMRMLModelNode').lstrip('0123456789-')
+                if manualName==node2.GetName(): dist.append([tipDistance, node2.GetID(), node2.GetName()])
+                # print tipDistance
           if dist != []:
             match = [min(dist)[0], min(dist)[1], node.GetID(), min(dist)[2]]
             result.append(match)
