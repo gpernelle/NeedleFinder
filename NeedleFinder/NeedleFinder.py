@@ -176,6 +176,7 @@ class NeedleFinderWidget:
     self.addManualTipClicks = 2
     self.obturatorNeedleTipClicks = 3
     self.caseNr = 0
+    self.userNr = 0
     self.logDir='/tmp' #TODO this is not windows compatible
 
     # keep list of pairs: [observee,tag] so they can be removed easily
@@ -3177,7 +3178,7 @@ class NeedleFinderLogic:
     profprint()
     t0 = time.clock()
     msgbox("Detour: \!/ This site is under heavy construction. /!\ ")
-
+    
 
   def needleDetectionThread13_4(self, ijkA, imgData, imgLabelData, lrasTempPoints, iColorVar, fvSpacing, bUp=False, bScript=False, strManualName=""):
     '''MICCAI2013 version, 3/11/13
@@ -4409,7 +4410,7 @@ class NeedleFinderLogic:
     w = slicer.modules.NeedleFinderWidget
     l = w.logic
     if not variant:
-      l.exportEvaluation(['user','maxTipHD','maxHD', 'avgHD', 'stdHD', 'medHD',
+      l.exportEvaluation(['user','case','maxTipHD','maxHD', 'avgHD', 'stdHD', 'medHD',
                         'nNeedles','nOutliers','outliers',
                         'radiusNeedle',
                         'lenghtNeedle',
@@ -4426,7 +4427,7 @@ class NeedleFinderLogic:
                         t.strftime("%d/%m/%Y"), t.strftime("%H:%M:%S")
                         ], fileName)
     else:
-      l.exportEvaluation(['tipHD','HD', 'man.-seg_', 'ID1', 'ID2',
+      l.exportEvaluation(['user','case','tipHD','HD', 'man.-seg_', 'ID1', 'ID2',
                         'outlier?',
                         'radiusNeedle',
                         'lenghtNeedle',
@@ -4451,10 +4452,9 @@ class NeedleFinderLogic:
     profprint()
     w = slicer.modules.NeedleFinderWidget
     l = w.logic
+    path = [ 0 for i in range(100)]
     
-    #Guillaumes files
     if 0:
-      path = [ 0 for i in range(100)]
       path[24] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 24 NRRD/Manual/2013-02-25-Scene-without-CtrPt.mrml'
       path[29] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 29 NRRD/Manual/2013-02-26-Scene-without-CtrPts.mrml'
       path[30] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 30 NRRD/Manual/2013-02-26-Scene-without-CtrPt.mrml'
@@ -4467,9 +4467,8 @@ class NeedleFinderLogic:
 
     #Andre's file system (case copies from AMIGO share)
     # stripped OTHER cases
-    if 1: path[ 8] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  008/NRRD/Auto-Eval-LB/2013-05-07-Scene.mrml'
+    if 1: path[33] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  033/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
     if 0:
-      path = [ 0 for i in range(100)]
       path[ 8] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  008/NRRD/Auto-Eval-LB/2013-05-07-Scene.mrml'
       path[12] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  012/NRRD/Auto-Eval-LB/2013-04-22-Scene.mrml'
       path[16] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  016/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
@@ -4490,8 +4489,7 @@ class NeedleFinderLogic:
       path[37] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  037/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
       path[38] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  038/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
       path[40] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  040/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
-    #end Miccai13 cases
-    # show a directory selector for saving the results
+    #show a directory selector for saving the results
     self.dirDialog = qt.QFileDialog(w.parent)
     self.dirDialog.setDirectory('/tmp')
     self.dirDialog.options = self.dirDialog.ShowDirsOnly
@@ -4509,19 +4507,21 @@ class NeedleFinderLogic:
       filLog=open(dir+'/allog.tsv', 'w')
       #filLog.write("case\tman.-seg_\tiStep\tcrit\treject\tvalue\tlimit\n")
       filLog.close()
-      nUsers=3 #CONST
+      nUsers=2 #CONST
       for user in range(nUsers): 
+        w.userNr=user
         print "simulated user (offset): ",user
         for id in range(100): #<o> range(100)
           if path[id]:
             w.caseNr=id
             print "processing ", path[id]
             self.writeTableHeader(dir+'/User-'+str(user)+'_AP-' + str(id) + '.csv', 1)
-            ##slicer.mrmlScene.Clear(0)
-            ##slicer.util.loadScene(path[id])
-            # l.resetNeedleDetection(script=True) # ??? this resets the parameters to default
+            slicer.mrmlScene.Clear(0)
+            slicer.util.loadScene(path[id])
             l.startValidation(script=True, offset=user*50/nUsers)
             results, outliers = l.evaluate(script=True)  # calculate HD distances
+            for result in results:
+              result[0:0]=[user,id]
             l.exportEvaluation(results, dir+'/User-'+str(user)+'_AP-' + str(id) + '.csv')
             #slicer.util.saveScene(dir+'/AP-' + str(id) + '.mrb') # may use lots of disk space
             # stats
@@ -4533,7 +4533,7 @@ class NeedleFinderLogic:
             stdHD = HD[:, 1].std()
             sl = np.sort(HD[:, 1])
             medHD = sl[sl.size / 2]
-            resultsEval = [user,maxTipHD, maxHD, avgHD, stdHD, medHD]+[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
+            resultsEval = [user,id,maxTipHD, maxHD, avgHD, stdHD, medHD]+[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
             l.exportEvaluation(resultsEval, dir+'/AP-All_stats.csv')
             #pause()
       msgbox("parSearch mode 0 done, results in "+dir)
@@ -4547,6 +4547,8 @@ class NeedleFinderLogic:
         w.numberOfPointsPerNeedle.setValue(i)  # change parameter control points
         l.startValidation(script=True)
         results, outliers = l.evaluate(script=True)  # calculate HD distances
+        for result in results:
+          result[0:0]=[user,id]
         l.exportEvaluation(results, dir+'/BF-' + str(id) + '.csv')
         slicer.util.saveScene(dir+'/BF-' + str(id) + '.mrb') # may use lots of disk space
         # stats
@@ -4558,7 +4560,7 @@ class NeedleFinderLogic:
         stdHD = HD[:, 1].std()
         sl = np.sort(HD[:, 1])
         medHD = sl[sl.size / 2]
-        resultsEval = [user,maxTipHD,maxHD, avgHD, stdHD, medHD] +[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
+        resultsEval = [user,id,maxTipHD,maxHD, avgHD, stdHD, medHD] +[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
         l.exportEvaluation(resultsEval, dir+'/BF-' + str(id) + '_stats.csv')
         #pause()
       msgbox("parSearch mode 1 done, results in "+dir)
@@ -4582,6 +4584,8 @@ class NeedleFinderLogic:
             w.numberOfPointsPerNeedle.setValue(np.random.randint(3, 11))
             l.startValidation(script=True)
             results, outliers = l.evaluate(script=True)  # calculate HD distances
+            for result in results:
+              result[0:0]=[user,id]
             l.exportEvaluation(results, dir+'/RS-' + str(id) + '.csv')
             slicer.util.saveScene(dir+'/RS-' + str(id) + '.mrb') # may use lots of disk space
             # stats
@@ -4592,8 +4596,8 @@ class NeedleFinderLogic:
             stdHD = HD[:, 1].std()
             sl = np.sort(HD[:, 1])
             medHD = sl[sl.size / 2]
-            resultsEval = [maxTipHD,maxHD, avgHD, stdHD, medHD] +[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
-            l.exportEvaluation(user,resultsEval, dir+'/RS-' + str(id) + '_stats.csv')
+            resultsEval = [user,id,maxTipHD,maxHD, avgHD, stdHD, medHD] +[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
+            l.exportEvaluation(resultsEval, dir+'/RS-' + str(id) + '_stats.csv')
             # end = time.time()
             # print 'processing time: ', end-start
             # start = time.time()
