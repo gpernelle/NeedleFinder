@@ -3179,22 +3179,6 @@ class NeedleFinderLogic:
     t0 = time.clock()
     msgbox("Detour: \!/ This site is under heavy construction. /!\ ")
     
-
-  def needleDetectionThread13_4(self, ijkA, imgData, imgLabelData, lrasTempPoints, iColorVar, fvSpacing, bUp=False, bScript=False, strManualName=""):
-    '''MICCAI2013 version, 3/11/13
-    iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
-    https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
-
-    >>> Stripped deployment version: Andre's bug fixes & experiments here: e.g. use additional user information to fix outliers.
-    >>> \!/ This site is under heavy construction. /!\
-    From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region.
-    The second extremity of this segment is saved as a control point (in lvControlPointsRAS), used later.
-    Then, this iStep is iterated, replacing the needle tip by the latest control point.
-    The height of the new conic region (stepsize) is increased as well as its base diameter (iRMax) and its normal is collinear to the previous computed segment. (cf. ijkB)
-    nStepsNeedle iterations give nStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip.
-    From these nStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
-    '''
-    msgbox("NYI")
     
   #------------------------------------------------------------------------------
   #
@@ -4467,8 +4451,8 @@ class NeedleFinderLogic:
 
     #Andre's file system (case copies from AMIGO share)
     # stripped OTHER cases
-    if 1: path[33] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  033/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
-    if 0:
+    if 0: path[33] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  033/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
+    if 1:
       path[ 8] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  008/NRRD/Auto-Eval-LB/2013-05-07-Scene.mrml'
       path[12] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  012/NRRD/Auto-Eval-LB/2013-04-22-Scene.mrml'
       path[16] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  016/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
@@ -4507,7 +4491,7 @@ class NeedleFinderLogic:
       filLog=open(dir+'/allog.tsv', 'w')
       #filLog.write("case\tman.-seg_\tiStep\tcrit\treject\tvalue\tlimit\n")
       filLog.close()
-      nUsers=2 #CONST
+      nUsers=3 #CONST
       for user in range(nUsers): 
         w.userNr=user
         print "simulated user (offset): ",user
@@ -4527,11 +4511,11 @@ class NeedleFinderLogic:
             # stats
             HD = np.array(results)
             # HD.shape = (int(len(results)/float(3)),3)
-            maxTipHD = HD[:, 0].max()
-            maxHD = HD[:, 1].max()
-            avgHD = HD[:, 1].mean()
-            stdHD = HD[:, 1].std()
-            sl = np.sort(HD[:, 1])
+            maxTipHD = HD[:, 2].max()
+            maxHD = HD[:, 3].max()
+            avgHD = HD[:, 3].mean()
+            stdHD = HD[:, 3].std()
+            sl = np.sort(HD[:, 3])
             medHD = sl[sl.size / 2]
             resultsEval = [user,id,maxTipHD, maxHD, avgHD, stdHD, medHD]+[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
             l.exportEvaluation(resultsEval, dir+'/AP-All_stats.csv')
@@ -4554,11 +4538,11 @@ class NeedleFinderLogic:
         # stats
         HD = np.array(results)
         # HD.shape = (int(len(results)/float(3)),3)
-        maxTipHD = HD[:, 0].max()
-        maxHD = HD[:, 1].max()
-        avgHD = HD[:, 1].mean()
-        stdHD = HD[:, 1].std()
-        sl = np.sort(HD[:, 1])
+        maxTipHD = HD[:, 2].max()
+        maxHD = HD[:, 3].max()
+        avgHD = HD[:, 3].mean()
+        stdHD = HD[:, 3].std()
+        sl = np.sort(HD[:, 3])
         medHD = sl[sl.size / 2]
         resultsEval = [user,id,maxTipHD,maxHD, avgHD, stdHD, medHD] +[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
         l.exportEvaluation(resultsEval, dir+'/BF-' + str(id) + '_stats.csv')
@@ -4590,11 +4574,11 @@ class NeedleFinderLogic:
             slicer.util.saveScene(dir+'/RS-' + str(id) + '.mrb') # may use lots of disk space
             # stats
             HD = np.array(results)
-            maxTipHD = HD[:, 0].max()
-            maxHD = HD[:, 1].max()
-            avgHD = HD[:, 1].mean()
-            stdHD = HD[:, 1].std()
-            sl = np.sort(HD[:, 1])
+            maxTipHD = HD[:, 2].max()
+            maxHD = HD[:, 3].max()
+            avgHD = HD[:, 3].mean()
+            stdHD = HD[:, 3].std()
+            sl = np.sort(HD[:, 3])
             medHD = sl[sl.size / 2]
             resultsEval = [user,id,maxTipHD,maxHD, avgHD, stdHD, medHD] +[len(results)]+[len(outliers)] +[str(outliers)]+ l.valuesExperience + [id]
             l.exportEvaluation(resultsEval, dir+'/RS-' + str(id) + '_stats.csv')
