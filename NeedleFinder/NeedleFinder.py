@@ -824,6 +824,7 @@ class NeedleFinderWidget:
       if sum(coord): 
         self.logic.controlPoints=[] #delete old control points from previous try
         ijkTipEstimate=self.logic.needleDetectionUPThread(ijk, imageData, colorVar, spcg, tipOnly=False,strName=".tempN",script=True)
+        rasTipEstimate=self.logic.ijk2ras(ijkTipEstimate)
       print "moving temp markers to new segment"
       tempFidNodes = slicer.mrmlScene.GetNodesByName('.tip? [Ctrl+y/n/u]')
       # if fiducial exists, move it to new location
@@ -847,7 +848,7 @@ class NeedleFinderWidget:
       slYel=slicer.app.layoutManager().sliceWidget("Yellow").sliceLogic()
       #slGrn=slicer.app.layoutManager().sliceWidget("Green").sliceLogic()
       node=slicer.util.getNode('*.tempN')
-      if node: self.logic.reformatCoronalView4Needle(node.GetID().lstrip('vtkMRMLModelNode'))
+      if node: self.logic.reformatCoronalView4NeedleSegment(rasPrevTip,rasTipEstimate) #(base=[],tip=[],ID=node.GetID().lstrip('vtkMRMLModelNode'))
       kx=1+ijkTipEstimate[2]
       print "z slice off.: ",(kx-1)*spcg[2]+org[2]
       slRed.SetSliceOffset((kx-1)*spcg[2]+org[2])
@@ -1181,9 +1182,10 @@ class NeedleFinderWidget:
                   print "needle detection upwards"
                   self.logic.controlPoints=[] #delete old control points from previous try
                   ijkTipEstimate=logic.needleDetectionUPThread(ijk, imageData, colorVar, spcg, tipOnly=False,strName=".tempN",script=True)
+                  rasTipEstimate=logic.ijk2ras(ijkTipEstimate)
                   kx=1+ijkTipEstimate[2]
                   node=slicer.util.getNode('*.tempN')
-                  if node: logic.reformatCoronalView4Needle(node.GetID().lstrip('vtkMRMLModelNode'))
+                  if node: logic.reformatCoronalView4NeedleSegment(ras,rasTipEstimate)#node.GetID().lstrip('vtkMRMLModelNode'))
                 #org=[0,0,0]
                 #update slice positions
                 print "z slice off.: ",(kx-1)*spcg[2]+org[2]
@@ -5363,22 +5365,23 @@ class NeedleFinderLogic:
     sw.fitSliceToBackground()
     sYellow.Modified()
 
-  def reformatCoronalView4Needle(self, ID):
+  def reformatCoronalView4NeedleSegment(self, base, tip, ID=-1):
     """
     Reformat the coronal view to be tangent to the needle.
     """
     #research
     profprint()
     for i in range(2):  # workaround update problem
-      modelNode = slicer.util.getNode('vtkMRMLModelNode' + str(ID))
-      polyData = modelNode.GetPolyData()
-      nb = polyData.GetNumberOfPoints()
-      base = [0, 0, 0]
-      tip = [0, 0, 0]
-      polyData.GetPoint(nb - 1, tip)
-      polyData.GetPoint(0, base)
+      if ID >=0:
+        modelNode = slicer.util.getNode('vtkMRMLModelNode' + str(ID))
+        polyData = modelNode.GetPolyData()
+        nb = polyData.GetNumberOfPoints()
+        base = [0, 0, 0]
+        tip = [0, 0, 0]
+        polyData.GetPoint(nb - 1, tip)
+        polyData.GetPoint(0, base)
       a, b, c = tip[0] - base[0], tip[1] - base[1], tip[2] - base[2]
-  
+    
       sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
       if sGreen == None :
         sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode3")
