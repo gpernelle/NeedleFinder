@@ -85,7 +85,7 @@ def getClassName(self):
 profiling = True
 #if profiling: msgbox("turned on")
 frequent = False
-MAXNEEDLES = MAXCOL = 205 # we have no more than 205 distinct colors defines here for display
+MAXNEEDLES = MAXCOL = 206 # we have no more than 206 distinct colors defines here for display
 conesColor=300 # color for visualizing the search cones in label volume (for debugging, None turns it off)
 conesColor=None
 outlierThresh_mm=4 #or 2mm
@@ -2398,9 +2398,7 @@ class NeedleFinderLogic:
     elif widget.algoVersParameter.value == 2:
       self.needleDetectionThread13_2(A, imageData, colorVar, spacing, script, labelData,manualName=strName)
     elif widget.algoVersParameter.value == 3:
-      self.needleDetectionThread13_3(A, imageData, labelData, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script, strManualName=strName)
-    elif widget.algoVersParameter.value == 4:
-      self.needleDetectionThread15(A, imageData, labelData, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script, strManualName=strName)
+      self.needleDetectionThread15_1(A, imageData, labelData, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script, strManualName=strName)
     else:
       msgbox ("/!\ needleDetectionThread not defined")
 
@@ -2767,7 +2765,7 @@ class NeedleFinderLogic:
     NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip.
     From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
     '''
-    # productive #probablyMiccai
+    # productive #probablyMiccai13
     profprint()
     global conesColor
     if conesColor: conesColor=(conesColor+1)%308;
@@ -3001,7 +2999,7 @@ class NeedleFinderLogic:
     NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip.
     From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
     '''
-    #productive #probablyMiccai #smallChanges
+    #productive #probablyMiccai13 #smallChanges
     profprint()
     t0 = time.clock()
     global conesColor
@@ -3248,9 +3246,9 @@ class NeedleFinderLogic:
     fid.GetDisplayNode().SetGlyphScale(glyphScale)
     fid.GetAnnotationTextDisplayNode().SetTextScale(textScale)
 
-  def needleDetectionThread13_3(self, ijkA, imgData, imgLabelData, lrasTempPoints, iColorVar, fvSpacing, bUp=False, bScript=False, strManualName="", tipOnly=False):
-    '''MICCAI2013 version, 3/11/13
-    iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
+  def needleDetectionThread15_1(self, ijkA, imgData, imgLabelData, lrasTempPoints, iColorVar, fvSpacing, bUp=False, bScript=False, strManualName="", tipOnly=False):
+    '''MICCAI2015 version, 4/16/15
+    based on iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
     https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
 
     >>> Developers version: Andre's bug fixes & experiments here: e.g. use additional user information to fix outliers.
@@ -3266,8 +3264,402 @@ class NeedleFinderLogic:
     profprint()
     t0 = time.clock()
     bDraw=True
-    msgbox("Detour: \!/ This site is under heavy construction. /!\ ")
-    
+    #msgbox("Detour: \!/ This site is under heavy construction. /!\ ")
+    widget = slicer.modules.NeedleFinderWidget
+    print "\n"*10 #<<< fast forward in console to create visual break
+    # ## load parameters from GUI
+    iRadiusMax_mm = widget.radiusMax.value
+    iGradientPonderation = widget.gradientPonderation.value
+    iSigmaValue = widget.sigmaValue.value
+    bGaussianAttenuation = widget.gaussianAttenuationButton.isChecked()
+    bGradient = widget.gradient.isChecked()
+    nPointsPerNeedle = widget.numberOfPointsPerNeedle.value
+    nRotatingIts = widget.nbRotatingIterations.value
+    iRadiusNeedle_mm = widget.radiusNeedleParameter.value
+    iAxialSegmentationLimit = widget.axialSegmentationLimit
+    bAutoStopTip = widget.autoStopTip.isChecked()
+    global conesColor
+    if conesColor: conesColor=(conesColor+1)%308;
+    if conesColor==0: conesColor=300
+    print "conesColor= ", conesColor
+    ### initialisation of some parameters
+    fModelNeedleLength_mm=187
+    fModelSegmentLength_mm=fModelNeedleLength_mm/20.
+    fK=2*np.pi*2050/(1000.) # 18 gauge brachy needle
+    # refactored local functions:
+    def norm(fv):
+        return np.sqrt(np.dot(fv,fv))
+    def normalized(fv):
+        fLen=np.sqrt(np.dot(fv,fv))
+        return fv/fLen, fLen
+    def defLocalNeedleCooSys(fvX, fvY, fvZ, iStep, rasA, rasDeflectionDirection, rasNeedlePlaneNormal,bDraw=False):
+        rasSegmentVector=rasA-rasAPrev
+        fLenSV=norm(rasSegmentVector)
+        rasSegmentVector1=rasSegmentVector/fLenSV
+        fAngleZvSeg_rad=np.arccos(np.dot(fvZ,rasSegmentVector1))
+        if not rasNeedlePlaneNormal.any(): rasNeedlePlaneNormal = np.cross(rasSegmentVector1,fvZ)
+        if np.arccos(np.dot(rasNeedlePlaneNormal,fvX))>np.pi/2: rasNeedlePlaneNormal*=-1 # check vector direction and turn if not in rhs normal X direction
+        if not sum(rasNeedlePlaneNormal):
+          rasNeedlePlaneNormal=np.cross(fvY,fvZ)
+        fLenNPN = norm(rasNeedlePlaneNormal)
+        rasNeedlePlaneNormal1=rasNeedlePlaneNormal/fLenNPN
+        if not rasDeflectionDirection.any(): rasDeflectionDirection=  \
+          +   np.cross(fvZ,rasNeedlePlaneNormal1) #TODO / CAVE: mind the sign
+        if np.arccos(np.dot(rasDeflectionDirection,fvY))>np.pi/2: rasDeflectionDirection*=-1 # check vector direction and turn for RHS
+        fLenDD=norm(rasDeflectionDirection)
+        rasDeflectionDirection1=rasDeflectionDirection/fLenDD
+        #re-estimate reference needle direction  #TODO/CAVE: mind the sign
+        if 1:
+          fvZ=    +     np.cross(rasNeedlePlaneNormal1,rasDeflectionDirection1)
+          fvZ/=norm(fvZ)
+        return rasDeflectionDirection1, rasNeedlePlaneNormal1, fvZ
+    def initNeedleModel(fAngleRefNeedle_rad, fEstNeedleLength_mm, fvZ, rasA, bDraw=False):
+        rasAPrev2A=rasA-rasAPrev; rasAPrev2A/=norm(rasAPrev2A)
+        fAngleLongSegVZ_rad=np.arccos(np.dot(fvZ,rasAPrev2A))
+        fEstDeflection_mm=fEstNeedleLength_mm*1/np.cos(fAngleRefNeedle_rad)*np.sin(fAngleLongSegVZ_rad) # estimate deflection as from z-axis
+        # look up the needle length model matrices and find best matches
+        faArcLen_mm=zip(*matArcLen_mm)[0] #transpose
+        ixArcLenColMin=find_nearest(faArcLen_mm,fEstNeedleLength_mm)[0]
+        # estimator using est. deflection
+        faYDefl_mm=matYDefl_mm[ixArcLenColMin] #zip(*matYDefl_mm)[ixArcLenColMin] #transpose
+        ixYDeflRowMin=find_nearest(faYDefl_mm,fEstDeflection_mm)[0]
+        fEstF0_mmN=matFs_mN[ixArcLenColMin][ixYDeflRowMin]/1000
+        fEstEndSegAngle_rad=matEndSegAngles_rad[ixArcLenColMin][ixYDeflRowMin]
+        fSumAngle_rad=fEstEndSegAngle_rad
+        fF_mmN=fEstF0_mmN #*np.cos(fSumAngle_rad)/(np.pi) #estimate
+        return fF_mmN, fSumAngle_rad
+    def runNeedleModel(fStepAngle_rad, fF_mmN, fStepSize_mm, fvZ, iModelIt, rasDeflectionDirection1, fSumAngle_rad, rasB, bDraw=False):
+        rasModelStepVector=rasDeflectionDirection1*np.sin(fSumAngle_rad)+fvZ*np.cos(fSumAngle_rad)
+        rasEstStepVector1=rasModelStepVector/norm(rasModelStepVector)
+        rasBDef=rasB
+        rasB=rasA  +   rasEstStepVector1*fStepSize_mm # TODO check sign, and if this still makes sense
+        fDistBDef2BMod=norm(rasBDef-rasB)
+        fMaxDistBDef2BMod_mm=0 #.25 # CONST
+        if 1 and fDistBDef2BMod>fMaxDistBDef2BMod_mm:
+          #compromise between model and heuristic based default vector
+          rasBDef2BMod=rasB-rasBDef; rasBDef2BMod1, fDistBDef2BMod_mm=normalized(rasBDef2BMod)
+          rasB=rasBDef+rasBDef2BMod1*min(fMaxDistBDef2BMod_mm,fDistBDef2BMod_mm/2.)
+        fAngleMultiSegments_rad=0
+        if fStepSize_mm/fModelSegmentLength_mm < 1: iFineStep=5; print "# fine steps "
+        else: iFineStep=1; print "normal steps"
+        for j in range(0, int(round(fStepSize_mm/(fModelSegmentLength_mm/iFineStep)))):
+          fF_mmN=fF_mmN/np.cos(fSumAngle_rad)
+          fStepAngle_rad=fF_mmN/(fK*iFineStep); angle_deg=np.degrees(fStepAngle_rad)
+          fSumAngle_rad-=fStepAngle_rad; fSumAngle_deg=np.degrees(fSumAngle_rad)
+          if fSumAngle_rad<0: fStepAngle_rad=fSumAngle_rad=0;# TODO check this
+          fAngleMultiSegments_rad+=fStepAngle_rad
+          iModelIt+=1
+        fAngleMultiSegments_deg=np.degrees(fAngleMultiSegments_rad)
+        return fF_mmN, fAngleMultiSegments_deg, rasEstStepVector1, fSumAngle_deg, rasB
+    def find_nearest(t,x):
+      from bisect import bisect_left
+      i = bisect_left(t, x)
+      if i==len(t): i-=1
+      if t[i] - x > 0.5:
+        i-=1
+      return i,t[i]
+    ijkAPrev=rasCBestPrev=ijkCBest=ijkCBestPrev=None
+    rasA2CBestInit=[]
+    rasA2CBest=rasCBestPrev2CBest=rasCBestPrev2CBestPrev1=np.array([])
+    ijk = [0, 0, 0]
+    fLabel = None
+    if not bScript: widget.createAddOrSelectLabelMapNode(bScript) #<<< always have label map to draw search cones
+    #widget.clearLabelMap()
+
+    if iAxialSegmentationLimit != None:
+      fEstNeedleLength_mm = abs(ijkA[2] - iAxialSegmentationLimit) * 1.15 * fvSpacing[2] #<<< CONST was 1.15
+    else:
+      fEstNeedleLength_mm = ijkA[2] * 0.9 * fvSpacing[2] # CONST
+    #load external needle model matrices (variable = file name)
+    sourceDir=slicer.util.modulePath('NeedleFinder').rstrip('NeedleFinder.py')
+    execfile(sourceDir+"matFs_mN.py") in locals()
+    execfile(sourceDir+"matArcLen_mm.py") in locals()
+    execfile(sourceDir+"matYDefl_mm.py") in locals()
+    execfile(sourceDir+"matEndSegAngles_rad.py") in locals()
+    fAngleRefNeedle_rad=np.deg2rad(22.5)# <<< to rotate z-axis down 22.5 degrees around x
+    fvX=np.array([1,0,0]); fvY=-np.array([0,np.cos(fAngleRefNeedle_rad),np.sin(fAngleRefNeedle_rad)])
+    fvZ=np.array([0,np.sin(fAngleRefNeedle_rad),  -   np.cos(fAngleRefNeedle_rad)])
+    fSumAngle_rad=fStepAngle_rad=fAngleA2CBestVZ_rad=None
+    rasA=np.array(self.ijk2ras(ijkA))#<<<
+    rasA0=rasA
+    ijkA0 = ijkA
+    nStepsNeedle = nPointsPerNeedle - 1 # one point (mouse click on tip) is already there
+    if bUp:
+      iZDirectionSign = 1
+    else:
+      iZDirectionSign = -1
+
+    ivDims = [0, 0, 0]
+    imgData.GetDimensions(ivDims)
+
+    if not bUp:
+      self.controlPoints = [] # in up mode, more interpol. points will be added to this array
+    lvControlPointsRAS = []
+    lvControlPointsIJK = []
+    lvBestControlPoints = []
+    rasNeedlePlaneNormal=rasDeflectionDirection=np.zeros(3)
+
+    lvControlPointsRAS.append(self.ijk2ras(ijkA))
+    lvControlPointsIJK.append(ijkA)
+    lvBestControlPoints.append(self.ijk2ras(ijkA))
+    print "#-----------------------------------------------------------"
+    fStepsSum_mm=0
+    iModelIt=0
+    iStart=-1 # <<<o> use init its. or not
+    for iAbsStep, iStep in enumerate(range(iStart, nStepsNeedle)):
+      print "#--------------------------------- %s: iStart: %d / iStep: %d / b,c%d----------------"%(strManualName, iStart,iStep,iStep+1)
+      fStepSize_mm = self.stepSize13(iStep+1,nStepsNeedle+1)*fEstNeedleLength_mm
+      #fStepSize_mm = (1.-self.stepSizeAndre(iStep+1,nStepsNeedle+1))*fEstNeedleLength_mm
+      fStepSize_mm = fEstNeedleLength_mm / (nStepsNeedle) # <<< equal step size
+      if iStep>-1: fStepsSum_mm+=fStepSize_mm
+      print "fStepSize_mm, fStepsSum_mm, fEstNeedleLength_mm= %f, %f, %f"%(fStepSize_mm, fStepsSum_mm, fEstNeedleLength_mm)
+
+      # init. iSteps for model est.
+      #------------------------------------------------------------------------------
+      if iStep < 0:
+
+        fFac=1./((((2)))*abs(iStart))*(iAbsStep+1) #<o> CONST how much of the nedle used for init. (1=full, 2=half)
+        fStepSizeInit_mm = fFac * fEstNeedleLength_mm
+        rasEstStepVector1=np.array([fvZ[0],fvZ[1], fvZ[2]])
+        rasB= rasA+rasEstStepVector1*fStepSizeInit_mm #<<< first step along reference needle axis
+        ijkB=self.ras2ijk(rasB)
+        iRMax = max(fStepSizeInit_mm, iRadiusMax_mm / float(fvSpacing[0])) # / nStepsNeedle
+        nRIter = max(15, min(20, int(iRMax/fvSpacing[0])))
+        nTIter=fStepSizeInit_mm #???
+        print "iRMax, nRIter, nTIter= %d, %d, %d"%(iRMax,nRIter,nTIter)
+
+      # iStep 0
+      #------------------------------------------------------------------------------
+      elif iStep==0: # and iStart == 0:
+
+        ijkB = [ijkA[0], ijkA[1], ijkA[2]+iZDirectionSign*fStepSize_mm/fvSpacing[2] ] #<<< going down along z-axis performs better on average on MICCAI13 cases
+        rasB=self.ijk2ras(ijkB)
+        ijkEstStepVector=np.array([0,0,iZDirectionSign * fStepSize_mm/fvSpacing[2]])
+
+        if len(rasA2CBestInit)==0: rasA2CBestInit.append(fvZ)
+        rasInitStepVector=sum(rasA2CBestInit)/len(rasA2CBestInit)
+        rasInitStepVector1, dum=normalized(rasInitStepVector) #TODO try
+        print "rasInitStepVector1= ",rasInitStepVector1
+        rasB=rasA+rasInitStepVector1*fStepSize_mm #<o>
+        ijkB=self.ras2ijk(rasB)
+        rasEstStepVector=self.ijk2ras(ijkEstStepVector)
+        rasEstStepVector1, dum=normalized(rasEstStepVector)
+        print "ijkB= ",ijkB,"# line: ",lineno()
+        iRMax = iRadiusMax_mm / fvSpacing[0] # / nStepsNeedle
+        nRIter = iRMax
+        nTIter=int(round(fStepSize_mm))
+        print "iRMax, nRIter, nTIter= %d, %d, %d"%(iRMax,nRIter,nTIter)
+        if iStart<0 and iStep==0:
+          fF_mmN, fSumAngle_rad = initNeedleModel(fAngleRefNeedle_rad, fEstNeedleLength_mm, fvZ, rasA)
+
+      # iStep other
+      #------------------------------------------------------------------------------
+      else:
+
+        ijkB = [ 2 * ijkA[0] - ijkAPrev[0],  # ??? why do you go double iStep in xy-plane
+                  2 * ijkA[1] - ijkAPrev[1],
+                  ijkA[2] + iZDirectionSign * fStepSize_mm /fvSpacing[2]   ]  # ??? this was buggy vector calculus, now its a feature ;-)
+
+        rasB=self.ijk2ras(ijkB)
+        print "default_ijkB= ", ijkB
+        iRMax = max(fStepSize_mm,iRadiusMax_mm / fvSpacing[0])
+        nRIter =max(15,min(20,int(iRMax/ fvSpacing[0])))
+        nTIter = fStepSize_mm # ??? coarse step size from MICCAI13 TODO check this
+        print "iRMax, nRIter, nTIter= %d, %d, %d"%(iRMax,nRIter,nTIter)
+
+        #>>>>>> exp.04
+        # define local needle coordinate system
+        rasDeflectionDirection1, rasNeedlePlaneNormal1, fvZ = defLocalNeedleCooSys(fvX, fvY, fvZ, iStep, rasA, rasDeflectionDirection, rasNeedlePlaneNormal,bDraw=True)
+        # initialise needle model
+        if (iStart==0 and iStep==1):
+          fF_mmN, fSumAngle_rad = initNeedleModel(fAngleRefNeedle_rad, fEstNeedleLength_mm, fvZ, rasA, bDraw=True)
+        # run needle model
+        if (iStart==0 and iStep>=1) or (iStart<0 and iStep>=0):
+          fF_mmN, fAngleMultiSegments_deg, rasEstStepVector1, fSumAngle_deg,    rasB   = runNeedleModel(fStepAngle_rad, fF_mmN, fStepSize_mm, fvZ, iModelIt, rasDeflectionDirection1, fSumAngle_rad, rasB, bDraw=True)
+        ijkB=self.ras2ijk(rasB)
+        #<<<<<< exp.04
+
+      ##############
+      # cone search: radius, fStepAngle_rad and line length variation
+      if ijkCBest: ijkCBestPrev = ijkCBest
+      ijkCBest = [np.nan, np.nan, np.nan]
+      print "# searching cone:"
+      fMinTotal = np.inf
+      for iR in range(int(nRIter) + 1):
+
+        fR = iR * (iRMax / float(nRIter))
+
+        # ## fStepAngle_rad variation from 0 to 360
+        for iThetaStep in xrange(int(nRotatingIts)):
+
+          fAngle_deg = (iThetaStep * 360.) / float(nRotatingIts)
+          fThetaStep_rad = math.radians(fAngle_deg)
+
+          ijkC = [ ijkB[0] + fR * (math.cos(fThetaStep_rad)),
+                            ijkB[1] + fR * (math.sin(fThetaStep_rad)),
+                            ijkB[2]]
+
+          fTotal = 0
+          lijkM = [[0, 0, 0] for i in xrange(int(nTIter) + 1)]
+
+          fLabel =  0
+          # calculates nTIter = number of points per segment
+          for iTStep in xrange(int(nTIter) + 1):
+
+            fTStep = iTStep / float(nTIter)
+
+            # x,y,z coordinates
+            for i in range(3):
+
+              lijkM[iTStep][i] = (1 - fTStep) * ijkA[i] + fTStep * ijkC[i]
+              ijk[i] = int(round(lijkM[iTStep][i]))
+
+            # first, test if points are in the image space
+            if ijk[0] < ivDims[0] and ijk[0] > 0 and  ijk[1] < ivDims[1] and ijk[1] > 0 and ijk[2] < ivDims[2] and ijk[2] > 0:
+
+              dCenter = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
+              fTotal += dCenter
+              if 1 and bGradient == 1 : #<<< feature on/off
+
+                iRadiusNeedle = int(round(iRadiusNeedle_mm / float(fvSpacing[0])))
+                iRadiusNeedleCorner = int(round((iRadiusNeedle_mm / float(fvSpacing[0]) / 1.414)))
+
+                g1 = imgData.GetScalarComponentAsDouble(ijk[0] + iRadiusNeedle, ijk[1], ijk[2], 0)
+                g2 = imgData.GetScalarComponentAsDouble(ijk[0] - iRadiusNeedle, ijk[1], ijk[2], 0)
+                g3 = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1] + iRadiusNeedle, ijk[2], 0)
+                g4 = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1] - iRadiusNeedle, ijk[2], 0)
+                g5 = imgData.GetScalarComponentAsDouble(ijk[0] + iRadiusNeedleCorner, ijk[1] + iRadiusNeedleCorner, ijk[2], 0)
+                g6 = imgData.GetScalarComponentAsDouble(ijk[0] - iRadiusNeedleCorner, ijk[1] - iRadiusNeedleCorner, ijk[2], 0)
+                g7 = imgData.GetScalarComponentAsDouble(ijk[0] - iRadiusNeedleCorner, ijk[1] + iRadiusNeedleCorner, ijk[2], 0)
+                g8 = imgData.GetScalarComponentAsDouble(ijk[0] + iRadiusNeedleCorner, ijk[1] - iRadiusNeedleCorner, ijk[2], 0)
+
+                fTotal += 8 * dCenter - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8) * iGradientPonderation
+              #fi gradient
+              # >>>>>>>>>>>>>>>>>>>>>> exp.02
+              if imgLabelData:
+                fLabel = imgLabelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0)
+                if fLabel and fLabel < 300:
+                  fTotal -= 10000
+                if conesColor: imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, conesColor) #mark the search cones in fLabel volume
+              # <<<<<<<<<<<<<<<<<<<<
+            #fi points in image space
+          #rof iTStep
+
+          if 1 and bGaussianAttenuation == 1 and iStep >= 2 : #<<< feature on/off
+
+            if ijkAPrev[2] - ijkA[2] != 0:
+
+                fK = (ijkA[2] - ijkB[2]) / float(ijkAPrev[2] - ijkA[2])
+
+                ijkX = [ ijkA[0] + fK * (ijkA[0] - ijkAPrev[0]),
+                                ijkA[1] + fK * (ijkA[1] - ijkAPrev[1]),
+                                ijkA[2] + fK * (ijkA[2] - ijkAPrev[2]) ]
+
+                fRgauss = ((ijkC[0] - ijkX[0]) ** 2
+                                + (ijkC[1] - ijkX[1]) ** 2
+                                + (ijkC[2] - ijkX[2]) ** 2) ** 0.5
+
+                fGaussianAttenuation = math.exp(-(fRgauss / float(iRMax)) ** 2 / float((2 * (iSigmaValue / float(10)) ** 2)))  # 1 for x=0, 0.2 for x=5
+                if fGaussianAttenuation<0 or fGaussianAttenuation>1:
+                  print "fGaussianAttenuation= ",fGaussianAttenuation," # /!\ "
+                fTotal = fTotal * fGaussianAttenuation
+          #fi gauss
+
+          if fTotal < fMinTotal:
+            fMinTotal = fTotal
+            ijkCBest = ijkC; rasCBest=self.ijk2ras(ijkCBest)
+        #rof iThetaStep
+      #rof iR
+      if ijkCBest==[np.nan,np.nan,np.nan]:
+        breakbox("/!!\ no ijkCBest found")
+
+      ijkAPrev = ijkA; rasAPrev=np.array(self.ijk2ras(ijkAPrev))
+
+      #>>> constraints: compare distances
+      if 1: # <o>
+        #fAngleA2CBestVStepVector_rad=0
+        print "ijkCBest= ", ijkCBest,'# line: ', lineno()
+        rasB2CBest=rasCBest-np.array(rasB)
+        fDistB2CBest_mm=norm(rasB2CBest)
+        print "fDistB2CBest_mm= ",fDistB2CBest_mm
+        if ijkCBestPrev:
+          rasCBestPrev=np.array(self.ijk2ras(ijkCBestPrev))
+          if rasCBestPrev2CBest.any(): rasCBestPrev2CBestPrev=rasCBestPrev2CBest; rasCBestPrev2CBestPrev1=rasCBestPrev2CBestPrev/norm(rasCBestPrev2CBestPrev)
+          rasCBestPrev2CBest=rasCBest-rasCBestPrev; rasCBestPrev2CBest1=rasCBestPrev2CBest/norm(rasCBestPrev2CBest)
+        rasA=np.array(self.ijk2ras(ijkA))
+        if rasA2CBest.any(): rasA2CBestPrev=rasA2CBest; rasA2CBestPrev1=rasA2CBestPrev/norm(rasA2CBestPrev)
+        rasA2CBest=rasCBest-rasA; rasA2CBest1=rasA2CBest/norm(rasA2CBest)
+        # in first initializing iterations, model not estimated yet, accept ijkCBest anyway
+        if (iStart<0 and iStep<0) or (iStart==0 and iStep==0):
+          fDistB2CBest_mm=-np.inf
+          fLimitCrit4=fMaxDistB2CBest_mm=np.inf #CONST
+        if ((iStart==0 and iStep>=1) or (iStart<0 and iStep>=0)) and ijkCBest != [np.nan, np.nan, np.nan]: # <<< feature off/on
+          fMaxDistB2CBest_mm=(((1))) #<o> CONST mm
+          fLimitCrit4=fMaxDistB2CBest_mm #CONST
+        bReject=not fDistB2CBest_mm<fLimitCrit4
+        bUseB=False
+        bRejected=False
+        ########################
+        if bReject:print "#^^^^^^^^^^^^^ crit. rejects best cone point"
+        ########################
+        if ijkCBest == [np.nan, np.nan, np.nan] or bReject: #<<<o> use criteria, when we dont use const. behaves as 13_2
+          if 1: #<o> TODO try, compromise between model and image feature based vector
+            if rasB2CBest.any():
+              rasB2CBest1, dum=normalized(rasB2CBest)
+            else: rasB2CBest1=np.array([0,0,0])
+            rasA=rasB+rasB2CBest1*min(fMaxDistB2CBest_mm,fDistB2CBest_mm/2.)
+            ijkA=self.ras2ijk(rasA)
+            print '#middle vector, but within constraint: rasA= ',rasA
+            #<<<
+          bUseB=True
+          print "using_point_near_ijkB= ", ijkA
+          if iStep==0-abs(iStart): breakbox("/!!\ not using CBest in first it.??") #<<<
+        elif ijkCBest != ijkAPrev:
+          if iStep<=-1: #prepare init. of model
+            print "# iStep -1"
+            if iStep==-1:
+              rasA2CBestInit.append(rasA2CBest) #2nd init. seg.
+              rasAPrev=rasA0-rasA2CBest #trick to restart from user tip click
+              ijkAPrev=self.ras2ijk(rasAPrev)
+              ijkA=ijkA0; rasA=self.ijk2ras(ijkA)
+            elif iStep<=-2: rasA2CBestInit.append(rasA2CBest) #1st init segment
+            continue #rof iStep, skip rest of loop using this helper segments
+          ijkA = ijkCBest; rasA=self.ijk2ras(ijkA)
+          rasNeedlePlaneNormal=rasDeflectionDirection=np.zeros(3) #<o>force recalc. of deflection direction
+          print "using_ijkC= ",ijkCBest
+          print "best_fEstimator_value= ",fTotal
+        else: breakbox("/!!| uncaught ijkCBest==ijkAPrev")
+        #file ijkCBest != ijkAPrev
+      #fi constraints <<<
+      
+      #################
+      # drag back a too far low control point to the axial limit plane
+      if ijkA[2] < iAxialSegmentationLimit and ijkA != ijkA0:
+
+        asl = iAxialSegmentationLimit
+        l = (ijkA[2] - asl) / float(ijkAPrev[2] - ijkA[2])
+
+        ijkA = [  ijkA[0] - l * (ijkAPrev[0] - ijkA[0]),
+                ijkA[1] - l * (ijkAPrev[1] - ijkA[1]),
+                ijkA[2] - l * (ijkAPrev[2] - ijkA[2])]
+
+      if iStep>=0:
+        lvControlPointsRAS.append(self.ijk2ras(ijkA))
+        lvControlPointsIJK.append(ijkA)
+
+        if ijkA[2] <= iAxialSegmentationLimit and ijkA != ijkA0:
+          print "# /!\ needle too long, break"
+          break
+    #rof iStep
+    for i in range(len(lvControlPointsRAS)): self.controlPoints.append(lvControlPointsRAS[i])
+    if not bAutoStopTip:
+      self.addNeedleToScene(lvControlPointsRAS, (205)% MAXCOL, 'Detection', bScript,0, manualName=strManualName)
+      self.controlPoints = []
+    if bAutoStopTip and bUp:
+      self.addNeedleToScene(self.controlPoints, (205)% MAXCOL, 'Detection', bScript,0, manualName=strManualName)
+      self.controlPoints = []
+    print time.clock() - t0, "seconds process time"
+    #self.deleteTempModels() # otw. too much clutter on view
 
   #------------------------------------------------------------------------------
   #
@@ -3293,14 +3685,14 @@ class NeedleFinderLogic:
       msgbox ("/!\ needleDetectionUPThread N/A for algoVersion 2")
     if widget.algoVersParameter.value == 3:
       if widget.labelMapNode:
-        return self.needleDetectionThread13_3(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, bUp=True, bScript=script, strManualName=strName)
+        return self.needleDetectionThread15_1(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, bUp=True, bScript=script, strManualName=strName)
       else:
-        return self.needleDetectionThread13_3(A, imageData, None, widget.tempPointList, colorVar, spacing, bUp=True, bScript=script, strManualName=strName)
+        return self.needleDetectionThread15_1(A, imageData, None, widget.tempPointList, colorVar, spacing, bUp=True, bScript=script, strManualName=strName)
     if widget.algoVersParameter.value == 4:
       if widget.labelMapNode:
-        return self.needleDetectionThread15(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, bUp=True, bScript=script, strName=strName)
+        return self.needleDetectionThread15_1(A, imageData, widget.labelMapNode.GetImageData(), widget.tempPointList, colorVar, spacing, bUp=True, bScript=script, strName=strName)
       else:
-        return self.needleDetectionThread15(A, imageData, None, widget.tempPointList, colorVar, spacing, bUp=True, bScript=script, strName=strName)
+        return self.needleDetectionThread15_1(A, imageData, None, widget.tempPointList, colorVar, spacing, bUp=True, bScript=script, strName=strName)
     else: 
       msgbox ("/!\ needleDetectionUPThread not defined")
 
@@ -4105,7 +4497,8 @@ class NeedleFinderLogic:
       model.SetAttribute("nth", str(nth))
 
     else:
-      nth = int(model.GetID().strip('vtkMRMLModelNode')) % MAXCOL
+      if widget.algoVersParameter.value<3: nth = int(model.GetID().strip('vtkMRMLModelNode')) % MAXCOL
+      else: nth = int(colorVar) % MAXCOL
       modelDisplay.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
       model.SetAttribute("nth", str(nth))
 
@@ -4540,28 +4933,28 @@ class NeedleFinderLogic:
 
     #Andre's file system (case copies from AMIGO share)
     # stripped OTHER cases
-    if 0: path[33] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  033/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
+    if 0: path[33] = '/home/mastmeyer/Dropbox/GYN Cases/Case  033/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
     if 0:
-      path[ 8] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  008/NRRD/Auto-Eval-LB/2013-05-07-Scene.mrml'
-      path[12] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  012/NRRD/Auto-Eval-LB/2013-04-22-Scene.mrml'
-      path[16] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  016/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
-      path[21] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  021/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
-      path[22] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  022/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
-      path[25] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  025/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
-      path[26] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  026/NRRD/Auto-Eval-LB/2013-04-17-Scene.mrml'
-      path[27] = '/home/amast/SpiderOak Hive/GYN Cases/OTHERStrippedCases/Case  027/NRRD/Auto-Eval-LB/2013-04-17-Scene.mrml'
+      path[ 8] = '/home/mastmeyer/Dropbox/GYN Cases/Case  008/NRRD/Auto-Eval-LB/2013-05-07-Scene.mrml'
+      path[12] = '/home/mastmeyer/Dropbox/GYN Cases/Case  012/NRRD/Auto-Eval-LB/2013-04-22-Scene.mrml'
+      path[16] = '/home/mastmeyer/Dropbox/GYN Cases/Case  016/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
+      path[21] = '/home/mastmeyer/Dropbox/GYN Cases/Case  021/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
+      path[22] = '/home/mastmeyer/Dropbox/GYN Cases/Case  022/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
+      path[25] = '/home/mastmeyer/Dropbox/GYN Cases/Case  025/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
+      path[26] = '/home/mastmeyer/Dropbox/GYN Cases/Case  026/NRRD/Auto-Eval-LB/2013-04-17-Scene.mrml'
+      path[27] = '/home/mastmeyer/Dropbox/GYN Cases/Case  027/NRRD/Auto-Eval-LB/2013-04-17-Scene.mrml'
     #stripped MICCAI13 cases (just manual seg. by LB/AM)
     if 1:
-      path[24] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  024/NRRD/Auto-Eval-LB/2013-02-28-Scene.mrml'
-      path[28] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  028/NRRD/Auto-Eval-LB/2013-02-28-Scene.mrml'
-      path[29] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  029/NRRD/Auto-Eval-LB/2013-02-26-Scene.mrml'
-      path[30] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  030/NRRD/Auto-Eval-LB/2013-02-26-Scene.mrml'
-      path[31] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  031/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
-      path[33] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  033/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
-      path[34] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  034/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
-      path[37] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  037/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
-      path[38] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  038/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
-      path[40] = '/home/amast/SpiderOak Hive/GYN Cases/MICCAI13StrippedCases/Case  040/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
+      path[24] = '/home/mastmeyer/Dropbox/GYN Cases/Case  024/NRRD/Auto-Eval-LB/2013-02-28-Scene.mrml'
+      path[28] = '/home/mastmeyer/Dropbox/GYN Cases/Case  028/NRRD/Auto-Eval-LB/2013-02-28-Scene.mrml'
+      path[29] = '/home/mastmeyer/Dropbox/GYN Cases/Case  029/NRRD/Auto-Eval-LB/2013-02-26-Scene.mrml'
+      path[30] = '/home/mastmeyer/Dropbox/GYN Cases/Case  030/NRRD/Auto-Eval-LB/2013-02-26-Scene.mrml'
+      path[31] = '/home/mastmeyer/Dropbox/GYN Cases/Case  031/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
+      path[33] = '/home/mastmeyer/Dropbox/GYN Cases/Case  033/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
+      path[34] = '/home/mastmeyer/Dropbox/GYN Cases/Case  034/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
+      path[37] = '/home/mastmeyer/Dropbox/GYN Cases/Case  037/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
+      path[38] = '/home/mastmeyer/Dropbox/GYN Cases/Case  038/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
+      path[40] = '/home/mastmeyer/Dropbox/GYN Cases/Case  040/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
     #show a directory selector for saving the results
     self.dirDialog = qt.QFileDialog(w.parent)
     self.dirDialog.setDirectory('/tmp')
@@ -5463,7 +5856,7 @@ class NeedleFinderLogic:
             polydata = node.GetPolyData()
             p, pbis = [0, 0, 0], [0, 0, 0]
             if not polydata: breakbox("needle tube not found in scene")
-            if polydata.GetNumberOfPoints() > 100:  # ??? this is risky when u have other models in the scene (not only neeedles(
+            if polydata and polydata.GetNumberOfPoints() > 100:  # ??? this is risky when u have other models in the scene (not only neeedles(
                 if not widget.autoStopTip.isChecked():
                   polydata.GetPoint(0+offset, p)
                   polydata.GetPoint(int(polydata.GetNumberOfPoints() - 1 - offset), pbis)
@@ -5965,7 +6358,7 @@ class NeedleFinderLogic:
     """
     # productive
     profprint()
-    self.color255 = [[0, 0, 0] for i in range(205)]
+    self.color255 = [[0, 0, 0] for i in range(MAXCOL)]
     self.color255[0] = [221, 108, 158]
     self.color255[1] = [128, 174, 128]
     self.color255[2] = [241, 214, 145]
@@ -6171,6 +6564,7 @@ class NeedleFinderLogic:
     self.color255[202] = [157, 0, 0]
     self.color255[203] = [100, 100, 130]
     self.color255[204] = [205, 205, 100]
+    self.color255[205] = [255, 255, 0]
 
     return self.color255
 
@@ -6179,9 +6573,9 @@ class NeedleFinderLogic:
     """
     # productive
     profprint()
-    self.color = [[0, 0, 0] for i in range(205)]
+    self.color = [[0, 0, 0] for i in range(MAXCOL)]
     self.color255 = self.setColors255()
-    for i in range(205):
+    for i in range(MAXCOL):
       for j in range(3):
         self.color[i][j] = self.color255[i][j] / float(255)
 
