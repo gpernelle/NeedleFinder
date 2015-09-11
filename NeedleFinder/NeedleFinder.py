@@ -6618,8 +6618,189 @@ class NeedleFinderLogic:
                         #'case',
                         t.strftime("%d/%m/%Y"), t.strftime("%H:%M:%S")
                         ], fileName)
-
   def parSearch(self, mode=False):
+    """
+    Parameter evaluation/optimization using no, grid brute-force or random-search algo.
+    """
+    # research
+    profprint()
+    w = slicer.modules.NeedleFinderWidget
+    l = w.logic
+    path = [ 0 for i in range(100)]
+    
+    if 0:
+      path[24] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 24 NRRD/Manual/2013-02-25-Scene-without-CtrPt.mrml'
+      path[29] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 29 NRRD/Manual/2013-02-26-Scene-without-CtrPts.mrml'
+      path[30] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 30 NRRD/Manual/2013-02-26-Scene-without-CtrPt.mrml'
+      path[31] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 31 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+      path[34] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 34 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+      path[35] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 35 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+      path[37] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 37 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+      path[38] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 38 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+      path[40] = '/Users/guillaume/Dropbox/AMIGO Gyn Data NRRD/Case 40 NRRD/Manual/2013-02-27-Scene-without-CtrPts.mrml'
+
+    #Andre's file system (case copies from AMIGO share)
+    # stripped OTHER cases
+    if 0: path[33] = '/home/mastmeyer/Dropbox/GYN Cases/Case  033/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
+    if 0:
+      path[ 8] = '/home/mastmeyer/Dropbox/GYN Cases/Case  008/NRRD/Auto-Eval-LB/2013-05-07-Scene.mrml'
+      path[12] = '/home/mastmeyer/Dropbox/GYN Cases/Case  012/NRRD/Auto-Eval-LB/2013-04-22-Scene.mrml'
+      path[16] = '/home/mastmeyer/Dropbox/GYN Cases/Case  016/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
+      path[21] = '/home/mastmeyer/Dropbox/GYN Cases/Case  021/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
+      path[22] = '/home/mastmeyer/Dropbox/GYN Cases/Case  022/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
+      path[25] = '/home/mastmeyer/Dropbox/GYN Cases/Case  025/NRRD/Auto-Eval-LB/2013-04-21-Scene.mrml'
+      path[26] = '/home/mastmeyer/Dropbox/GYN Cases/Case  026/NRRD/Auto-Eval-LB/2013-04-17-Scene.mrml'
+      path[27] = '/home/mastmeyer/Dropbox/GYN Cases/Case  027/NRRD/Auto-Eval-LB/2013-04-17-Scene.mrml'
+    #stripped MICCAI13 cases (just manual seg. by LB/AM)
+    if 0:
+      path[24] = '/home/mastmeyer/Dropbox/GYN Cases/Case  024/NRRD/Auto-Eval-LB/2013-02-28-Scene.mrml'
+      path[28] = '/home/mastmeyer/Dropbox/GYN Cases/Case  028/NRRD/Auto-Eval-LB/2013-02-28-Scene.mrml'
+      path[29] = '/home/mastmeyer/Dropbox/GYN Cases/Case  029/NRRD/Auto-Eval-LB/2013-02-26-Scene.mrml'
+      path[30] = '/home/mastmeyer/Dropbox/GYN Cases/Case  030/NRRD/Auto-Eval-LB/2013-02-26-Scene.mrml'
+      path[31] = '/home/mastmeyer/Dropbox/GYN Cases/Case  031/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
+      path[33] = '/home/mastmeyer/Dropbox/GYN Cases/Case  033/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
+      path[34] = '/home/mastmeyer/Dropbox/GYN Cases/Case  034/NRRD/Auto-Eval-LB/2013-02-27-Scene.mrml'
+      path[37] = '/home/mastmeyer/Dropbox/GYN Cases/Case  037/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
+      path[38] = '/home/mastmeyer/Dropbox/GYN Cases/Case  038/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
+      path[40] = '/home/mastmeyer/Dropbox/GYN Cases/Case  040/NRRD/Manual Alireza/2013-02-27-Scene.mrml'
+    #all available stripped cases
+    if 1:
+      try:
+        #with open('/home/mastmeyer/Dropbox/GYN Cases/MICCAI13scenes.txt') as f:
+        with open('/home/mastmeyer/Dropbox/GYN Cases/scenes.txt') as f:
+          lines = f.readlines()
+      except: print '/!\ scene list file not found!'
+      for line in lines:
+        path[int(line.lstrip('./Case  ')[1:3])]='/home/mastmeyer/Dropbox/GYN Cases/'+line.lstrip('./').rstrip('\n')
+    #show a directory selector for saving the results
+    self.dirDialog = qt.QFileDialog(w.parent)
+    self.dirDialog.setDirectory('/tmp')
+    self.dirDialog.options = self.dirDialog.ShowDirsOnly
+    self.dirDialog.acceptMode = self.dirDialog.AcceptSave
+    #self.dirDialog.show()
+    dir=self.dirDialog.getExistingDirectory()
+    w.logDir=dir
+    print "saving results to ", dir
+    try: shutil.copyfile('/home/mastmeyer/WualaDrive/mastmeyer/Labs/NeedleFinder/NeedleFinder/NeedleFinder.py',dir+'/NeedleFinder.py')
+    except: breakbox("/!\ reference source NeedleFinder.py not found!")
+    if mode == 0:
+      #save a copy of the source file as reference
+      # simple run with current parameters/algo over several patients
+      self.writeTableHeader(dir+'/AP-All_stats.csv')
+      filLog=open(dir+'/allog.tsv', 'w')
+      #filLog.write("case\tman.-seg_\tiStep\tcrit\treject\tvalue\tlimit\n")
+      filLog.close()
+      #nUsers=1; clickWeight=1 #default MICCAI13/15, clickWeight=1 original fringe click <o> CONST 0.5 tube middle
+      nUsers=1; clickWeight=.5 #clickWeight=1 original fringe click <o> CONST 0.5 tube middle
+      #nUsers=3; clickWeight=1 #<o> CONST around tube middle at fringe
+      #nUsers=3; clickWeight=.75 #<o> CONST around tube middle
+      for id in range(0,100): #(1,100): <o> CONST
+        if path[id]:
+          slicer.mrmlScene.Clear(0)
+          slicer.util.loadScene(path[id])
+          w.caseNr=id
+        else:
+          continue
+        for user in range(nUsers): 
+          w.userNr=user
+          print "simulated user: ",user
+          print "processing case: ", path[id]
+          self.writeTableHeader(dir+'/User-'+str(user)+'_AP-' + str(id) + '.csv', 1)
+          #TODO maybe implement random tips in  a sphere (d=2mm) from tube center 
+          offset=user*50/nUsers #CONST
+          print "click offset: ",offset
+          l.startValidation(script=True, offset=offset)#RM clickWeight=clickWeight, displayClicks=True)
+          #results, outliers1, outliers2, outliers3 = l.evaluate(script=True)  # calculate HD distances
+          results, outliers1 = l.evaluate(script=True)  #RM calculate HD distances
+          for result in results:
+            result[0:0]=[user,id]
+          l.exportEvaluation(results, dir+'/User-'+str(user)+'_AP-' + str(id) + '.csv')
+          #slicer.util.saveScene(dir+'/AP-' + str(id) + '.mrb') # may use lots of disk space
+          # stats
+          HD = np.array(results)
+          # HD.shape = (int(len(results)/float(3)),3)
+          maxTipHD = HD[:, 2].max()
+          maxHD = HD[:, 3].max()
+          avgHD = HD[:, 3].mean()
+          stdHD = HD[:, 3].std()
+          sl = np.sort(HD[:, 3])
+          medHD = sl[sl.size / 2]
+          resultsEval = [user,id,maxTipHD, maxHD, avgHD, stdHD, medHD]+[len(results)]+[len(outliers1)]+[str(outliers1)]           + l.valuesExperience + [id]
+            #RM +[len(outliers2)] +[str(outliers2)]+[len(outliers3)] +[str(outliers3)]\
+          l.exportEvaluation(resultsEval, dir+'/AP-All_stats.csv')
+          #pause()
+      msgbox("parSearch mode 0 done, results in "+dir)
+    elif mode == 1:
+      id = 'Current'
+      # simple brute force search in the dimensions (Guillaumes parameterSearch.py)
+      self.writeTableHeader(dir+'/BF-' + str(id) + '.csv', 1)
+      self.writeTableHeader(dir+'/BF-' + str(id) + '_stats.csv')
+      for i in range(3, 12):
+        # l.resetNeedleDetection(script=True) # ??? this resets the parameters to default
+        w.numberOfPointsPerNeedle.setValue(i)  # change parameter control points
+        l.startValidation(script=True)
+        results, outliers1, outliers2, outliers3 = l.evaluate(script=True)  # calculate HD distances
+        for result in results:
+          result[0:0]=[user,id]
+        l.exportEvaluation(results, dir+'/BF-' + str(id) + '.csv')
+        slicer.util.saveScene(dir+'/BF-' + str(id) + '.mrb') # may use lots of disk space
+        # stats
+        HD = np.array(results)
+        # HD.shape = (int(len(results)/float(3)),3)
+        maxTipHD = HD[:, 2].max()
+        maxHD = HD[:, 3].max()
+        avgHD = HD[:, 3].mean()
+        stdHD = HD[:, 3].std()
+        sl = np.sort(HD[:, 3])
+        medHD = sl[sl.size / 2]
+        resultsEval = [user,id,maxTipHD,maxHD, avgHD, stdHD, medHD] +[len(results)]+[len(outliers1)] +[str(outliers1)]+[len(outliers2)] +[str(outliers2)]+[len(outliers3)] +[str(outliers3)]+ l.valuesExperience + [id]
+        l.exportEvaluation(resultsEval, dir+'/BF-' + str(id) + '_stats.csv')
+        #pause()
+      msgbox("parSearch mode 1 done, results in "+dir)
+    elif mode == 2:
+      # code piece from Guillaumes (bruteForce.py) multi patient mode search
+      for id in range(100):
+        if path[id]:
+          w.caseNr=id
+          print "processing ", path[id]
+          slicer.mrmlScene.Clear(0)
+          slicer.util.loadScene(path[id])
+          self.writeTableHeader(dir+'/RS-' + str(id) + '.csv', 1)
+          self.writeTableHeader(dir+'/RS-' + str(id) + '_stats.csv')
+          for i in range(1, 10000):
+            # l.resetNeedleDetection(script=True) # ??? this resets the parameters to default
+            w.radiusNeedleParameter.setValue(np.random.randint(1, 6))
+            w.stepsize.setValue(np.random.randint(1, 40))
+            w.sigmaValue.setValue(np.random.randint(1, 40))  # change parameter sigma
+            w.gradientPonderation.setValue(np.random.randint(1, 20))
+            w.exponent.setValue(np.random.randint(1, 20))
+            w.numberOfPointsPerNeedle.setValue(np.random.randint(3, 11))
+            l.startValidation(script=True)
+            results, outliers1, outliers2, outliers3 = l.evaluate(script=True)  # calculate HD distances
+            for result in results:
+              result[0:0]=[user,id]
+            l.exportEvaluation(results, dir+'/RS-' + str(id) + '.csv')
+            slicer.util.saveScene(dir+'/RS-' + str(id) + '.mrb') # may use lots of disk space
+            # stats
+            HD = np.array(results)
+            maxTipHD = HD[:, 2].max()
+            maxHD = HD[:, 3].max()
+            avgHD = HD[:, 3].mean()
+            stdHD = HD[:, 3].std()
+            sl = np.sort(HD[:, 3])
+            medHD = sl[sl.size / 2]
+            resultsEval = [user,id,maxTipHD,maxHD, avgHD, stdHD, medHD] +[len(results)]+[len(outliers1)] +[str(outliers1)]+[len(outliers2)] +[str(outliers2)]+[len(outliers3)] +[str(outliers3)]+ l.valuesExperience + [id]
+            l.exportEvaluation(resultsEval, dir+'/RS-' + str(id) + '_stats.csv')
+            # end = time.time()
+            # print 'processing time: ', end-start
+            # start = time.time()
+            #pause()
+        msgbox("parSearch mode 2 done, results in "+dir)
+      #rof id
+    #file mode 2
+    #slicer.mrmlScene.Clear(0) #clean up to save memory
+  
+  def parSearchOld(self, mode=False):
     """
     Parameter evaluation/optimization using no, grid brute-force or random-search algo.
     """
@@ -7564,7 +7745,7 @@ class NeedleFinderLogic:
         if node.GetAttribute('type') == type:
             polydata = node.GetPolyData()
             p, pbis = [0, 0, 0], [0, 0, 0]
-            if not polydata: breakbox("needle tube not found in scene")
+            #if not polydata: breakbox("needle tube not found in scene")
             if polydata and polydata.GetNumberOfPoints() > 100:  # ??? this is risky when u have other models in the scene (not only neeedles(
                 if not widget.autoStopTip.isChecked():
                   polydata.GetPoint(0+offset, p)
