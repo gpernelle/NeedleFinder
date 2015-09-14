@@ -6693,7 +6693,7 @@ class NeedleFinderLogic:
       filLog.close()
       #nUsers=1; clickWeight=1 #default MICCAI13/15, clickWeight=1 original fringe click <o> CONST 0.5 tube middle
       nUsers=1; clickWeight=.5 #clickWeight=1 original fringe click <o> CONST 0.5 tube middle
-      #nUsers=3; clickWeight=1 #<o> CONST around tube middle at fringe
+      nUsers=3; clickWeight=1 #<o> CONST around tube middle at fringe
       #nUsers=3; clickWeight=.75 #<o> CONST around tube middle
       for id in range(0,100): #(1,100): <o> CONST
         if path[id]:
