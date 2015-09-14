@@ -2378,7 +2378,7 @@ class NeedleFinderLogic:
       asl = [0, 0, 0]
     return int(round(self.ras2ijk(asl)[2])), coord[2]
 
-  def needleDetectionThread(self, A, imageData, colorVar, spacing, script=False, strName=""):
+  def needleDetectionThread_old(self, A, imageData, colorVar, spacing, script=False, strName=""):
     """
     Switches between the versions of the algorithm. For comparison tests.
     """
@@ -2424,7 +2424,7 @@ class NeedleFinderLogic:
         value = V.GetScalarComponentAsDouble(int(round(x)),int(round(y)),int(round(z)),0)
     return value
       
-  def needleDetectionThread_RM(self, tips, imageData, spacing, script=False, names=""):
+  def needleDetectionThread(self, tips, imageData, spacing, script=False, names=""):
     """
     Switches between the versions of the algorithm. For comparison tests.
     """
@@ -2738,7 +2738,8 @@ class NeedleFinderLogic:
                     print "The ",WrongPositionsToSend[i],"(+1 each) Needle corrected"
                 LastWrongPositionsToSend = WrongPositionsToSend         
     FinalControlPointsPackage, FinalControlPointsPackageIJK = self.needleRationalityProtect(OriginalControlPointsPackage, OriginalControlPointsPackageIJK, ControlPointsPackage, ControlPointsPackageIJK, OriginalWrongPositions,imageData,spacing)
-            
+    #FinalControlPointsPackage = ControlPointsPackage     
+    #FinalControlPointsPackageIJK = ControlPointsPackageIJK   
     for i in range(NumberOfNeedles):
         colorVar = i
         manName = names[i]
@@ -3854,22 +3855,22 @@ class NeedleFinderLogic:
 
             # first, test if points are in the image space
             if ijk[0] < dims[0] and ijk[0] > 0 and  ijk[1] < dims[1] and ijk[1] > 0 and ijk[2] < dims[2] and ijk[2] > 0:
-              center = self.interp3(imageData, ijk[0], ijk[1], ijk[2],1)#ruibin interpolation
+              center = self.interp3(imageData, ijk[0], ijk[1], ijk[2],0)#ruibin interpolation
               #center = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
               total += center
               if gradient == 1 :
 
-                radiusNeedle = radiusNeedleParameter / float(spacing[0])
-                radiusNeedleCorner = radiusNeedleParameter / float(spacing[0]) / 1.414
+                radiusNeedle = int(round(radiusNeedleParameter / float(spacing[0])))
+                radiusNeedleCorner = int(round((radiusNeedleParameter / float(spacing[0]) / 1.414)))
                 
-                g1 = self.interp3(imageData, ijk[0] + radiusNeedle, ijk[1], ijk[2],1)
-                g2 = self.interp3(imageData, ijk[0] - radiusNeedle, ijk[1], ijk[2],1)
-                g3 = self.interp3(imageData, ijk[0], ijk[1] + radiusNeedle, ijk[2],1)
-                g4 = self.interp3(imageData, ijk[0], ijk[1] - radiusNeedle, ijk[2],1)
-                g5 = self.interp3(imageData, ijk[0] + radiusNeedleCorner, ijk[1] + radiusNeedleCorner, ijk[2],1)
-                g6 = self.interp3(imageData, ijk[0] - radiusNeedleCorner, ijk[1] - radiusNeedleCorner, ijk[2],1)
-                g7 = self.interp3(imageData, ijk[0] - radiusNeedleCorner, ijk[1] + radiusNeedleCorner, ijk[2],1)
-                g8 = self.interp3(imageData, ijk[0] + radiusNeedleCorner, ijk[1] - radiusNeedleCorner, ijk[2],1)
+                g1 = self.interp3(imageData, ijk[0] + radiusNeedle, ijk[1], ijk[2],0)
+                g2 = self.interp3(imageData, ijk[0] - radiusNeedle, ijk[1], ijk[2],0)
+                g3 = self.interp3(imageData, ijk[0], ijk[1] + radiusNeedle, ijk[2],0)
+                g4 = self.interp3(imageData, ijk[0], ijk[1] - radiusNeedle, ijk[2],0)
+                g5 = self.interp3(imageData, ijk[0] + radiusNeedleCorner, ijk[1] + radiusNeedleCorner, ijk[2],0)
+                g6 = self.interp3(imageData, ijk[0] - radiusNeedleCorner, ijk[1] - radiusNeedleCorner, ijk[2],0)
+                g7 = self.interp3(imageData, ijk[0] - radiusNeedleCorner, ijk[1] + radiusNeedleCorner, ijk[2],0)
+                g8 = self.interp3(imageData, ijk[0] + radiusNeedleCorner, ijk[1] - radiusNeedleCorner, ijk[2],0)
                 '''ruibin interpolation
                 g1 = imageData.GetScalarComponentAsDouble(ijk[0] + radiusNeedle, ijk[1], ijk[2], 0)
                 g2 = imageData.GetScalarComponentAsDouble(ijk[0] - radiusNeedle, ijk[1], ijk[2], 0)
@@ -7784,7 +7785,7 @@ class NeedleFinderLogic:
     # chrono starts
     self.t0 = time.clock()
     
-    self.needleDetectionThread_RM(tips, imageData, spacing, script=script, names=names)
+    self.needleDetectionThread(tips, imageData, spacing, script=script, names=names)
 
     """
     for i in range(len(tips)):
