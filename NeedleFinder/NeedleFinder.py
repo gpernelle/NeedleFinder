@@ -3660,6 +3660,7 @@ class NeedleFinderLogic:
       self.controlPoints = []
     print time.clock() - t0, "seconds process time"
     #self.deleteTempModels() # otw. too much clutter on view
+    if bUp: return lvControlPointsIJK[-1] #return last control point as tip estimate
 
   #------------------------------------------------------------------------------
   #
