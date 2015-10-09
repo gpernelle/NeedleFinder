@@ -2213,6 +2213,7 @@ class NeedleFinderLogic:
     print pointToRemove.GetID()
     slicer.mrmlScene.RemoveNode(pointToRemove)
     self.drawValidationNeedles()
+    self.deletePointFromTable(ID)
 
     return 0
 
@@ -5370,7 +5371,7 @@ class NeedleFinderLogic:
       needleLabel = str(ID)
       ref = ID
 
-    # self.labelStatsCTL["Labels"].append(ref)
+    self.labelStatsCTL["Labels"].append(ID)
     # self.labelStatsCTL[needleNumber, "#"] = needleLabel
 
     ################################################
@@ -5435,10 +5436,7 @@ class NeedleFinderLogic:
     print "len(items): ", len(self.itemsCTL)
     if self.rowCTL:
       pos = self.labelStatsCTL["Labels"].index(ID)
-      ref = ID % MAXNEEDLES
       self.labelStatsCTL["Labels"].pop(pos)
-      self.labelStatsCTL[ref, "Label"] = None
-
       pos += 1
       for i in range(1, self.colCTL + 1):
         item = self.itemsCTL.pop(pos * self.colCTL - i)
