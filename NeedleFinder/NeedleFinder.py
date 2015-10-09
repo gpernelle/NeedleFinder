@@ -292,6 +292,21 @@ class NeedleFinderWidget:
 
     #-----------------------------------------------------------------------------
 
+    #Report Frame Control Point########################################
+    self.__reportFrameCTL = ctk.ctkCollapsibleButton()
+    self.__reportFrameCTL.text = "Manual Segmentation Report"
+    self.__reportFrameCTL.collapsed = 1
+    reportFrameCTL = qt.QFormLayout(self.__reportFrameCTL)
+
+    # manual segmentation report
+    self.analysisGroupBoxCTL = qt.QGroupBox()
+    self.analysisGroupBoxCTL.setFixedHeight(330)
+    self.analysisGroupBoxCTL.setTitle('Manual Segmentation Report')
+    reportFrameCTL.addRow(self.analysisGroupBoxCTL)
+    self.analysisGroupBoxLayoutCTL = qt.QFormLayout(self.analysisGroupBoxCTL)
+
+    #-----------------------------------------------------------------------------
+
     #Segmentation Frame##########################################
     self.__segmentationFrame = ctk.ctkCollapsibleButton()
     self.__segmentationFrame.text = "Segmentation"
@@ -339,41 +354,47 @@ class NeedleFinderWidget:
 
     self.startGivingControlPointsButton = qt.QPushButton('Start Giving Control Points')
     self.startGivingControlPointsButton.checkable = True
-    validationFrame.addRow(self.startGivingControlPointsButton)
+
     self.startGivingControlPointsButton.connect('toggled(bool)', self.onStartStopGivingValidationControlPointsToggled)
 
-    self.validationNeedleButton = qt.QPushButton('Next Validation Needle: (1)->(2)')
+    self.validationNeedleButton = qt.QPushButton('Next Validation Needle: (0)->(1)')
     self.validationNeedleButton.toolTip = "By clicking on this button, you will increment the number of the needle"
     self.validationNeedleButton.toolTip += "that you want to manually segment. Thus, the points you will add will be used to draw a new needle.<br/>"
     self.validationNeedleButton.toolTip += "<b>Warning:<b> You can/'t add any more points to the current needle after clicking here"
-    validationFrame.addRow(self.validationNeedleButton)
+
     self.validationNeedleButton.connect('clicked()', logic.validationNeedle)
 
     self.drawValidationNeedlesButton = qt.QPushButton('Render Manual Needles')
     self.drawValidationNeedlesButton.toolTip = "Redraw every manually segmented needles. This is usefull for example if you moved a control point, or after you added a new needle"
-    validationFrame.addRow(self.drawValidationNeedlesButton)
+
     self.drawValidationNeedlesButton.connect('clicked()', logic.drawValidationNeedles)
 
     self.startValidationButton = qt.QPushButton('Start Evaluation')
     self.startValidationButton.toolTip = "Launch tracking algo. from the tip of the manually segmented needles"
-    validationFrame.addRow(self.startValidationButton)
+
     self.startValidationButton.connect('clicked()', logic.startValidation)
     #self.startValidationButton.setStyleSheet("background-color: yellow")
     self.startValidationButton.setStyleSheet("background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #f7f700, stop: 1 #dbdb00)");
 
     # Reset Needle Validation Button
     self.resetValidationButton = qt.QPushButton('Reset Needles from Manual Segmentation')
-    validationFrame.addRow(self.resetValidationButton)
+
     self.resetValidationButton.connect('clicked()', logic.resetNeedleValidation)
 
     self.editNeedleTxtBox = qt.QSpinBox()
     self.editNeedleTxtBox.connect("valueChanged(int)", logic.changeValue)
-    editLabel = qt.QLabel('Choose Needle for Ctrl Pt scrolling:')
-    validationFrame.addRow(editLabel, self.editNeedleTxtBox)
+    editLabel = qt.QLabel('Choose Needle:')
 
-    self.scrollPointButton = qt.QPushButton('Scroll Ctrl Pt for Needle ' + str(self.editNeedleTxtBox.value))
-    validationFrame.addRow(self.scrollPointButton)
-    self.scrollPointButton.connect('clicked()', logic.scrollPoint)
+    validationFrame.addRow(editLabel, self.editNeedleTxtBox)
+    validationFrame.addRow(self.validationNeedleButton)
+    validationFrame.addRow(self.startGivingControlPointsButton)
+    validationFrame.addRow(self.drawValidationNeedlesButton)
+    validationFrame.addRow(self.startValidationButton)
+    validationFrame.addRow(self.resetValidationButton)
+
+    # self.scrollPointButton = qt.QPushButton('Scroll Ctrl Pt for Needle ' + str(self.editNeedleTxtBox.value))
+    # validationFrame.addRow(self.scrollPointButton)
+    # self.scrollPointButton.connect('clicked()', logic.scrollPoint)
 
     # Needle detection parameters#################################
     self.__parameterFrame = ctk.ctkCollapsibleButton()
@@ -644,6 +665,7 @@ class NeedleFinderWidget:
     #put frames on the tab########################################
     self.layout.addRow(self.__segmentationFrame)
     self.layout.addRow(self.__reportFrame)
+    self.layout.addRow(self.__reportFrameCTL)
     self.layout.addRow(self.__validationFrame)
     self.layout.addRow(self.__parameterFrame)
     self.layout.addRow(self.__devFrame)
@@ -657,6 +679,7 @@ class NeedleFinderWidget:
 
     # init table report
     logic.initTableView()  # init the report table
+    logic.initTableViewControlPoints()  # init the report table
 
     # Lauren's feature request: set mainly unused coronal view to sagittal to display ground truth bitmap image (if available)
     # Usage after fresh slicer start: 1. Load scene and 2. reference jpg. 3. Then open NeedleFinder from Modules selector
@@ -1473,8 +1496,11 @@ class NeedleFinderLogic:
     # widget.stepNeedle         = 0
     self.ptNumber = 0
     self.table = None
+    self.tableCTL = None
     self.view = None
+    self.viewCTL = None
     self.model = None
+    self.modelCTL = None
     self.contourNode = None
     self.lastNeedleNames = []
     self.enableScreenshots = 0
@@ -2099,6 +2125,37 @@ class NeedleFinderLogic:
       if slicer.modules.NeedleFinderWidget.autoStopTip.isChecked():
         self.needleDetectionUPThread(A, imageData, colorVar, spacing)
 
+  def findNextStepNumber(self, needleNumber):
+    modelNodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
+    nbNode = modelNodes.GetNumberOfItems()
+    stepValue = 0
+    for nthNode in range(nbNode):
+        modelNode = slicer.mrmlScene.GetNthNodeByClass(nthNode, 'vtkMRMLAnnotationFiducialNode')
+        if modelNode.GetAttribute("ValidationNeedle") == "1" and int(modelNode.GetAttribute("NeedleNumber")) == needleNumber:
+          if int(modelNode.GetAttribute("NeedleStep")) > stepValue:
+            stepValue = int(modelNode.GetAttribute("NeedleStep"))
+
+    return stepValue + 1
+
+  def lockControlPoints(self, needleNumber):
+    modelNodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
+    nbNode = modelNodes.GetNumberOfItems()
+    stepValue = 0
+    for nthNode in range(nbNode):
+        modelNode = slicer.mrmlScene.GetNthNodeByClass(nthNode, 'vtkMRMLAnnotationFiducialNode')
+        if modelNode.GetAttribute("ValidationNeedle") == "1" and int(modelNode.GetAttribute("NeedleNumber")) != needleNumber:
+          modelNode.SetLocked(1)
+
+
+  def unlockControlPoints(self, needleNumber):
+    modelNodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
+    nbNode = modelNodes.GetNumberOfItems()
+    stepValue = 0
+    for nthNode in range(nbNode):
+        modelNode = slicer.mrmlScene.GetNthNodeByClass(nthNode, 'vtkMRMLAnnotationFiducialNode')
+        if modelNode.GetAttribute("ValidationNeedle") == "1" and int(modelNode.GetAttribute("NeedleNumber")) == needleNumber:
+          modelNode.SetLocked(0)
+
   def placeNeedleShaftEvalMarker(self, A, imageData, colorVar, spacing):
     """
     Add a fiducial point to the vtkMRMLScence, where the mouse click was triggered. The fiducial points reprents a control
@@ -2114,14 +2171,20 @@ class NeedleFinderLogic:
     profprint()
     widget = slicer.modules.NeedleFinderWidget
     fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
-    fiducial.SetName('.' + str(widget.validationNeedleNumber) + "-" + str(widget.stepNeedle))
+    # pointName = '.' + str(widget.editNeedleTxtBox.value) + "-" + str(widget.stepNeedle)
+    stepValue = self.findNextStepNumber(widget.editNeedleTxtBox.value)
+    pointName = '.' + str(widget.editNeedleTxtBox.value) + "-" + str(stepValue)
+    fiducial.SetName(pointName)
     fiducial.Initialize(slicer.mrmlScene)
     fiducial.SetFiducialCoordinates(self.ijk2ras(A))
     fiducial.SetAttribute('ValidationNeedle', '1')
-    fiducial.SetAttribute('NeedleNumber', str(widget.validationNeedleNumber))
-    fiducial.SetAttribute('NeedleStep', str(widget.stepNeedle))
+    # fiducial.SetAttribute('NeedleNumber', str(widget.editNeedleTxtBox.value))
+    fiducial.SetAttribute('NeedleNumber', str(widget.editNeedleTxtBox.value))
+    fiducial.SetAttribute('NeedleStep', str(stepValue))
+    # self.addPointToTable(pointName, widget.editNeedleTxtBox.value, widget.stepNeedle, None)
+    self.addPointToTable(pointName, widget.editNeedleTxtBox.value, stepValue, None)
 
-    nth = int(widget.validationNeedleNumber)
+    nth = int(widget.editNeedleTxtBox.value)
     # print nth
 
     displayNode = fiducial.GetDisplayNode()
@@ -2130,7 +2193,28 @@ class NeedleFinderLogic:
     textNode = fiducial.GetAnnotationTextDisplayNode()
     textNode.SetTextScale(4)
     textNode.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
-    self.tableValueCtrPt[widget.validationNeedleNumber][widget.stepNeedle] = self.ijk2ras(A)
+    # self.tableValueCtrPt[widget.editNeedleTxtBox.value].append(self.ijk2ras(A))
+
+  def removeNeedleShaftEvalMarker(self, listArgs):
+    """
+    Remove a control points from the table and from the scene
+    :param ID:
+    :param needleNumber:
+    :param pointNumber:
+    :return:
+    """
+    print(listArgs)
+    ID = listArgs[0]
+    needleNumber = listArgs[1]
+    pointNumber = listArgs[2]
+    profprint()
+
+    pointToRemove = slicer.util.getNode(ID)
+    print pointToRemove.GetID()
+    slicer.mrmlScene.RemoveNode(pointToRemove)
+    self.drawValidationNeedles()
+
+    return 0
 
   def obturatorNeedle(self, A, imageData, colorVar, spacing):
     """ Use the mouse click coordinates to draw obturator needles:
@@ -4128,8 +4212,7 @@ class NeedleFinderLogic:
         for node in nodes.values():
           slicer.mrmlScene.RemoveNode(node)
 
-    if self.tableValueCtrPt == [[]]:
-        self.tableValueCtrPt = [[[999, 999, 999] for i in range(100)] for j in range(100)]
+    tableValueCtrPt = [[[999, 999, 999] for i in range(100)] for j in range(100)]
     modelNodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
     nbNode = modelNodes.GetNumberOfItems()
     for nthNode in range(nbNode):
@@ -4139,15 +4222,18 @@ class NeedleFinderLogic:
           needleStep = int(modelNode.GetAttribute("NeedleStep"))
           coord = [0, 0, 0]
           modelNode.GetFiducialCoordinates(coord)
-          self.tableValueCtrPt[needleNumber][needleStep] = coord
+          tableValueCtrPt[needleNumber][needleStep] = coord
           print needleNumber, needleStep, coord
           # print self.tableValueCtrPt[needleNumber][needleStep]
 
-    for i in range(len(self.tableValueCtrPt)):
-      if self.tableValueCtrPt[i][1] != [999, 999, 999]:
+    for i in range(len(tableValueCtrPt)):
+      if not all(e == [999, 999, 999] for e in tableValueCtrPt[i]):
+      # if self.tableValueCtrPt[i][1] != [999, 999, 999]:
         colorVar = random.randrange(50, 100, 1)  # ??? /(100.)
-        controlPointsUnsorted = [val for val in self.tableValueCtrPt[i] if val != [999, 999, 999]]
+        controlPointsUnsorted = [val for val in tableValueCtrPt[i] if val != [999, 999, 999]]
         controlPoints = self.sortTable(controlPointsUnsorted, (2, 1, 0))
+        # print "Control points unsorted", controlPointsUnsorted
+        print "Control points", controlPoints
         self.addNeedleToScene(controlPoints, i, 'Validation')
       else:
         # print i
@@ -4247,7 +4333,7 @@ class NeedleFinderLogic:
     elif needleType == 'Obturator':
       model.SetName('.obturator-seg_' + str(colorVar))
     else:
-      model.SetName('.python-catch-round_' + str(self.round) + '-ID-' + str(model.GetID())+'-'+manualName)
+      model.SetName('.auto-seg_' + str(self.round) + '-ID-' + str(model.GetID())+'-'+manualName)
     model.SetAttribute('type', needleType)
 
     if needleType == 'Validation':
@@ -4361,7 +4447,7 @@ class NeedleFinderLogic:
     elif needleType == 'Obturator':
       model.SetName('.obturator-seg_' + str(colorVar))
     else:
-      model.SetName('.python-catch-round_' + str(self.round) + '-ID-' + str(model.GetID())+'-'+manualName)
+      model.SetName('.auto-seg_' + str(self.round) + '-ID-' + str(model.GetID())+'-'+manualName)
     model.SetAttribute('type', needleType)
 
     if needleType == 'Validation' or needleType =='Debug':
@@ -4485,7 +4571,7 @@ class NeedleFinderLogic:
     elif needleType == 'Obturator':
       model.SetName('obturator-seg_' + str(colorVar))
     else:
-      model.SetName('python-catch-round_' + str(self.round) + '-ID-' + str(model.GetID())+'-'+manualName)
+      model.SetName('auto-seg_' + str(self.round) + '-ID-' + str(model.GetID())+'-'+manualName)
     model.SetAttribute('type', needleType)
 
     self.lastNeedleNames.append(model.GetName())
@@ -4545,8 +4631,8 @@ class NeedleFinderLogic:
     """
     # productive #onButton
     profprint()
-    while slicer.util.getNodes('python-catch-round_' + str(self.round) + '*') != {}:
-      nodes = slicer.util.getNodes('python-catch-round_' + str(self.round) + '*')
+    while slicer.util.getNodes('auto-seg_' + str(self.round) + '*') != {}:
+      nodes = slicer.util.getNodes('auto-seg_' + str(self.round) + '*')
       for node in nodes.values():
         slicer.mrmlScene.RemoveNode(node)
 
@@ -4594,8 +4680,8 @@ class NeedleFinderLogic:
           for node in nodes.values():
             slicer.mrmlScene.RemoveNode(node)
     # remove artifacts from needle finder
-    while slicer.util.getNodes('python-catch-round_*') != {}:
-      nodes = slicer.util.getNodes('python-catch-round_*')
+    while slicer.util.getNodes('auto-seg_*') != {}:
+      nodes = slicer.util.getNodes('auto-seg_*')
       for node in nodes.values():
         slicer.mrmlScene.RemoveNode(node)
     # while slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode') !={}:
@@ -4632,7 +4718,7 @@ class NeedleFinderLogic:
         for node in nodes.values():
           slicer.mrmlScene.RemoveNode(node)
       # rebuild report table
-      ID = name.lstrip('python-catch-round_').lstrip('manual-seg_').lstrip('obturator-seg_').lstrip('0123456789').lstrip('-ID-vtkMRMLModelNode').rstrip('manual-seg_').rstrip('0123456789')
+      ID = name.lstrip('auto-seg_').lstrip('manual-seg_').lstrip('obturator-seg_').lstrip('0123456789').lstrip('-ID-vtkMRMLModelNode').rstrip('manual-seg_').rstrip('0123456789')
       print "needle ID: <%s>" % ID
       self.deleteNeedleFromTable(int(ID))
 
@@ -4729,7 +4815,7 @@ class NeedleFinderLogic:
           # slicer.mrmlScene.RemoveNode(node)
       # self.deleteEvaluationNeedlesFromTable()
 
-      widget.validationNeedleNumber = 1
+      widget.editNeedleTxtBox.value = 1
       widget.stepNeedle = 0
       self.tableValueCtrPt = [[[999, 999, 999] for i in range(100)] for j in range(100)]
       print "Manual needle validation segmentation reset!"
@@ -4786,7 +4872,9 @@ class NeedleFinderLogic:
     # productive #onUpDnArrow
     profprint()
     widget = slicer.modules.NeedleFinderWidget
-    widget.scrollPointButton.setText('Scroll Point for Needle ' + str(widget.editNeedleTxtBox.value) + ' (pt: ' + str(self.ptNumber) + ')')
+    # widget.scrollPointButton.setText('Scroll Point for Needle ' + str(widget.editNeedleTxtBox.value) + ' (pt: ' + str(self.ptNumber) + ')')
+    self.lockControlPoints(widget.editNeedleTxtBox.value)
+    self.unlockControlPoints(widget.editNeedleTxtBox.value)
 
   def scrollPoint(self):
     """Reformat the axial view to display the slice containing the currently selected point.
@@ -4848,10 +4936,12 @@ class NeedleFinderLogic:
     # productive #onButton
     profprint()
     widget = slicer.modules.NeedleFinderWidget
-    widget.validationNeedleNumber += 1
-    widget.validationNeedleButton.text = "New Validation Needle: (" + str(widget.validationNeedleNumber) + ")->(" + str(widget.validationNeedleNumber + 1) + ")"
+    # widget.editNeedleTxtBox.value += 1
+    widget.validationNeedleButton.text = "New Validation Needle: (" + str(widget.editNeedleTxtBox.value) + ")->(" + str(widget.editNeedleTxtBox.value + 1) + ")"
+    widget.editNeedleTxtBox.value += 1
     # self.tableValueCtrPt.append([])
     widget.stepNeedle = 0
+    self.lockControlPoints(widget.editNeedleTxtBox.value)
 
   def filterWithSITK(self):
     """
@@ -5222,6 +5312,142 @@ class NeedleFinderLogic:
       del ritem
       self.model.removeRow(pos)
       self.row -= 1
+
+
+  #----------------------------------------------------------------------------------------------
+  """ Manual Control Points report"""
+  #----------------------------------------------------------------------------------------------
+
+  def initTableViewControlPoints(self):
+    """
+    Initialize a table gathering control points from manual segmentation
+    """
+    # productive
+    profprint()
+    if self.tableCTL == None:
+      self.keysCTL = ("#")
+      self.labelStatsCTL = {}
+      self.labelStatsCTL['Labels'] = []
+      self.itemsCTL = []
+      if self.modelCTL == None:
+          self.modelCTL = qt.QStandardItemModel()
+          self.modelCTL.setColumnCount(5)
+          self.modelCTL.setHeaderData(0, 1, "")
+          self.modelCTL.setHeaderData(1, 1, "# Needle")
+          self.modelCTL.setHeaderData(2, 1, "# Point")
+
+          self.modelCTL.setHeaderData(3, 1, "Delete")
+          self.modelCTL.setHeaderData(4, 1, "Reformat")
+          self.modelCTL.setHeaderData(5, 1, "Comments")
+          if self.viewCTL == None:
+            self.viewCTL = qt.QTableView()
+            self.viewCTL.setMinimumHeight(300)
+            self.viewCTL.sortingEnabled = True
+            self.viewCTL.verticalHeader().visible = False
+            self.viewCTL.horizontalHeader().setStretchLastSection(True)
+
+          self.viewCTL.setModel(self.modelCTL)
+          self.viewCTL.setColumnWidth(0, 18)
+          self.viewCTL.setColumnWidth(1, 58)
+          self.viewCTL.setColumnWidth(2, 58)
+          self.tableCTL = 1
+          self.rowCTL = 0
+          self.colCTL = 0
+          slicer.modules.NeedleFinderWidget.analysisGroupBoxLayoutCTL.addRow(self.viewCTL)
+
+  def addPointToTable(self, ID, needleNumber, pointNumber, label=None, needleType=None):
+    """
+    Add control point to the table
+    The color icon corresponds to the color of the needle, which corresponds to its label (color code)
+    """
+    # productive
+    profprint()
+    self.initTableViewControlPoints()
+    if label != None:
+      ref = int(label[0])
+      needleLabel = self.option[ref]
+    else:
+      needleLabel = str(ID)
+      ref = ID
+
+    # self.labelStatsCTL["Labels"].append(ref)
+    # self.labelStatsCTL[needleNumber, "#"] = needleLabel
+
+    ################################################
+    # Column 0
+    color = qt.QColor()
+    color.setRgb(self.color255[needleNumber][0], self.color255[needleNumber][1], self.color255[needleNumber][2])
+    item = qt.QStandardItem()
+    item.setData(color, 1)
+    self.modelCTL.setItem(self.rowCTL, 0, item)
+    self.itemsCTL.append(item)
+    ################################################
+    # Column 1
+    colCTL = 1
+    item = qt.QStandardItem()
+    item.setText(needleNumber)
+    self.modelCTL.setItem(self.rowCTL, colCTL, item)
+    self.itemsCTL.append(item)
+    ################################################
+    # Column 1
+    colCTL = 2
+    item = qt.QStandardItem()
+    item.setText(pointNumber)
+    self.modelCTL.setItem(self.rowCTL, colCTL, item)
+    self.itemsCTL.append(item)
+    # ################################################
+    # Column 3
+    displayButton = qt.QPushButton("Delete")
+    displayButton.checked = True
+    displayButton.checkable = True
+    if needleType == 'Validation':
+      ID = int(slicer.util.getNode('.' + str(ID)).GetID().strip('vtkMRMLModelNode'))
+    listArgs = [ID, needleNumber, pointNumber]
+    displayButton.connect("clicked()", lambda who=listArgs: self.removeNeedleShaftEvalMarker(who))
+    index = self.modelCTL.index(self.rowCTL, 3)
+    #
+    self.items.append(displayButton)
+    # self.col += 1
+    self.viewCTL.setIndexWidget(index, displayButton)
+    # ################################################
+    # # Column 3
+    # reformatButton = qt.QPushButton("Reformat")
+    # reformatButton.connect("clicked()", lambda who=ID: self.reformatSagittalView4Needle(who))
+    # index = self.model.index(self.row, 3)
+    # self.items.append(reformatButton)
+    # self.col += 1
+    # self.view.setIndexWidget(index, reformatButton)
+    # ################################################
+    # # Column 4
+    # editField = qt.QTextEdit("")
+
+    # self.items.append(editField)
+    # self.col += 1
+    # self.view.setIndexWidget(index, editField)
+    self.rowCTL += 1
+
+  def deletePointFromTable(self, ID):
+    """
+    Delete point from table
+    """
+    profprint()
+    # productive #onButton
+    print "len(items): ", len(self.itemsCTL)
+    if self.rowCTL:
+      pos = self.labelStatsCTL["Labels"].index(ID)
+      ref = ID % MAXNEEDLES
+      self.labelStatsCTL["Labels"].pop(pos)
+      self.labelStatsCTL[ref, "Label"] = None
+
+      pos += 1
+      for i in range(1, self.colCTL + 1):
+        item = self.itemsCTL.pop(pos * self.colCTL - i)
+        del item
+      pos -= 1
+      ritem = self.modelCTL.item(pos)
+      del ritem
+      self.modelCTL.removeRow(pos)
+      self.rowCTL -= 1
 
   #-----------------------------------------------------------
   # Radiation
@@ -6230,7 +6456,7 @@ class NeedleFinderLogic:
               if polydata2 != None and polydata2.GetNumberOfPoints() > 100 and polydata.GetNumberOfPoints() > 100:
                 tipDistance = self.distTip(int(node.GetID().strip('vtkMRMLModelNode')) , int(node2.GetID().strip('vtkMRMLModelNode')))
                 name = node.GetName()
-                manualName = name.lstrip('python-catch-round_').lstrip('manual-seg_').lstrip('obturator-seg_').lstrip('0123456789').lstrip('-ID-vtkMRMLModelNode').lstrip('0123456789-')
+                manualName = name.lstrip('auto-seg_').lstrip('manual-seg_').lstrip('obturator-seg_').lstrip('0123456789').lstrip('-ID-vtkMRMLModelNode').lstrip('0123456789-')
                 if manualName==node2.GetName(): dist.append([tipDistance, node2.GetID(), node2.GetName()])
                 # print tipDistance
           if dist != []:
