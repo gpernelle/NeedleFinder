@@ -349,7 +349,7 @@ class NeedleFinderWidget:
     validationFrame.addRow(self.validationNeedleButton)
     self.validationNeedleButton.connect('clicked()', logic.validationNeedle)
 
-    self.drawValidationNeedlesButton = qt.QPushButton('Draw Needle 3D Models')
+    self.drawValidationNeedlesButton = qt.QPushButton('Render Manual Needles')
     self.drawValidationNeedlesButton.toolTip = "Redraw every manually segmented needles. This is usefull for example if you moved a control point, or after you added a new needle"
     validationFrame.addRow(self.drawValidationNeedlesButton)
     self.drawValidationNeedlesButton.connect('clicked()', logic.drawValidationNeedles)
@@ -1309,6 +1309,8 @@ class NeedleFinderWidget:
       self.logic.t0 = time.clock()
       slicer.modules.NeedleFinderWidget.stepNeedle += 1
       self.logic.placeNeedleShaftEvalMarker(ijk, imageData, colorVar, spacing)
+      self.logic.drawValidationNeedles()
+
 
     # if self.sliceWidgetsPerStyle.has_key(observee) and event == "LeaveEvent":
       # self.stop()
