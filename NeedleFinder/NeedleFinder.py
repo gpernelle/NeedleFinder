@@ -292,17 +292,17 @@ class NeedleFinderWidget:
 
     #-----------------------------------------------------------------------------
 
-    #Report Frame Control Point########################################
-    self.__reportFrameCTL = ctk.ctkCollapsibleButton()
-    self.__reportFrameCTL.text = "Manual Segmentation Report"
-    self.__reportFrameCTL.collapsed = 1
-    reportFrameCTL = qt.QFormLayout(self.__reportFrameCTL)
+    # #Report Frame Control Point########################################
+    # self.__reportFrameCTL = ctk.ctkCollapsibleButton()
+    # self.__reportFrameCTL.text = "Manual Segmentation Report"
+    # self.__reportFrameCTL.collapsed = 1
+    # reportFrameCTL = qt.QFormLayout(self.__reportFrameCTL)
 
     # manual segmentation report
     self.analysisGroupBoxCTL = qt.QGroupBox()
     self.analysisGroupBoxCTL.setFixedHeight(330)
     self.analysisGroupBoxCTL.setTitle('Manual Segmentation Report')
-    reportFrameCTL.addRow(self.analysisGroupBoxCTL)
+    # reportFrameCTL.addRow(self.analysisGroupBoxCTL)
     self.analysisGroupBoxLayoutCTL = qt.QFormLayout(self.analysisGroupBoxCTL)
 
     #-----------------------------------------------------------------------------
@@ -354,6 +354,8 @@ class NeedleFinderWidget:
 
     self.startGivingControlPointsButton = qt.QPushButton('Start Giving Control Points')
     self.startGivingControlPointsButton.checkable = True
+    self.startGivingControlPointsButton.setStyleSheet("QPushButton {background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ccffcc, stop: 1 #f3fff3)}"
+                                                      "QPushButton:checked{background-color: red;}")
 
     self.startGivingControlPointsButton.connect('toggled(bool)', self.onStartStopGivingValidationControlPointsToggled)
 
@@ -385,12 +387,22 @@ class NeedleFinderWidget:
     self.editNeedleTxtBox.connect("valueChanged(int)", logic.changeValue)
     editLabel = qt.QLabel('Choose Needle:')
 
-    validationFrame.addRow(editLabel, self.editNeedleTxtBox)
-    validationFrame.addRow(self.validationNeedleButton)
+    # Choose needle
+    self.configFrameCTL = qt.QFrame()
+    self.configFrameCTL.setLayout(qt.QHBoxLayout())
+
+    self.configFrameCTL.layout().addWidget(editLabel)
+    self.configFrameCTL.layout().addWidget(self.editNeedleTxtBox)
+    self.configFrameCTL.layout().addWidget(self.validationNeedleButton)
+
+    # validationFrame.addRow(editLabel, self.editNeedleTxtBox)
+    # validationFrame.addRow(self.validationNeedleButton)
+    validationFrame.layout().addRow(self.configFrameCTL)
     validationFrame.addRow(self.startGivingControlPointsButton)
     validationFrame.addRow(self.drawValidationNeedlesButton)
     validationFrame.addRow(self.startValidationButton)
     validationFrame.addRow(self.resetValidationButton)
+    validationFrame.addRow(self.analysisGroupBoxCTL)
 
     # self.scrollPointButton = qt.QPushButton('Scroll Ctrl Pt for Needle ' + str(self.editNeedleTxtBox.value))
     # validationFrame.addRow(self.scrollPointButton)
@@ -665,7 +677,7 @@ class NeedleFinderWidget:
     #put frames on the tab########################################
     self.layout.addRow(self.__segmentationFrame)
     self.layout.addRow(self.__reportFrame)
-    self.layout.addRow(self.__reportFrameCTL)
+    # self.layout.addRow(self.__reportFrameCTL)
     self.layout.addRow(self.__validationFrame)
     self.layout.addRow(self.__parameterFrame)
     self.layout.addRow(self.__devFrame)
@@ -4877,6 +4889,51 @@ class NeedleFinderLogic:
     self.lockControlPoints(widget.editNeedleTxtBox.value)
     self.unlockControlPoints(widget.editNeedleTxtBox.value)
 
+
+  def goToPoint(self, ID):
+    """
+    Focus the slices on the selected point
+    :param ID: name of the fiducial point
+    :return:
+    """
+    profprint()
+    modelNode = slicer.util.getNode(ID)
+    coord = [0, 0, 0]
+    if modelNode != None:
+      if modelNode.GetAttribute("ValidationNeedle") == "1":
+        modelNode.GetFiducialCoordinates(coord)
+        X = coord[0]
+        Y = coord[1]
+        Z = coord[2]
+
+        sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
+        if sRed == None :
+          sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode1")
+
+        sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
+        if sYellow == None :
+          sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
+
+        sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
+        if sGreen == None :
+          sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode3")
+
+        mYellow = sYellow.GetSliceToRAS()
+        mYellow.SetElement(0, 3, X)
+        sYellow.Modified()
+        sYellow.UpdateMatrices()
+
+        mGreen = sGreen.GetSliceToRAS()
+        mGreen.SetElement(1, 3, Y)
+        sGreen.Modified()
+        sGreen.UpdateMatrices()
+
+        mRed = sRed.GetSliceToRAS()
+        mRed.SetElement(2, 3, Z)
+        sRed.Modified()
+        sRed.UpdateMatrices()
+
+
   def scrollPoint(self):
     """Reformat the axial view to display the slice containing the currently selected point.
     """
@@ -5406,18 +5463,15 @@ class NeedleFinderLogic:
     listArgs = [ID, needleNumber, pointNumber]
     displayButton.connect("clicked()", lambda who=listArgs: self.removeNeedleShaftEvalMarker(who))
     index = self.modelCTL.index(self.rowCTL, 3)
-    #
     self.items.append(displayButton)
-    # self.col += 1
     self.viewCTL.setIndexWidget(index, displayButton)
     # ################################################
-    # # Column 3
-    # reformatButton = qt.QPushButton("Reformat")
-    # reformatButton.connect("clicked()", lambda who=ID: self.reformatSagittalView4Needle(who))
-    # index = self.model.index(self.row, 3)
-    # self.items.append(reformatButton)
-    # self.col += 1
-    # self.view.setIndexWidget(index, reformatButton)
+    # Column 3
+    reformatButton = qt.QPushButton("Focus")
+    reformatButton.connect("clicked()", lambda who=ID: self.goToPoint(who))
+    index = self.modelCTL.index(self.rowCTL, 4)
+    self.itemsCTL.append(reformatButton)
+    self.viewCTL.setIndexWidget(index, reformatButton)
     # ################################################
     # # Column 4
     # editField = qt.QTextEdit("")
