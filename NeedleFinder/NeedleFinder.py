@@ -4220,10 +4220,11 @@ class NeedleFinderLogic:
     # self.row=0
     self.initTableView()
     self.deleteEvaluationNeedlesFromTable()
-    while slicer.util.getNodes('manual-seg*') != {}:
-        nodes = slicer.util.getNodes('manual-seg*')
-        for node in nodes.values():
-          slicer.mrmlScene.RemoveNode(node)
+    widget = slicer.modules.NeedleFinderWidget
+    while slicer.util.getNodes('manual-seg_'+str(widget.editNeedleTxtBox.value)) != {}:
+      nodes = slicer.util.getNodes('manual-seg_'+str(widget.editNeedleTxtBox.value))
+      for node in nodes.values():
+        slicer.mrmlScene.RemoveNode(node)
 
     tableValueCtrPt = [[[999, 999, 999] for i in range(100)] for j in range(100)]
     modelNodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
@@ -4232,12 +4233,13 @@ class NeedleFinderLogic:
         modelNode = slicer.mrmlScene.GetNthNodeByClass(nthNode, 'vtkMRMLAnnotationFiducialNode')
         if modelNode.GetAttribute("ValidationNeedle") == "1":
           needleNumber = int(modelNode.GetAttribute("NeedleNumber"))
-          needleStep = int(modelNode.GetAttribute("NeedleStep"))
-          coord = [0, 0, 0]
-          modelNode.GetFiducialCoordinates(coord)
-          tableValueCtrPt[needleNumber][needleStep] = coord
-          print needleNumber, needleStep, coord
-          # print self.tableValueCtrPt[needleNumber][needleStep]
+          if needleNumber == widget.editNeedleTxtBox.value:
+            needleStep = int(modelNode.GetAttribute("NeedleStep"))
+            coord = [0, 0, 0]
+            modelNode.GetFiducialCoordinates(coord)
+            tableValueCtrPt[needleNumber][needleStep] = coord
+            print needleNumber, needleStep, coord
+            # print self.tableValueCtrPt[needleNumber][needleStep]
 
     for i in range(len(tableValueCtrPt)):
       if not all(e == [999, 999, 999] for e in tableValueCtrPt[i]):
