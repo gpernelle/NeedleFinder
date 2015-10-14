@@ -2401,7 +2401,7 @@ class NeedleFinderLogic:
       self.needleDetectionThread15_1(A, imageData, labelData, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script, strManualName=strName)
     else:
       msgbox ("/!\ needleDetectionThread not defined")
-  def interp3(self,V, x, y, z,interpswitch):
+  def interp3(self,V, x, y, z,interpswitch=0):
     if interpswitch ==1:
         xf = int(math.floor(x))
         yf = int(math.floor(y))
@@ -2421,7 +2421,8 @@ class NeedleFinderLogic:
         w2 = j1*(1-yd) + j2*yd
         value = w1*(1-xd) + w2*xd
     else:
-        value = V.GetScalarComponentAsDouble(int(round(x)),int(round(y)),int(round(z)),0)
+        #value = V.GetScalarComponentAsDouble(int(round(x)),int(round(y)),int(round(z)),0)
+        value = V.GetScalarComponentAsDouble(x,y,z,0)
     return value
       
   def needleDetectionThread(self, tips, imageData, spacing, script=False, names=""):
@@ -3855,15 +3856,15 @@ class NeedleFinderLogic:
 
             # first, test if points are in the image space
             if ijk[0] < dims[0] and ijk[0] > 0 and  ijk[1] < dims[1] and ijk[1] > 0 and ijk[2] < dims[2] and ijk[2] > 0:
-              center = self.interp3(imageData, ijk[0], ijk[1], ijk[2],0)#ruibin interpolation
-              #center = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
+              #center = self.interp3(imageData, ijk[0], ijk[1], ijk[2],0)#ruibin interpolation
+              center = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
               total += center
               if gradient == 1 :
 
                 radiusNeedle = int(round(radiusNeedleParameter / float(spacing[0])))
                 radiusNeedleCorner = int(round((radiusNeedleParameter / float(spacing[0]) / 1.414)))
                 
-                g1 = self.interp3(imageData, ijk[0] + radiusNeedle, ijk[1], ijk[2],0)
+                '''g1 = self.interp3(imageData, ijk[0] + radiusNeedle, ijk[1], ijk[2],0)
                 g2 = self.interp3(imageData, ijk[0] - radiusNeedle, ijk[1], ijk[2],0)
                 g3 = self.interp3(imageData, ijk[0], ijk[1] + radiusNeedle, ijk[2],0)
                 g4 = self.interp3(imageData, ijk[0], ijk[1] - radiusNeedle, ijk[2],0)
@@ -3871,7 +3872,7 @@ class NeedleFinderLogic:
                 g6 = self.interp3(imageData, ijk[0] - radiusNeedleCorner, ijk[1] - radiusNeedleCorner, ijk[2],0)
                 g7 = self.interp3(imageData, ijk[0] - radiusNeedleCorner, ijk[1] + radiusNeedleCorner, ijk[2],0)
                 g8 = self.interp3(imageData, ijk[0] + radiusNeedleCorner, ijk[1] - radiusNeedleCorner, ijk[2],0)
-                '''ruibin interpolation
+                '''#ruibin interpolation
                 g1 = imageData.GetScalarComponentAsDouble(ijk[0] + radiusNeedle, ijk[1], ijk[2], 0)
                 g2 = imageData.GetScalarComponentAsDouble(ijk[0] - radiusNeedle, ijk[1], ijk[2], 0)
                 g3 = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1] + radiusNeedle, ijk[2], 0)
@@ -3880,7 +3881,7 @@ class NeedleFinderLogic:
                 g6 = imageData.GetScalarComponentAsDouble(ijk[0] - radiusNeedleCorner, ijk[1] - radiusNeedleCorner, ijk[2], 0)
                 g7 = imageData.GetScalarComponentAsDouble(ijk[0] - radiusNeedleCorner, ijk[1] + radiusNeedleCorner, ijk[2], 0)
                 g8 = imageData.GetScalarComponentAsDouble(ijk[0] + radiusNeedleCorner, ijk[1] - radiusNeedleCorner, ijk[2], 0)
-                '''
+                
 
                 total += 8 * center - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8) * gradientPonderation
               # >>>>>>>>>>>>>>>>>>>>>> exp.02
@@ -5225,22 +5226,22 @@ class NeedleFinderLogic:
             # first, test if points are in the image space
             if ijk[0] < ivDims[0] and ijk[0] > 0 and  ijk[1] < ivDims[1] and ijk[1] > 0 and ijk[2] < ivDims[2] and ijk[2] > 0:
 
-              #dCenter = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
-              dCenter = self.interp3(imgData, ijk[0], ijk[1], ijk[2], 0)
+              dCenter = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
+              #dCenter = self.interp3(imgData, ijk[0], ijk[1], ijk[2], 0)
               fTotal += dCenter
               if 1 and bGradient == 1 : #<<< feature on/off
 
-                iRadiusNeedle = iRadiusNeedle_mm / float(fvSpacing[0])
-                iRadiusNeedleCorner = iRadiusNeedle_mm / float(fvSpacing[0]) / 1.414
+                iRadiusNeedle = int(round(iRadiusNeedle_mm / float(fvSpacing[0])))
+                iRadiusNeedleCorner = int(round((iRadiusNeedle_mm / float(fvSpacing[0]) / 1.414)))
 
-                g1 = self.interp3(imgData,ijk[0] + iRadiusNeedle, ijk[1], ijk[2], 0)
-                g2 = self.interp3(imgData,ijk[0] - iRadiusNeedle, ijk[1], ijk[2], 0)
-                g3 = self.interp3(imgData,ijk[0], ijk[1] + iRadiusNeedle, ijk[2], 0)
-                g4 = self.interp3(imgData,ijk[0], ijk[1] - iRadiusNeedle, ijk[2], 0)
-                g5 = self.interp3(imgData,ijk[0] + iRadiusNeedleCorner, ijk[1] + iRadiusNeedleCorner, ijk[2], 0)
-                g6 = self.interp3(imgData,ijk[0] - iRadiusNeedleCorner, ijk[1] - iRadiusNeedleCorner, ijk[2], 0)
-                g7 = self.interp3(imgData,ijk[0] - iRadiusNeedleCorner, ijk[1] + iRadiusNeedleCorner, ijk[2], 0)
-                g8 = self.interp3(imgData,ijk[0] + iRadiusNeedleCorner, ijk[1] - iRadiusNeedleCorner, ijk[2], 0)
+                g1 = imgData.GetScalarComponentAsDouble(ijk[0] + iRadiusNeedle, ijk[1], ijk[2], 0)
+                g2 = imgData.GetScalarComponentAsDouble(ijk[0] - iRadiusNeedle, ijk[1], ijk[2], 0)
+                g3 = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1] + iRadiusNeedle, ijk[2], 0)
+                g4 = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1] - iRadiusNeedle, ijk[2], 0)
+                g5 = imgData.GetScalarComponentAsDouble(ijk[0] + iRadiusNeedleCorner, ijk[1] + iRadiusNeedleCorner, ijk[2], 0)
+                g6 = imgData.GetScalarComponentAsDouble(ijk[0] - iRadiusNeedleCorner, ijk[1] - iRadiusNeedleCorner, ijk[2], 0)
+                g7 = imgData.GetScalarComponentAsDouble(ijk[0] - iRadiusNeedleCorner, ijk[1] + iRadiusNeedleCorner, ijk[2], 0)
+                g8 = imgData.GetScalarComponentAsDouble(ijk[0] + iRadiusNeedleCorner, ijk[1] - iRadiusNeedleCorner, ijk[2], 0)
 
                 fTotal += 8 * dCenter - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8) * iGradientPonderation
               #fi gradient
@@ -6668,11 +6669,11 @@ class NeedleFinderLogic:
     if 1:
       try:
         #with open('/home/mastmeyer/Dropbox/GYN Cases/MICCAI13scenes.txt') as f:
-        with open('/home/mastmeyer/Dropbox/GYN Cases/scenes.txt') as f:
+        with open('/home/mastmeyer/Drpbx/GYN Cases/scenes.txt') as f:
           lines = f.readlines()
       except: print '/!\ scene list file not found!'
       for line in lines:
-        path[int(line.lstrip('./Case  ')[1:3])]='/home/mastmeyer/Dropbox/GYN Cases/'+line.lstrip('./').rstrip('\n')
+        path[int(line.lstrip('./Case  ')[1:3])]='/home/mastmeyer/Drpbx/GYN Cases/'+line.lstrip('./').rstrip('\n')
     #show a directory selector for saving the results
     self.dirDialog = qt.QFileDialog(w.parent)
     self.dirDialog.setDirectory('/tmp')
@@ -6692,9 +6693,9 @@ class NeedleFinderLogic:
       #filLog.write("case\tman.-seg_\tiStep\tcrit\treject\tvalue\tlimit\n")
       filLog.close()
       #nUsers=1; clickWeight=1 #default MICCAI13/15, clickWeight=1 original fringe click <o> CONST 0.5 tube middle
-      nUsers=1; clickWeight=.5 #clickWeight=1 original fringe click <o> CONST 0.5 tube middle
-      nUsers=3; clickWeight=1 #<o> CONST around tube middle at fringe
-      #nUsers=3; clickWeight=.75 #<o> CONST around tube middle
+      nUsers=1; clickWeight=.5 #<o> clickWeight=1 original fringe click, CONST 0.5 tube middle
+      #nUsers=3; clickWeight=1 #<o> CONST around tube middle at fringe
+      #nUsers=3; clickWeight=.75 #CONST around tube middle
       for id in range(0,100): #(1,100): <o> CONST
         if path[id]:
           slicer.mrmlScene.Clear(0)
@@ -6710,7 +6711,7 @@ class NeedleFinderLogic:
           #TODO maybe implement random tips in  a sphere (d=2mm) from tube center 
           offset=user*50/nUsers #CONST
           print "click offset: ",offset
-          l.startValidation(script=True, offset=offset)#RM clickWeight=clickWeight, displayClicks=True)
+          l.startValidation(script=True, offset=offset, clickWeight=clickWeight)#RM  displayClicks=True)
           #results, outliers1, outliers2, outliers3 = l.evaluate(script=True)  # calculate HD distances
           results, outliers1 = l.evaluate(script=True)  #RM calculate HD distances
           for result in results:
@@ -7760,7 +7761,7 @@ class NeedleFinderLogic:
                 names.append(node.GetName())
     return returnTips, names
 
-  def startValidation(self, script=False, offset=0):
+  def startValidation(self, script=False, offset=0,clickWeight=1.):
     """Start the evaluation process:
     * Calls returnTipsFromNeedleModels() to build an array of the tip of manually segmented needles
     * Use theses tips to generate auto segmented needles
@@ -7773,7 +7774,11 @@ class NeedleFinderLogic:
     profprint()
     widget = slicer.modules.NeedleFinderWidget
     self.deleteNeedleDetectionModelsFromScene()
-    tips, names = self.returnTipsFromNeedleModels(offset=offset)
+    #tips, names = self.returnTipsFromNeedleModels(offset=offset)
+    #get pseudo clicks near middle of tube
+    tips0, names = self.returnTipsFromNeedleModels(offset=offset)
+    tips1, dum = self.returnTipsFromNeedleModels(offset=(offset+25)%50) #CONST opposite point
+    tips=((np.array(tips0)*clickWeight+np.array(tips1)*(1.-clickWeight))).tolist()
     # delete old needles as they will be recalculated
     self.deleteAllAutoNeedlesFromScene()
     # select the image node from the Red slice viewer
