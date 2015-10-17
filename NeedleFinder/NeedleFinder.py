@@ -41,6 +41,7 @@ import os.path
 import time as t
 import vtk, qt, ctk, slicer
 import shutil
+import fnmatch
 
 import EditorLib
 from EditorLib.EditUtil import EditUtil
@@ -109,11 +110,55 @@ class NeedleFinder:
     parent.acknowledgementText = " Version : " + "NeedleFinder 2015 v1.0."
     self.NeedleFinderWidget = 0
     self.parent = parent
+    self.loaded = 0
+    self.logic = NeedleFinderLogic()
     try:
       slicer.selfTests
     except AttributeError:
       slicer.selfTests = {}
     slicer.selfTests['NeedleFinder'] = self.runTest
+
+    from functools import partial
+    def __onNodeAddedObserver__(self, caller, eventId, callData):
+      """Node added to the Slicer scene"""
+      if callData.GetClassName() == 'vtkMRMLScalarVolumeNode' and self.loaded==0:
+        print ("Loaded " + callData.GetID())
+        self.loadCTLPointsInTable()
+        self.loaded = 1
+
+
+    self.__onNodeAddedObserver__ = partial(__onNodeAddedObserver__, self)
+    self.__onNodeAddedObserver__.CallDataType = vtk.VTK_OBJECT
+    print ("adding observer")
+    slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, self.__onNodeAddedObserver__)
+
+  def loadCTLPointsInTable(self):
+    # get list of fiducial points
+    path = slicer.mrmlScene.GetRootDirectory()
+    fname = os.listdir(path)
+    print fname
+    pointList=[]
+    for file in fname:
+        if fnmatch.fnmatch(file, '*.acsv'):
+            with open(path + file) as f:
+                content = f.readlines()
+                print content
+                s = content[-1]
+                print s
+                sArray = s.split('|')
+                print sArray
+                # read filename
+                fs = file.split('.')
+                print fs
+                fss = fs[1].split('-')
+                if len(fss)>1:
+                  print fss
+                  coord = np.array([int(fss[0]),int(fss[1]),float(sArray[1]),float(sArray[2]),float(sArray[3])])
+                  pointList.append(coord)
+    pointList = np.array(pointList)
+
+    for point in pointList:
+      self.logic.placeNeedleShaftEvalMarker(point[2:], int(point[0]),int(point[1]), 'ras')
 
   def __del__(self):
     if self.NeedleFinderWidget:
@@ -182,6 +227,14 @@ class NeedleFinderWidget:
     self.userNr = 0
     self.logDir='/tmp' #TODO this is not windows compatible
 
+    # table report
+    self.table = None
+    self.tableCTL = None
+    self.view = None
+    self.viewCTL = None
+    self.model = None
+    self.modelCTL = None
+
     # keep list of pairs: [observee,tag] so they can be removed easily
     self.styleObserverTags = []
     # keep a map of interactor styles to sliceWidgets so we can easily get sliceLogic
@@ -213,6 +266,48 @@ class NeedleFinderWidget:
     return class name
     """
     return self.__class__.__name__
+
+
+    #----------------------------------------------------------------------------------------------
+  """ Manual Control Points report"""
+  #----------------------------------------------------------------------------------------------
+
+  def initTableViewControlPoints(self):
+    """
+    Initialize a table gathering control points from manual segmentation
+    """
+    # productive
+    profprint()
+    if self.tableCTL == None:
+      self.keysCTL = ("#")
+      self.labelStatsCTL = {}
+      self.labelStatsCTL['Labels'] = []
+      self.itemsCTL = []
+      if self.modelCTL == None:
+          self.modelCTL = qt.QStandardItemModel()
+          self.modelCTL.setColumnCount(5)
+          self.modelCTL.setHeaderData(0, 1, "")
+          self.modelCTL.setHeaderData(1, 1, "# Needle")
+          self.modelCTL.setHeaderData(2, 1, "# Point")
+
+          self.modelCTL.setHeaderData(3, 1, "Delete")
+          self.modelCTL.setHeaderData(4, 1, "Reformat")
+          self.modelCTL.setHeaderData(5, 1, "Comments")
+          if self.viewCTL == None:
+            self.viewCTL = qt.QTableView()
+            self.viewCTL.setMinimumHeight(300)
+            self.viewCTL.sortingEnabled = True
+            self.viewCTL.verticalHeader().visible = False
+            self.viewCTL.horizontalHeader().setStretchLastSection(True)
+
+          self.viewCTL.setModel(self.modelCTL)
+          self.viewCTL.setColumnWidth(0, 18)
+          self.viewCTL.setColumnWidth(1, 58)
+          self.viewCTL.setColumnWidth(2, 58)
+          self.tableCTL = 1
+          self.rowCTL = 0
+          self.colCTL = 0
+          self.analysisGroupBoxLayoutCTL.addRow(self.viewCTL)
 
   def createAddOrSelectLabelMapNode(self, script=False):
     """
@@ -691,7 +786,7 @@ class NeedleFinderWidget:
 
     # init table report
     logic.initTableView()  # init the report table
-    logic.initTableViewControlPoints()  # init the report table
+    self.initTableViewControlPoints()  # init the report table
 
     # Lauren's feature request: set mainly unused coronal view to sagittal to display ground truth bitmap image (if available)
     # Usage after fresh slicer start: 1. Load scene and 2. reference jpg. 3. Then open NeedleFinder from Modules selector
@@ -1342,8 +1437,9 @@ class NeedleFinderWidget:
       ijk = self.logic.ras2ijk(ras)
 
       self.logic.t0 = time.clock()
-      slicer.modules.NeedleFinderWidget.stepNeedle += 1
-      self.logic.placeNeedleShaftEvalMarker(ijk, imageData, colorVar, spacing)
+      widget = slicer.modules.NeedleFinderWidget
+      widget.stepNeedle += 1
+      self.logic.placeNeedleShaftEvalMarker(ijk, widget.editNeedleTxtBox.value, self.logic.findNextStepNumber(widget.editNeedleTxtBox.value))
       self.logic.drawValidationNeedles()
 
 
@@ -2168,7 +2264,7 @@ class NeedleFinderLogic:
         if modelNode.GetAttribute("ValidationNeedle") == "1" and int(modelNode.GetAttribute("NeedleNumber")) == needleNumber:
           modelNode.SetLocked(0)
 
-  def placeNeedleShaftEvalMarker(self, A, imageData, colorVar, spacing):
+  def placeNeedleShaftEvalMarker(self, A, needleNumber, stepValue, type = 'ijk'):
     """
     Add a fiducial point to the vtkMRMLScence, where the mouse click was triggered. The fiducial points reprents a control
     point for a manually segmented needle (validation needle)
@@ -2183,29 +2279,27 @@ class NeedleFinderLogic:
     profprint()
     widget = slicer.modules.NeedleFinderWidget
     fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
-    # pointName = '.' + str(widget.editNeedleTxtBox.value) + "-" + str(widget.stepNeedle)
-    stepValue = self.findNextStepNumber(widget.editNeedleTxtBox.value)
-    pointName = '.' + str(widget.editNeedleTxtBox.value) + "-" + str(stepValue)
+    # stepValue = self.findNextStepNumber(widget.editNeedleTxtBox.value)
+    pointName = '.' + str(needleNumber) + "-" + str(stepValue)
     fiducial.SetName(pointName)
     fiducial.Initialize(slicer.mrmlScene)
-    fiducial.SetFiducialCoordinates(self.ijk2ras(A))
+    if type=='ijk':
+      fiducial.SetFiducialCoordinates(self.ijk2ras(A))
+    else:
+      fiducial.SetFiducialCoordinates(A)
     fiducial.SetAttribute('ValidationNeedle', '1')
-    # fiducial.SetAttribute('NeedleNumber', str(widget.editNeedleTxtBox.value))
-    fiducial.SetAttribute('NeedleNumber', str(widget.editNeedleTxtBox.value))
+    fiducial.SetAttribute('NeedleNumber', str(needleNumber))
     fiducial.SetAttribute('NeedleStep', str(stepValue))
-    # self.addPointToTable(pointName, widget.editNeedleTxtBox.value, widget.stepNeedle, None)
-    self.addPointToTable(pointName, widget.editNeedleTxtBox.value, stepValue, None)
+    self.addPointToTable(pointName, needleNumber, stepValue, None)
 
-    nth = int(widget.editNeedleTxtBox.value)
+    nth = int(needleNumber)
     # print nth
-
     displayNode = fiducial.GetDisplayNode()
     displayNode.SetGlyphScale(2)
     displayNode.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
     textNode = fiducial.GetAnnotationTextDisplayNode()
     textNode.SetTextScale(4)
     textNode.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
-    # self.tableValueCtrPt[widget.editNeedleTxtBox.value].append(self.ijk2ras(A))
 
   def removeNeedleShaftEvalMarker(self, listArgs):
     """
@@ -5373,48 +5467,6 @@ class NeedleFinderLogic:
       self.model.removeRow(pos)
       self.row -= 1
 
-
-  #----------------------------------------------------------------------------------------------
-  """ Manual Control Points report"""
-  #----------------------------------------------------------------------------------------------
-
-  def initTableViewControlPoints(self):
-    """
-    Initialize a table gathering control points from manual segmentation
-    """
-    # productive
-    profprint()
-    if self.tableCTL == None:
-      self.keysCTL = ("#")
-      self.labelStatsCTL = {}
-      self.labelStatsCTL['Labels'] = []
-      self.itemsCTL = []
-      if self.modelCTL == None:
-          self.modelCTL = qt.QStandardItemModel()
-          self.modelCTL.setColumnCount(5)
-          self.modelCTL.setHeaderData(0, 1, "")
-          self.modelCTL.setHeaderData(1, 1, "# Needle")
-          self.modelCTL.setHeaderData(2, 1, "# Point")
-
-          self.modelCTL.setHeaderData(3, 1, "Delete")
-          self.modelCTL.setHeaderData(4, 1, "Reformat")
-          self.modelCTL.setHeaderData(5, 1, "Comments")
-          if self.viewCTL == None:
-            self.viewCTL = qt.QTableView()
-            self.viewCTL.setMinimumHeight(300)
-            self.viewCTL.sortingEnabled = True
-            self.viewCTL.verticalHeader().visible = False
-            self.viewCTL.horizontalHeader().setStretchLastSection(True)
-
-          self.viewCTL.setModel(self.modelCTL)
-          self.viewCTL.setColumnWidth(0, 18)
-          self.viewCTL.setColumnWidth(1, 58)
-          self.viewCTL.setColumnWidth(2, 58)
-          self.tableCTL = 1
-          self.rowCTL = 0
-          self.colCTL = 0
-          slicer.modules.NeedleFinderWidget.analysisGroupBoxLayoutCTL.addRow(self.viewCTL)
-
   def addPointToTable(self, ID, needleNumber, pointNumber, label=None, needleType=None):
     """
     Add control point to the table
@@ -5422,7 +5474,8 @@ class NeedleFinderLogic:
     """
     # productive
     profprint()
-    self.initTableViewControlPoints()
+    widget = slicer.modules.NeedleFinderWidget
+    widget.initTableViewControlPoints()
     if label != None:
       ref = int(label[0])
       needleLabel = self.option[ref]
@@ -5430,7 +5483,7 @@ class NeedleFinderLogic:
       needleLabel = str(ID)
       ref = ID
 
-    self.labelStatsCTL["Labels"].append(ID)
+    widget.labelStatsCTL["Labels"].append(ID)
     # self.labelStatsCTL[needleNumber, "#"] = needleLabel
 
     ################################################
@@ -5439,22 +5492,22 @@ class NeedleFinderLogic:
     color.setRgb(self.color255[needleNumber][0], self.color255[needleNumber][1], self.color255[needleNumber][2])
     item = qt.QStandardItem()
     item.setData(color, 1)
-    self.modelCTL.setItem(self.rowCTL, 0, item)
-    self.itemsCTL.append(item)
+    widget.modelCTL.setItem(widget.rowCTL, 0, item)
+    widget.itemsCTL.append(item)
     ################################################
     # Column 1
     colCTL = 1
     item = qt.QStandardItem()
     item.setText(needleNumber)
-    self.modelCTL.setItem(self.rowCTL, colCTL, item)
-    self.itemsCTL.append(item)
+    widget.modelCTL.setItem(widget.rowCTL, colCTL, item)
+    widget.itemsCTL.append(item)
     ################################################
     # Column 1
     colCTL = 2
     item = qt.QStandardItem()
     item.setText(pointNumber)
-    self.modelCTL.setItem(self.rowCTL, colCTL, item)
-    self.itemsCTL.append(item)
+    widget.modelCTL.setItem(widget.rowCTL, colCTL, item)
+    widget.itemsCTL.append(item)
     # ################################################
     # Column 3
     displayButton = qt.QPushButton("Delete")
@@ -5464,16 +5517,16 @@ class NeedleFinderLogic:
       ID = int(slicer.util.getNode('.' + str(ID)).GetID().strip('vtkMRMLModelNode'))
     listArgs = [ID, needleNumber, pointNumber]
     displayButton.connect("clicked()", lambda who=listArgs: self.removeNeedleShaftEvalMarker(who))
-    index = self.modelCTL.index(self.rowCTL, 3)
-    self.items.append(displayButton)
-    self.viewCTL.setIndexWidget(index, displayButton)
+    index = widget.modelCTL.index(widget.rowCTL, 3)
+    widget.itemsCTL.append(displayButton)
+    widget.viewCTL.setIndexWidget(index, displayButton)
     # ################################################
     # Column 3
     reformatButton = qt.QPushButton("Focus")
     reformatButton.connect("clicked()", lambda who=ID: self.goToPoint(who))
-    index = self.modelCTL.index(self.rowCTL, 4)
-    self.itemsCTL.append(reformatButton)
-    self.viewCTL.setIndexWidget(index, reformatButton)
+    index = widget.modelCTL.index(widget.rowCTL, 4)
+    widget.itemsCTL.append(reformatButton)
+    widget.viewCTL.setIndexWidget(index, reformatButton)
     # ################################################
     # # Column 4
     # editField = qt.QTextEdit("")
@@ -5481,7 +5534,7 @@ class NeedleFinderLogic:
     # self.items.append(editField)
     # self.col += 1
     # self.view.setIndexWidget(index, editField)
-    self.rowCTL += 1
+    widget.rowCTL += 1
 
   def deletePointFromTable(self, ID):
     """
@@ -5489,19 +5542,20 @@ class NeedleFinderLogic:
     """
     profprint()
     # productive #onButton
-    print "len(items): ", len(self.itemsCTL)
-    if self.rowCTL:
-      pos = self.labelStatsCTL["Labels"].index(ID)
-      self.labelStatsCTL["Labels"].pop(pos)
+    widget = slicer.modules.NeedleFinderWidget
+    print "len(items): ", len(widget.itemsCTL)
+    if widget.rowCTL:
+      pos = widget.labelStatsCTL["Labels"].index(ID)
+      widget.labelStatsCTL["Labels"].pop(pos)
       pos += 1
-      for i in range(1, self.colCTL + 1):
-        item = self.itemsCTL.pop(pos * self.colCTL - i)
+      for i in range(1, widget.colCTL + 1):
+        item = widget.itemsCTL.pop(pos * widget.colCTL - i)
         del item
       pos -= 1
-      ritem = self.modelCTL.item(pos)
+      ritem = widget.modelCTL.item(pos)
       del ritem
-      self.modelCTL.removeRow(pos)
-      self.rowCTL -= 1
+      widget.modelCTL.removeRow(pos)
+      widget.rowCTL -= 1
 
   #-----------------------------------------------------------
   # Radiation
