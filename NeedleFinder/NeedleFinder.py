@@ -42,9 +42,9 @@ import time as t
 import vtk, qt, ctk, slicer
 import shutil
 import fnmatch
+from functools import partial
 
 import EditorLib
-from EditorLib.EditUtil import EditUtil
 from Editor import EditorWidget
 
 # profiling/debugging helper functions:
@@ -118,7 +118,7 @@ class NeedleFinder:
       slicer.selfTests = {}
     slicer.selfTests['NeedleFinder'] = self.runTest
 
-    from functools import partial
+
     def __onNodeAddedObserver__(self, caller, eventId, callData):
       """Node added to the Slicer scene"""
       if callData.GetClassName() == 'vtkMRMLScalarVolumeNode' and self.loaded==0:
@@ -142,23 +142,26 @@ class NeedleFinder:
         if fnmatch.fnmatch(file, '*.acsv'):
             with open(path + file) as f:
                 content = f.readlines()
-                print content
+                # print content
                 s = content[-1]
-                print s
+                # print s
                 sArray = s.split('|')
-                print sArray
+                # print sArray
                 # read filename
                 fs = file.split('.')
-                print fs
+                # print fs
                 fss = fs[1].split('-')
                 if len(fss)>1:
-                  print fss
+                  # print fss
                   coord = np.array([int(fss[0]),int(fss[1]),float(sArray[1]),float(sArray[2]),float(sArray[3])])
                   pointList.append(coord)
     pointList = np.array(pointList)
 
     for point in pointList:
-      self.logic.placeNeedleShaftEvalMarker(point[2:], int(point[0]),int(point[1]), 'ras')
+      self.logic.placeNeedleShaftEvalMarker(point[2:], int(point[0]),int(point[1]), 'ras', 0)
+
+    # observe visibility of manual needles to propagate on ctl points
+    self.logic.observeManualNeedles()
 
   def __del__(self):
     if self.NeedleFinderWidget:
@@ -281,7 +284,9 @@ class NeedleFinderWidget:
     if self.tableCTL == None:
       self.keysCTL = ("#")
       self.labelStatsCTL = {}
+      self.labelStatsCTLID = {}
       self.labelStatsCTL['Labels'] = []
+      self.labelStatsCTLID['Labels'] = []
       self.itemsCTL = []
       if self.modelCTL == None:
           self.modelCTL = qt.QStandardItemModel()
@@ -1615,6 +1620,8 @@ class NeedleFinderLogic:
     self.screenshotScaleFactor = 1
     self.estimatorReference = 0
     self.controlPoints = []
+    self.observerTags = {}
+    self.observeManualNeedles()
 
     self.previousValues = [[0, 0, 0]]
     self.tableValueCtrPt = [[[999, 999, 999] for i in range(100)] for j in range(100)]
@@ -1626,6 +1633,45 @@ class NeedleFinderLogic:
     return class name
     """
     return self.__class__.__name__
+
+  def observeManualNeedles(self):
+
+    nodes = slicer.util.getNodes('manual-seg_*')
+    for node in nodes.values():
+      nth = node.GetAttribute('nth')
+      vals = self.observerTags.get(nth)
+      if vals != None:
+        dNode = node.GetDisplayNode()
+        for val in vals:
+          dNode.RemoveObserver(val)
+        del self.observerTags[nth]
+
+    for node in nodes.values():
+      if node != None and node.GetClassName() == 'vtkMRMLModelNode':
+        dNode = node.GetDisplayNode()
+        nth = node.GetAttribute('nth')
+        dNode.SetDescription(nth)
+        if self.observerTags.get(nth) == None:
+          self.observerTags[nth] = [dNode.AddObserver('ModifiedEvent', self.followVisibility)]
+        else:
+          self.observerTags[nth].append(dNode.AddObserver('ModifiedEvent', self.followVisibility))
+
+  def followVisibility(self, dn, eventId ): #needleModelNode=0, displayNode=0,
+    '''
+    propagate visibility of needle to control points
+    :param displayNodeID:
+    :return:
+    '''
+    nth = dn.GetDescription()
+    v = dn.GetVisibility()
+    print v
+    print '.' + nth +'-*'
+    nodes = slicer.util.getNodes('.' + nth +'-*')
+    for node in nodes.values():
+      print node.GetID()
+      if node != None and node.GetClassName() == 'vtkMRMLAnnotationFiducialNode':
+        node.SetDisplayVisibility(v)
+
 
   def hasImageData(self, volumeNode):
     """ Test:
@@ -2264,7 +2310,7 @@ class NeedleFinderLogic:
         if modelNode.GetAttribute("ValidationNeedle") == "1" and int(modelNode.GetAttribute("NeedleNumber")) == needleNumber:
           modelNode.SetLocked(0)
 
-  def placeNeedleShaftEvalMarker(self, A, needleNumber, stepValue, type = 'ijk'):
+  def placeNeedleShaftEvalMarker(self, A, needleNumber, stepValue, type = 'ijk', createPoint=1):
     """
     Add a fiducial point to the vtkMRMLScence, where the mouse click was triggered. The fiducial points reprents a control
     point for a manually segmented needle (validation needle)
@@ -2277,29 +2323,31 @@ class NeedleFinderLogic:
     """
     # productive #onClick
     profprint()
-    widget = slicer.modules.NeedleFinderWidget
-    fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
-    # stepValue = self.findNextStepNumber(widget.editNeedleTxtBox.value)
     pointName = '.' + str(needleNumber) + "-" + str(stepValue)
-    fiducial.SetName(pointName)
-    fiducial.Initialize(slicer.mrmlScene)
-    if type=='ijk':
-      fiducial.SetFiducialCoordinates(self.ijk2ras(A))
-    else:
-      fiducial.SetFiducialCoordinates(A)
-    fiducial.SetAttribute('ValidationNeedle', '1')
-    fiducial.SetAttribute('NeedleNumber', str(needleNumber))
-    fiducial.SetAttribute('NeedleStep', str(stepValue))
-    self.addPointToTable(pointName, needleNumber, stepValue, None)
+    # if slicer.util.getNode(pointName) == None:
+    if createPoint == 1:
+      fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+      # stepValue = self.findNextStepNumber(widget.editNeedleTxtBox.value)
+      fiducial.SetName(pointName)
+      fiducial.Initialize(slicer.mrmlScene)
+      if type=='ijk':
+        fiducial.SetFiducialCoordinates(self.ijk2ras(A))
+      else:
+        fiducial.SetFiducialCoordinates(A)
+      fiducial.SetAttribute('ValidationNeedle', '1')
+      fiducial.SetAttribute('NeedleNumber', str(needleNumber))
+      fiducial.SetAttribute('NeedleStep', str(stepValue))
 
-    nth = int(needleNumber)
-    # print nth
-    displayNode = fiducial.GetDisplayNode()
-    displayNode.SetGlyphScale(2)
-    displayNode.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
-    textNode = fiducial.GetAnnotationTextDisplayNode()
-    textNode.SetTextScale(4)
-    textNode.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
+      nth = int(needleNumber)
+      # print nth
+      displayNode = fiducial.GetDisplayNode()
+      displayNode.SetGlyphScale(2)
+      displayNode.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
+      textNode = fiducial.GetAnnotationTextDisplayNode()
+      textNode.SetTextScale(4)
+      textNode.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
+
+    self.addPointToTable(pointName, needleNumber, stepValue, None)
 
   def removeNeedleShaftEvalMarker(self, listArgs):
     """
@@ -4344,6 +4392,7 @@ class NeedleFinderLogic:
         # print "Control points unsorted", controlPointsUnsorted
         print "Control points", controlPoints
         self.addNeedleToScene(controlPoints, i, 'Validation')
+        self.observeManualNeedles()
       else:
         # print i
         pass
@@ -5484,6 +5533,7 @@ class NeedleFinderLogic:
       ref = ID
 
     widget.labelStatsCTL["Labels"].append(ID)
+    widget.labelStatsCTLID["Labels"].append(1000*needleNumber + pointNumber)
     # self.labelStatsCTL[needleNumber, "#"] = needleLabel
 
     ################################################
@@ -5498,14 +5548,14 @@ class NeedleFinderLogic:
     # Column 1
     colCTL = 1
     item = qt.QStandardItem()
-    item.setText(needleNumber)
+    item.setText(str(needleNumber).zfill(2))
     widget.modelCTL.setItem(widget.rowCTL, colCTL, item)
     widget.itemsCTL.append(item)
     ################################################
     # Column 1
     colCTL = 2
     item = qt.QStandardItem()
-    item.setText(pointNumber)
+    item.setText(str(pointNumber).zfill(2))
     widget.modelCTL.setItem(widget.rowCTL, colCTL, item)
     widget.itemsCTL.append(item)
     # ################################################
@@ -5535,6 +5585,8 @@ class NeedleFinderLogic:
     # self.col += 1
     # self.view.setIndexWidget(index, editField)
     widget.rowCTL += 1
+    widget.viewCTL.sortByColumn(2)
+    widget.viewCTL.sortByColumn(1)
 
   def deletePointFromTable(self, ID):
     """
@@ -5543,10 +5595,21 @@ class NeedleFinderLogic:
     profprint()
     # productive #onButton
     widget = slicer.modules.NeedleFinderWidget
-    print "len(items): ", len(widget.itemsCTL)
+    sortedIndex = widget.labelStatsCTLID['Labels']
+    sortedIndex.sort()
+    sortedIndex.reverse()
+    # print sortedIndex
+    # print ID
+    label = ID.split('.')
+    labelval = label[1].split('-')
+    # print labelval
+    val = 1000 * int(labelval[0]) + int(labelval[1])
+    # print "val: ", val
+    # print "len(items): ", len(widget.itemsCTL)
     if widget.rowCTL:
-      pos = widget.labelStatsCTL["Labels"].index(ID)
+      pos = sortedIndex.index(val)
       widget.labelStatsCTL["Labels"].pop(pos)
+      widget.labelStatsCTLID["Labels"].pop(pos)
       pos += 1
       for i in range(1, widget.colCTL + 1):
         item = widget.itemsCTL.pop(pos * widget.colCTL - i)
