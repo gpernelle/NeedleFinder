@@ -274,8 +274,57 @@ class NeedleFinderWidget:
     """
     return self.__class__.__name__
 
+  #----------------------------------------------------------------------------------------------
+  """ Needle Segmentation report"""
+  #----------------------------------------------------------------------------------------------
 
-    #----------------------------------------------------------------------------------------------
+  def initTableView(self):
+    """
+    Initialize a table gathering information on segmented needles
+    Model and view for stats table
+    """
+    # productive
+    profprint()
+    if self.table == None:
+      # self.keys = ("#")
+      # self.keys = ("#","Round" ,"Reliability")
+      self.keys = ("#")
+      self.labelStats = {}
+      self.labelStats['Labels'] = []
+      self.items = []
+      if self.model == None:
+          self.model = qt.QStandardItemModel()
+          self.model.setColumnCount(5)
+          self.model.setHeaderData(0, 1, "")
+          self.model.setHeaderData(1, 1, "#")
+          # self.model.setHeaderData(2,1,"R.")
+          # self.model.setHeaderData(3,1,"Reliability")
+          self.model.setHeaderData(2, 1, "Display")
+          self.model.setHeaderData(3, 1, "Reformat")
+          self.model.setHeaderData(4, 1, "Comments")
+          # self.model.setStrechLastSection(True)
+          if self.view == None:
+            self.view = qt.QTableView()
+            self.view.setMinimumHeight(300)
+            self.view.sortingEnabled = True
+            self.view.verticalHeader().visible = False
+            self.view.horizontalHeader().setStretchLastSection(True)
+
+          # col = 1
+          # for k in self.keys:
+          #   # self.view.setColumnWidth(col,15*len(k))
+          #   # self.model.setHeaderData(col,1,k)
+          #   col += 1
+          self.view.setModel(self.model)
+          self.view.setColumnWidth(0, 18)
+          self.view.setColumnWidth(1, 58)
+          self.view.setColumnWidth(2, 58)
+          self.table = 1
+          self.row = 0
+          self.col = 0
+          slicer.modules.NeedleFinderWidget.analysisGroupBoxLayout.addRow(self.view)
+
+  #----------------------------------------------------------------------------------------------
   """ Manual Control Points report"""
   #----------------------------------------------------------------------------------------------
 
@@ -793,7 +842,7 @@ class NeedleFinderWidget:
     self.layout2.addWidget(self.widget)
 
     # init table report
-    logic.initTableView()  # init the report table
+    self.initTableView()  # init the report table
     self.initTableViewControlPoints()  # init the report table
 
     # Lauren's feature request: set mainly unused coronal view to sagittal to display ground truth bitmap image (if available)
@@ -4293,7 +4342,7 @@ class NeedleFinderLogic:
     # reset report table
     self.table = None
     self.row = 0
-    self.initTableView()
+    widget.initTableView()
     while slicer.util.getNodes('obturator-seg*') != {}:
       nodes = slicer.util.getNodes('obturator-seg*')
       for node in nodes.values():
@@ -4363,9 +4412,9 @@ class NeedleFinderLogic:
     # print "Draw manually segmented needles..."
     # self.table =None
     # self.row=0
-    self.initTableView()
-    self.deleteEvaluationNeedlesFromTable()
     widget = slicer.modules.NeedleFinderWidget
+    widget.initTableView()
+    self.deleteEvaluationNeedlesFromTable()
     while slicer.util.getNodes('manual-seg_'+str(widget.editNeedleTxtBox.value)) != {}:
       nodes = slicer.util.getNodes('manual-seg_'+str(widget.editNeedleTxtBox.value))
       for node in nodes.values():
@@ -4919,27 +4968,27 @@ class NeedleFinderLogic:
         widget.newInsertionButton.setText('Start a new set of needles (' + str(self.round + 1) + ') ?')
         widget.deleteNeedleButton.setText('Delete Needles from set (' + str(self.round) + ")")
       # reset report table
-      self.table = None
-      self.row = 0
-      self.col = 0
+      widget.table = None
+      widget.row = 0
+      widget.col = 0
       if not script:
-        for i in self.items:
-          item = self.items.pop()
+        for i in widget.items:
+          item = widget.items.pop()
           del item
-        self.items = None
-        if self.model.rowCount() > 0:
-          for i in range(0, self.model.rowCount()):
-            ritem = self.model.item(i)
+        widget.items = None
+        if widget.model.rowCount() > 0:
+          for i in range(0, widget.model.rowCount()):
+            ritem = widget.model.item(i)
             del ritem
-          self.model.removeRows(0, self.model.rowCount())
-        self.model.modelReset()
-        del self.model
-        self.model = None
-        self.view.reset()
-        slicer.modules.NeedleFinderWidget.analysisGroupBoxLayout.removeWidget(self.view)
-        del self.view
-        self.view = None
-        self.initTableView()
+          widget.model.removeRows(0, widget.model.rowCount())
+        widget.model.modelReset()
+        del widget.model
+        widget.model = None
+        widget.view.reset()
+        slicer.modules.NeedleFinderWidget.analysisGroupBoxLayout.removeWidget(widget.view)
+        del widget.view
+        widget.view = None
+        widget.initTableView()
 
       # ## Leave the needle detection mode
       widget.fiducialButton.checked = 0
@@ -4987,7 +5036,8 @@ class NeedleFinderLogic:
     """
     # productive #onButton
     profprint()
-    self.initTableView()
+    widget = slicer.modules.NeedleFinderWidget
+    widget.initTableView()
     for name in self.lastNeedleNames:
       print name
       ID = name.lstrip('manual-seg_')
@@ -5377,52 +5427,6 @@ class NeedleFinderLogic:
   """ Needle segmentation report"""
   #----------------------------------------------------------------------------------------------
 
-  def initTableView(self):
-    """
-    Initialize a table gathering information on segmented needles
-    Model and view for stats table
-    """
-    # productive
-    profprint()
-    if self.table == None:
-      # self.keys = ("#")
-      # self.keys = ("#","Round" ,"Reliability")
-      self.keys = ("#")
-      self.labelStats = {}
-      self.labelStats['Labels'] = []
-      self.items = []
-      if self.model == None:
-          self.model = qt.QStandardItemModel()
-          self.model.setColumnCount(5)
-          self.model.setHeaderData(0, 1, "")
-          self.model.setHeaderData(1, 1, "#")
-          # self.model.setHeaderData(2,1,"R.")
-          # self.model.setHeaderData(3,1,"Reliability")
-          self.model.setHeaderData(2, 1, "Display")
-          self.model.setHeaderData(3, 1, "Reformat")
-          self.model.setHeaderData(4, 1, "Comments")
-          # self.model.setStrechLastSection(True)
-          if self.view == None:
-            self.view = qt.QTableView()
-            self.view.setMinimumHeight(300)
-            self.view.sortingEnabled = True
-            self.view.verticalHeader().visible = False
-            self.view.horizontalHeader().setStretchLastSection(True)
-
-          # col = 1
-          # for k in self.keys:
-          #   # self.view.setColumnWidth(col,15*len(k))
-          #   # self.model.setHeaderData(col,1,k)
-          #   col += 1
-          self.view.setModel(self.model)
-          self.view.setColumnWidth(0, 18)
-          self.view.setColumnWidth(1, 58)
-          self.view.setColumnWidth(2, 58)
-          self.table = 1
-          self.row = 0
-          self.col = 0
-          slicer.modules.NeedleFinderWidget.analysisGroupBoxLayout.addRow(self.view)
-
   def addNeedleToTable(self, ID, label=None, needleType=None):
     """
     Add last segmented needle to the table
@@ -5430,7 +5434,9 @@ class NeedleFinderLogic:
     """
     # productive
     profprint()
-    self.initTableView()
+    widget = slicer.modules.NeedleFinderWidget
+    widget.initTableViewControlPoints()
+    widget.initTableView()
     if label != None:
       ref = int(label[0]) % MAXNEEDLES
       needleLabel = self.option[ref]
@@ -5441,8 +5447,8 @@ class NeedleFinderLogic:
       # reliability = '-'
     # ref = int(modelNode.GetAttribute("nth"))
 
-    self.labelStats["Labels"].append(ref)
-    self.labelStats[ref, "#"] = needleLabel
+    widget.labelStats["Labels"].append(ref)
+    widget.labelStats[ref, "#"] = needleLabel
     # self.labelStats[ref,"Round"] = str(self.round)
     # self.labelStats[ref,"Reliability"] = str(reliability)
 
@@ -5453,17 +5459,17 @@ class NeedleFinderLogic:
     item = qt.QStandardItem()
     item.setData(color, 1)
     # self.model.appendRow(item)
-    self.model.setItem(self.row, 0, item)
-    self.items.append(item)
+    widget.model.setItem(widget.row, 0, item)
+    widget.items.append(item)
     ################################################
     # Column 1
-    self.col = 1
-    for k in self.keys:
+    widget.col = 1
+    for k in widget.keys:
       item = qt.QStandardItem()
-      item.setText(self.labelStats[ref, k])
-      self.model.setItem(self.row, self.col, item)
-      self.items.append(item)
-      self.col += 1
+      item.setText(widget.labelStats[ref, k])
+      widget.model.setItem(widget.row, widget.col, item)
+      widget.items.append(item)
+      widget.col += 1
     ################################################
     # Column 2
     displayButton = qt.QPushButton("Display")
@@ -5472,28 +5478,28 @@ class NeedleFinderLogic:
     if needleType == 'Validation':
       ID = int(slicer.util.getNode('manual-seg_' + str(ID)).GetID().strip('vtkMRMLModelNode'))
     displayButton.connect("clicked()", lambda who=ID: self.displayNeedleTube(who))
-    index = self.model.index(self.row, 2)
+    index = widget.model.index(widget.row, 2)
 
-    self.items.append(displayButton)
-    self.col += 1
-    self.view.setIndexWidget(index, displayButton)
+    widget.items.append(displayButton)
+    widget.col += 1
+    widget.view.setIndexWidget(index, displayButton)
     ################################################
     # Column 3
     reformatButton = qt.QPushButton("Reformat")
     reformatButton.connect("clicked()", lambda who=ID: self.reformatSagittalView4Needle(who))
-    index = self.model.index(self.row, 3)
-    self.items.append(reformatButton)
-    self.col += 1
-    self.view.setIndexWidget(index, reformatButton)
+    index = widget.model.index(widget.row, 3)
+    widget.items.append(reformatButton)
+    widget.col += 1
+    widget.view.setIndexWidget(index, reformatButton)
     ################################################
     # Column 4
     editField = qt.QTextEdit("")
-    index = self.model.index(self.row, 4)
-    self.items.append(editField)
-    self.col += 1
-    self.view.setIndexWidget(index, editField)
+    index = widget.model.index(widget.row, 4)
+    widget.items.append(editField)
+    widget.col += 1
+    widget.view.setIndexWidget(index, editField)
 
-    self.row += 1
+    widget.row += 1
 
   def deleteNeedleFromTable(self, ID):
     """
@@ -5501,23 +5507,22 @@ class NeedleFinderLogic:
     """
     profprint()
     # productive #onButton
-    print "len(items): ", len(self.items)
-    if self.row:
-      pos = self.labelStats["Labels"].index(ID)
+    widget = slicer.modules.NeedleFinderWidget
+    print "len(items): ", len(widget.items)
+    if widget.row:
+      pos = widget.labelStats["Labels"].index(ID)
       ref = ID % MAXNEEDLES
-      self.labelStats["Labels"].pop(pos)
-      self.labelStats[ref, "Label"] = None
-      # self.labelStats[ref,"Round"] = None
-      # self.labelStats[ref,"Reliability"] = None
+      widget.labelStats["Labels"].pop(pos)
+      widget.labelStats[ref, "Label"] = None
       pos += 1
-      for i in range(1, self.col + 1):
-        item = self.items.pop(pos * self.col - i)
+      for i in range(1, widget.col + 1):
+        item = widget.items.pop(pos * widget.col - i)
         del item
       pos -= 1
-      ritem = self.model.item(pos)
+      ritem = widget.model.item(pos)
       del ritem
-      self.model.removeRow(pos)
-      self.row -= 1
+      widget.model.removeRow(pos)
+      widget.row -= 1
 
   def addPointToTable(self, ID, needleNumber, pointNumber, label=None, needleType=None):
     """
@@ -5528,12 +5533,6 @@ class NeedleFinderLogic:
     profprint()
     widget = slicer.modules.NeedleFinderWidget
     widget.initTableViewControlPoints()
-    if label != None:
-      ref = int(label[0])
-      needleLabel = self.option[ref]
-    else:
-      needleLabel = str(ID)
-      ref = ID
 
     widget.labelStatsCTL["Labels"].append(ID)
     widget.labelStatsCTL["ID"].append(1000*needleNumber + pointNumber)
@@ -5632,11 +5631,13 @@ class NeedleFinderLogic:
     # productive #onButton
     widget = slicer.modules.NeedleFinderWidget
     widget.labelStatsCTL = {}
+    widget.labelStats = {}
 
     # table report
     widget.table = None
     widget.tableCTL = None
     widget.modelCTL.delete()
+    widget.model.delete()
     # widget.view = None
     # widget.viewCTL = None
     # widget.model = None
