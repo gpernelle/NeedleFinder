@@ -4403,9 +4403,55 @@ class NeedleFinderLogic:
       self.addNeedleToScene(controlPoints, colorVar, 'Detection', script, manualName=manualName)
     print time.clock() - t0, "seconds process time"
 
+  def addPlaneToScene(self, foot, x, y):
+    """
+    Add a plane to the scene.
+    :param foot: base point
+    :param x: vector
+    :param y: vector
+    :return: plane in scene
+    """
+    #research
+    profprint()
+    scene = slicer.mrmlScene
+    # Create model node
+    model = slicer.vtkMRMLModelNode()
+    model.SetScene(scene)
+    model.SetName(scene.GenerateUniqueName(".ObturatorPlane"))
+
+    planeSource = vtk.vtkPlaneSource()
+    foot-=25*(x+y)
+    #planeSource.SetOrigin(np.array(foot))
+    planeSource.SetOrigin(list(foot))
+    planeSource.SetPoint1(np.array(foot)+50*x)
+    planeSource.SetPoint2(np.array(foot)+50*y)
+    planeSource.Update()
+    model.SetAndObservePolyData(planeSource.GetOutput())
+
+    # Create display node
+    modelDisplay = slicer.vtkMRMLModelDisplayNode()
+    modelDisplay.SetColor(1,1,0) # yellow
+    modelDisplay.SetBackfaceCulling(0)
+    modelDisplay.SetScene(scene)
+    scene.AddNode(modelDisplay)
+    model.SetAndObserveDisplayNodeID(modelDisplay.GetID())
+
+    # Add to scene
+    scene.AddNode(model)
+    # transform = slicer.vtkMRMLLinearTransformNode()
+    # scene.AddNode(transform)
+    # model.SetAndObserveTransformNodeID(transform.GetID())
+    #
+    # vTransform = vtk.vtkTransform()
+    # vTransform.Scale(50,50,50)
+    # #vTransform.RotateX(30)
+    # transform.SetAndObserveMatrixTransformToParent(vTransform.GetMatrix())
+
   def addFiducialToScene(self, ijk, name, rgbColor=(1,1,0), glyphScale=2, textScale=2):
     """
     Add fiducial marker to scene.
+    @param ijk: IJK point marker to draw 
+    @param name: string for the marker
     """
     #research
     #profprint()
@@ -5512,7 +5558,7 @@ class NeedleFinderLogic:
       textNode.SetTextScale(3)
       textNode.SetColor(0, 0, 0)
 
-  def addPolyLineToScene(self, controlPoint, colorVar, needleType='Detection',script=False, endMarker=False, name="^", trans=0, manualName=""):
+  def addPolyLineToScene(self, controlPoint, colorVar, needleType='Detection',script=False, endMarker=False, name="^", trans=0, manualName="",radius=1,bPause=False):
     """Just adds visual representation of linear (needle) segments to the scene.
     Useful for drawing the control polygon of a smooth curve.
 
@@ -5587,7 +5633,7 @@ class NeedleFinderLogic:
     tube = vtk.vtkTubeFilter()
     polyData = model.GetPolyData()
     tube.SetInputData(polyData)
-    tube.SetRadius(1)
+    tube.SetRadius(radius)
     tube.SetNumberOfSides(50)
     tube.Update()
 
@@ -5625,8 +5671,9 @@ class NeedleFinderLogic:
       textNode = fiducial.GetAnnotationTextDisplayNode()
       textNode.SetTextScale(1)
       textNode.SetColor(0, 0, 0)
+    if bPause: breakbox('Inspect this situation in the viewer!')
 
-  def addNeedleToScene(self, controlPoint, colorVar, needleType='Detection', script=False, trans=0, manualName=""):
+  def addNeedleToScene(self, controlPoint, colorVar, needleType='Detection', script=False, trans=0, manualName="", bPause=False):
     """Computes the Bezier's curve and adds visual representation of a needle to the scene
 
     :param controlPoint: array of RAS coordinates of points of a needle (used as control point for the Bezier's curve
@@ -5756,11 +5803,15 @@ class NeedleFinderLogic:
     Delete control points from needle curves etc.
     """
     # research
-    # remove old control pts from scene
+    # remove old control pts and debug annotations from scene
     while slicer.util.getNodes('.*') != {}:
       nodes = slicer.util.getNodes('.*')
       for key,value in zip(nodes.keys(),nodes.values()):
         if key != ".temp": slicer.mrmlScene.RemoveNode(value)
+    while slicer.util.getNodes('_*') != {}:
+      nodes = slicer.util.getNodes('_*')
+      for key,value in zip(nodes.keys(),nodes.values()):
+        slicer.mrmlScene.RemoveNode(value)
     # ruler measurements
     while 0 and slicer.util.getNodes('M*') != {}:
       nodes = slicer.util.getNodes('M*')
@@ -7222,7 +7273,7 @@ class NeedleFinderLogic:
         if node.GetAttribute('type') == type:
             polydata = node.GetPolyData()
             p, pbis = [0, 0, 0], [0, 0, 0]
-            if not polydata: breakbox("needle tube not found in scene")
+            #if not polydata: breakbox("/!!!\ needle tube not found as polydata in scene/vtk file missing: "+widget.caseNr+" "+node.GetName())
             if polydata and polydata.GetNumberOfPoints() > 100:  # ??? this is risky when u have other models in the scene (not only neeedles(
                 if not widget.autoStopTip.isChecked():
                   polydata.GetPoint(0+offset, p)
@@ -7236,6 +7287,58 @@ class NeedleFinderLogic:
                 names.append(node.GetName())
     return returnTips, names
 
+  def returnBasesFromNeedleModels(self, type="Validation", offset=0):
+    """ Returns the IJK coordinates of the base of manually segmented needle polygon models
+    :return: array of IJK coordinates of validation needle bases
+    """
+    #research
+    profprint()
+    widget = slicer.modules.NeedleFinderWidget
+    returnBases = []
+    names = []
+    modelNodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLModelNode')
+    nbNode = modelNodes.GetNumberOfItems()
+    for nthNode in range(nbNode):
+        # print nthNode
+        node = slicer.mrmlScene.GetNthNodeByClass(nthNode, 'vtkMRMLModelNode')
+        if node.GetAttribute('type') == type:
+            polydata = node.GetPolyData()
+            p, pbis = [0, 0, 0], [0, 0, 0]
+            #if not polydata: breakbox("/!!!\ needle tube not found as polydata in scene: "+widget.caseNr+" "+node.GetName())
+            if polydata and polydata.GetNumberOfPoints() > 100:  # ??? this is risky when u have other models in the scene (not only neeedles(
+                if not widget.autoStopTip.isChecked():
+                  polydata.GetPoint(0+offset, p)
+                  polydata.GetPoint(int(polydata.GetNumberOfPoints() - 1 - offset), pbis)
+                  if pbis[2] < p[2]:
+                      p = pbis
+                returnBases.append(self.ras2ijk(p))
+                names.append(node.GetName())
+    return returnBases, names
+  
+  def returnMidsFromNeedleModels(self, type="Validation", offset=0):
+    """ Returns the IJK coordinates of the middles of manually segmented needle polygon models
+    :return: array of IJK coordinates of validation needle tips
+    """
+    # productive
+    profprint()
+    widget = slicer.modules.NeedleFinderWidget
+    returnTips = []
+    names = []
+    modelNodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLModelNode')
+    nbNode = modelNodes.GetNumberOfItems()
+    for nthNode in range(nbNode):
+        # print nthNode
+        node = slicer.mrmlScene.GetNthNodeByClass(nthNode, 'vtkMRMLModelNode')
+        if node.GetAttribute('type') == type:
+            polydata = node.GetPolyData()
+            pmid=[0, 0, 0]
+            #if not polydata: breakbox("/!!!\ needle tube not found as polydata in scene/vtk file missing: "+widget.caseNr+" "+node.GetName())
+            if polydata and polydata.GetNumberOfPoints() > 100:  # ??? this is risky when u have other models in the scene (not only neeedles(
+              polydata.GetPoint(int((polydata.GetNumberOfPoints() - 1)/2)+offset, pmid)
+              returnTips.append(self.ras2ijk(pmid))
+              names.append(node.GetName())
+    return returnTips, names
+
   def startValidation(self, script=False, offset=0):
     """Start the evaluation process:
     * Calls returnTipsFromNeedleModels() to build an array of the tip of manually segmented needles
@@ -7245,7 +7348,7 @@ class NeedleFinderLogic:
     :return: print the results in the python interactor (CMD+3 or CTRL+3)
     """
     # productive #button
-    print "\n"*100
+    print "\n"*10
     profprint()
     widget = slicer.modules.NeedleFinderWidget
     self.deleteNeedleDetectionModelsFromScene()
@@ -7261,7 +7364,7 @@ class NeedleFinderLogic:
     # chrono starts
     self.t0 = time.clock()
 
-    self.needleDetectionThread(tips, imageData, spacing, script=script, names=names)
+    self.needleDetectionThread(tips, imageData, spacing, script=script, names=names) # <<< Ruibin
           
     ''' old due to Ruibins code:
     for i in range(len(tips)):
@@ -7283,6 +7386,7 @@ class NeedleFinderLogic:
           except: strI=str(t[i][2])
           print i,'\t', strI,'\t',t[i][0],'\t',t[i][1]
         print '=========================='
+    if not script: msgbox('Validation ready!')
 
   def placeAxialLimitMarker(self, assign=True):
     """
@@ -7558,15 +7662,44 @@ class NeedleFinderLogic:
     tipDistance = []
     for i in range(100):
         polydata.GetPoint(i, p)
-        polydata.GetPoint(2499 - i, pbis)
+        polydata.GetPoint(polydata.GetNumberOfPoints()-1 - i, pbis)
         if pbis[2] > p[2]:
           p = pbis
-        polydata2.GetPoint(2499 - i, p2)
-        polydata2.GetPoint(i, p2bis)
+        polydata2.GetPoint(i, p2)
+        polydata2.GetPoint(polydata2.GetNumberOfPoints()-1 - i, p2bis)
         if p2bis[2] > p2[2]:
           p2 = p2bis
         tipDistance.append(((p2[0] - p[0]) ** 2 + (p2[1] - p[1]) ** 2 + (p2[2] - p[2]) ** 2) ** 0.5)
     return min(tipDistance)
+  
+  def distBase(self, id1, id2):
+    """ Returns the distance between the base of two needles
+
+    :param id1: ID number for the needle 1 (vtkMRMLModelNode)
+    :param id2: ID number for the needle 2 (vtkMRMLModelNode)
+    :return: distance in millimeters between the tip of both needles
+    """
+    # productive #math
+    if frequent: profprint()
+    node = slicer.mrmlScene.GetNodeByID('vtkMRMLModelNode' + str(id1))
+    polydata = node.GetPolyData()
+    node2 = slicer.mrmlScene.GetNodeByID('vtkMRMLModelNode' + str(id2))
+    polydata2 = node2.GetPolyData()
+    p, pbis = [0, 0, 0], [0, 0, 0]
+    p2 = [0, 0, 0]
+    p2bis = [0, 0, 0]
+    baseDistance = []
+    for i in range(100):
+        polydata.GetPoint(i, p)
+        polydata.GetPoint(polydata.GetNumberOfPoints()-1 - i, pbis)
+        if pbis[2] > p[2]:
+          pbis = p
+        polydata2.GetPoint(i, p2)
+        polydata2.GetPoint(polydata2.GetNumberOfPoints()-1 - i, p2bis)
+        if p2bis[2] > p2[2]:
+          p2bis = p2
+        baseDistance.append(((p2bis[0] - pbis[0]) ** 2 + (p2bis[1] - pbis[1]) ** 2 + (p2bis[2] - pbis[2]) ** 2) ** 0.5)
+    return min(baseDistance)
 
   def needleMatching(self):
     """This functions associates manually segmented needles to their automatically segmented version. To do so,
@@ -7596,6 +7729,7 @@ class NeedleFinderLogic:
               polydata2 = node2.GetPolyData()
               if polydata2 != None and polydata2.GetNumberOfPoints() > 100 and polydata.GetNumberOfPoints() > 100:
                 tipDistance = self.distTip(int(node.GetID().strip('vtkMRMLModelNode')) , int(node2.GetID().strip('vtkMRMLModelNode')))
+                baseDistance = self.distBase(int(node.GetID().strip('vtkMRMLModelNode')) , int(node2.GetID().strip('vtkMRMLModelNode')))
                 name = node.GetName()
                 manualName = name.lstrip('auto-seg_').lstrip('manual-seg_').lstrip('obturator-seg_').lstrip('0123456789').lstrip('-ID-vtkMRMLModelNode').lstrip('0123456789-')
                 if manualName==node2.GetName(): dist.append([tipDistance, node2.GetID(), node2.GetName()])
