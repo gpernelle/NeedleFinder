@@ -4409,7 +4409,7 @@ class NeedleFinderLogic:
     :param foot: base point
     :param x: vector
     :param y: vector
-    :return: plane in scene
+    :return: visible plane in scene
     """
     #research
     profprint()
