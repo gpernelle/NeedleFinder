@@ -4742,7 +4742,7 @@ class NeedleFinderLogic:
     n = len(controlPointListSorted) - 1
     Q = [[0, 0, 0] for t in range(nbEvaluationPoints + 1)]
     # start calculation
-    for t in range(nbEvaluationPoints): #+1):  #<<< lil bug
+    for t in range(nbEvaluationPoints+1): #+1):  #<<< lil bug    <<< we need +1, it's not a bug! otherwise needle is too short!
       tt = float(t) / (1 * nbEvaluationPoints)
       for j in range(3):
         for i in range(n + 1):
