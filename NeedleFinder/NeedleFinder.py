@@ -518,7 +518,7 @@ class NeedleFinderWidget:
 
     self.validationNeedleButton.connect('clicked()', logic.validationNeedle)
 
-    self.drawValidationNeedlesButton = qt.QPushButton('Render Manual Needles')
+    self.drawValidationNeedlesButton = qt.QPushButton('Render Manual Needle 0')
     self.drawValidationNeedlesButton.toolTip = "Redraw every manually segmented needles. This is usefull for example if you moved a control point, or after you added a new needle"
 
     self.drawValidationNeedlesButton.connect('clicked()', logic.drawValidationNeedles)
@@ -531,7 +531,7 @@ class NeedleFinderWidget:
     self.startValidationButton.setStyleSheet("background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #f7f700, stop: 1 #dbdb00)");
 
     # Reset Needle Validation Button
-    self.resetValidationButton = qt.QPushButton('Reset Needles from Manual Segmentation')
+    self.resetValidationButton = qt.QPushButton('Reset Manual Segmentation')
 
     self.resetValidationButton.connect('clicked()', logic.resetNeedleValidation)
 
@@ -5970,6 +5970,7 @@ class NeedleFinderLogic:
       widget.editNeedleTxtBox.value = 1
       widget.stepNeedle = 0
       self.tableValueCtrPt = [[[999, 999, 999] for i in range(100)] for j in range(100)]
+      self.cleanTable()
       print "Manual needle validation segmentation reset!"
 
   def deleteEvaluationNeedlesFromTable(self):
@@ -6028,6 +6029,7 @@ class NeedleFinderLogic:
     # widget.scrollPointButton.setText('Scroll Point for Needle ' + str(widget.editNeedleTxtBox.value) + ' (pt: ' + str(self.ptNumber) + ')')
     self.lockControlPoints(widget.editNeedleTxtBox.value)
     self.unlockControlPoints(widget.editNeedleTxtBox.value)
+    widget.drawValidationNeedlesButton.text = "Render Manual Needle  " + str(widget.editNeedleTxtBox.value)
 
 
   def goToPoint(self, ID):
