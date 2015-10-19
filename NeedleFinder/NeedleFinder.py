@@ -119,18 +119,22 @@ class NeedleFinder:
     slicer.selfTests['NeedleFinder'] = self.runTest
 
 
-    def __onNodeAddedObserver__(self, caller, eventId, callData):
-      """Node added to the Slicer scene"""
-      if callData.GetClassName() == 'vtkMRMLScalarVolumeNode' and self.loaded==0:
-        print ("Loaded " + callData.GetID())
-        self.loadCTLPointsInTable()
-        self.loaded = 1
+    def __onSceneLoaded__(self, caller, eventId, callData):
+      """Load CTRL points AFTER scene finished to be loaded"""
+      self.loadCTLPointsInTable()
+
+    def __onSceneClosed__(self, caller, eventId, callData):
+      """Clean report table and internal variables"""
+      self.logic.cleanTable()
 
 
-    self.__onNodeAddedObserver__ = partial(__onNodeAddedObserver__, self)
-    self.__onNodeAddedObserver__.CallDataType = vtk.VTK_OBJECT
-    print ("adding observer")
-    slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, self.__onNodeAddedObserver__)
+    self.__onSceneLoaded__ = partial(__onSceneLoaded__, self)
+    self.__onSceneLoaded__.CallDataType = vtk.VTK_OBJECT
+    self.__onSceneClosed__ = partial(__onSceneClosed__, self)
+    self.__onSceneClosed__.CallDataType = vtk.VTK_OBJECT
+
+    slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.EndImportEvent, self.__onSceneLoaded__)
+    slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.EndCloseEvent, self.__onSceneClosed__)
 
   def loadCTLPointsInTable(self):
     # get list of fiducial points
@@ -284,9 +288,8 @@ class NeedleFinderWidget:
     if self.tableCTL == None:
       self.keysCTL = ("#")
       self.labelStatsCTL = {}
-      self.labelStatsCTLID = {}
       self.labelStatsCTL['Labels'] = []
-      self.labelStatsCTLID['Labels'] = []
+      self.labelStatsCTL['ID'] = []
       self.itemsCTL = []
       if self.modelCTL == None:
           self.modelCTL = qt.QStandardItemModel()
@@ -2324,8 +2327,8 @@ class NeedleFinderLogic:
     # productive #onClick
     profprint()
     pointName = '.' + str(needleNumber) + "-" + str(stepValue)
-    # if slicer.util.getNode(pointName) == None:
-    if createPoint == 1:
+    if slicer.util.getNode(pointName) == None:
+    # if createPoint == 1:
       fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
       # stepValue = self.findNextStepNumber(widget.editNeedleTxtBox.value)
       fiducial.SetName(pointName)
@@ -5533,7 +5536,7 @@ class NeedleFinderLogic:
       ref = ID
 
     widget.labelStatsCTL["Labels"].append(ID)
-    widget.labelStatsCTLID["Labels"].append(1000*needleNumber + pointNumber)
+    widget.labelStatsCTL["ID"].append(1000*needleNumber + pointNumber)
     # self.labelStatsCTL[needleNumber, "#"] = needleLabel
 
     ################################################
@@ -5595,7 +5598,7 @@ class NeedleFinderLogic:
     profprint()
     # productive #onButton
     widget = slicer.modules.NeedleFinderWidget
-    sortedIndex = widget.labelStatsCTLID['Labels']
+    sortedIndex = widget.labelStatsCTL['ID']
     sortedIndex.sort()
     sortedIndex.reverse()
     # print sortedIndex
@@ -5609,7 +5612,7 @@ class NeedleFinderLogic:
     if widget.rowCTL:
       pos = sortedIndex.index(val)
       widget.labelStatsCTL["Labels"].pop(pos)
-      widget.labelStatsCTLID["Labels"].pop(pos)
+      widget.labelStatsCTL["ID"].pop(pos)
       pos += 1
       for i in range(1, widget.colCTL + 1):
         item = widget.itemsCTL.pop(pos * widget.colCTL - i)
@@ -5619,6 +5622,27 @@ class NeedleFinderLogic:
       del ritem
       widget.modelCTL.removeRow(pos)
       widget.rowCTL -= 1
+
+  def cleanTable(self):
+    '''
+    Clean report table and internal variables
+    :return:
+    '''
+    profprint()
+    # productive #onButton
+    widget = slicer.modules.NeedleFinderWidget
+    widget.labelStatsCTL = {}
+
+    # table report
+    widget.table = None
+    widget.tableCTL = None
+    widget.modelCTL.delete()
+    # widget.view = None
+    # widget.viewCTL = None
+    # widget.model = None
+    # widget.modelCTL = None
+
+    self.observeManualNeedles()
 
   #-----------------------------------------------------------
   # Radiation
