@@ -2538,7 +2538,8 @@ class NeedleFinderLogic:
             print "The",feedbackindex+1," Loop"
             for i in range(NumberOfWrongPositionsToSend):
                 Punish = 0.85
-                CorrectedControlPoints, CorrectedControlPointsIJK = self.needleDetectionThread15_RM_Feedback(ControlPointsPackage, ControlPointsPackageIJK, WrongPositionsToSend[i], imgData, fvSpacing, imgLabelData, GlobalDirection, Punish,bScript,bUp)
+                CorrectedControlPoints, CorrectedControlPointsIJK = self.needleDetectionThread15_1( ijkA, imgData, imgLabelData, lrasTempPoints,0, fvSpacing, bUp=False, bScript=False, strManualName=strManualName, tipOnly=False, bDrawNeedle=False,whetherfeedback=True,ControlPointsPackage=ControlPointsPackage,ControlPointsPackageIJK=ControlPointsPackageIJK,WrongPosition=WrongPositionsToSend[i],GlobalDirection=GlobalDirection,Punish=Punish)
+                #CorrectedControlPoints, CorrectedControlPointsIJK = self.needleDetectionThread15_RM_Feedback(ControlPointsPackage, ControlPointsPackageIJK, WrongPositionsToSend[i], imgData, fvSpacing, imgLabelData, GlobalDirection, Punish,bScript,bUp)
                 ControlPointsPackage[WrongPositionsToSend[i][0]] = CorrectedControlPoints
                 ControlPointsPackageIJK[WrongPositionsToSend[i][0]] = CorrectedControlPointsIJK
                 print "The ",WrongPositionsToSend[i],"(+1 each) Needle corrected"
@@ -2586,7 +2587,8 @@ class NeedleFinderLogic:
                 NumberOfWrongPositionsToSend = len(WrongPositionsToSend)
                 print "The",feedbackindex+1," Loop"
                 for i in range(NumberOfWrongPositionsToSend):
-                    CorrectedControlPoints, CorrectedControlPointsIJK = self.needleDetectionThread15_RM_Feedback(ControlPointsPackage, ControlPointsPackageIJK, WrongPositionsToSend[i], imgData, fvSpacing, imgLabelData, GlobalDirection,Punish,bScript,bUp)
+                    CorrectedControlPoints, CorrectedControlPointsIJK = self.needleDetectionThread15_1( ijkA, imgData, imgLabelData, lrasTempPoints,0, fvSpacing, bUp=False, bScript=False, strManualName=strManualName, tipOnly=False, bDrawNeedle=False,whetherfeedback=True,ControlPointsPackage=ControlPointsPackage,ControlPointsPackageIJK=ControlPointsPackageIJK,WrongPosition=WrongPositionsToSend[i],GlobalDirection=GlobalDirection,Punish=Punish)
+                    #CorrectedControlPoints, CorrectedControlPointsIJK = self.needleDetectionThread15_RM_Feedback(ControlPointsPackage, ControlPointsPackageIJK, WrongPositionsToSend[i], imgData, fvSpacing, imgLabelData, GlobalDirection,Punish,bScript,bUp)
                     ControlPointsPackage[WrongPositionsToSend[i][0]] = CorrectedControlPoints
                     ControlPointsPackageIJK[WrongPositionsToSend[i][0]] = CorrectedControlPointsIJK
                     print "The ",WrongPositionsToSend[i],"(+1 each) Needle corrected"
@@ -2602,6 +2604,8 @@ class NeedleFinderLogic:
           self.addNeedleToScene(FinalControlPointsPackage[i], (205)% MAXCOL, 'Detection', bScript,0, manualName=strManualName)
         if bAutoStopTip and bUp:
           self.addNeedleToScene(FinalControlPointsPackage[i], (205)% MAXCOL, 'Detection', bScript,0, manualName=strManualName)
+    print "The Time of 15_RM:_________________________",time.clock()-t0
+            
   def needleDetectionThread13_RM(self, tips, imageData, spacing, script=False, imgLabelData=None,names=""):
     '''MICCAI2013 suspect version, 3/11/13
     iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
@@ -2617,6 +2621,7 @@ class NeedleFinderLogic:
     # productive #probablyMiccai
     print "RM____________________________________________Thread"
     profprint()
+    t0 = time.clock()
     global conesColor
     if conesColor: conesColor=(conesColor+1)%308;
     if conesColor==0: conesColor=300
@@ -2684,7 +2689,8 @@ class NeedleFinderLogic:
             print "The",feedbackindex+1," Loop"
             for i in range(NumberOfWrongPositionsToSend):
                 Punish = 0.85
-                CorrectedControlPoints, CorrectedControlPointsIJK = self.needleDetectionThread13_RM_FeedBack(ControlPointsPackage, ControlPointsPackageIJK, WrongPositionsToSend[i], imageData, spacing, imgLabelData, GlobalDirection, Punish)
+                CorrectedControlPoints, CorrectedControlPointsIJK = self.needleDetectionThread13_1(A, imageData, colorVar, spacing, script, imgLabelData, manName, bDrawNeedle=False,whetherfeedback=True,ControlPointsPackage=ControlPointsPackage,ControlPointsPackageIJK=ControlPointsPackageIJK,WrongPosition=WrongPositionsToSend[i],GlobalDirection=GlobalDirection,Punish=Punish)
+                #CorrectedControlPoints, CorrectedControlPointsIJK = self.needleDetectionThread13_RM_FeedBack(ControlPointsPackage, ControlPointsPackageIJK, WrongPositionsToSend[i], imageData, spacing, imgLabelData, GlobalDirection, Punish)
                 ControlPointsPackage[WrongPositionsToSend[i][0]] = CorrectedControlPoints
                 ControlPointsPackageIJK[WrongPositionsToSend[i][0]] = CorrectedControlPointsIJK
                 print "The ",WrongPositionsToSend[i],"(+1 each) Needle corrected"
@@ -2732,7 +2738,8 @@ class NeedleFinderLogic:
                 NumberOfWrongPositionsToSend = len(WrongPositionsToSend)
                 print "The",feedbackindex+1," Loop"
                 for i in range(NumberOfWrongPositionsToSend):
-                    CorrectedControlPoints, CorrectedControlPointsIJK = self.needleDetectionThread13_RM_FeedBack(ControlPointsPackage, ControlPointsPackageIJK, WrongPositionsToSend[i], imageData, spacing, imgLabelData, GlobalDirection,Punish)
+                    CorrectedControlPoints, CorrectedControlPointsIJK = self.needleDetectionThread13_1(A, imageData, colorVar, spacing, script, imgLabelData, manName, bDrawNeedle=False,whetherfeedback=True,ControlPointsPackage=ControlPointsPackage,ControlPointsPackageIJK=ControlPointsPackageIJK,WrongPosition=WrongPositionsToSend[i],GlobalDirection=GlobalDirection,Punish=Punish)
+                    #CorrectedControlPoints, CorrectedControlPointsIJK = self.needleDetectionThread13_RM_FeedBack(ControlPointsPackage, ControlPointsPackageIJK, WrongPositionsToSend[i], imageData, spacing, imgLabelData, GlobalDirection,Punish)
                     ControlPointsPackage[WrongPositionsToSend[i][0]] = CorrectedControlPoints
                     ControlPointsPackageIJK[WrongPositionsToSend[i][0]] = CorrectedControlPointsIJK
                     print "The ",WrongPositionsToSend[i],"(+1 each) Needle corrected"
@@ -2744,7 +2751,8 @@ class NeedleFinderLogic:
         colorVar = i
         manName = names[i]
         if not autoStopTip:
-          self.addNeedleToScene(FinalControlPointsPackage[i], colorVar, 'Detection', script,manualName=manName)        
+          self.addNeedleToScene(FinalControlPointsPackage[i], colorVar, 'Detection', script,manualName=manName)     
+    print "The time of 13_RM:______________________",time.clock()-t0   
         
   def needleRationalityProtect(self, OriginalControlPointsPackage, OriginalControlPointsPackageIJK, ControlPointsPackage, ControlPointsPackageIJK, OriginalWrongPositions, imageData, spacing):
     print "Protection Start"
@@ -3718,7 +3726,7 @@ class NeedleFinderLogic:
     if not autoStopTip:
       self.addNeedleToScene(self.controlPoints, colorVar, 'Detection', script, manualName=manualName)
 
-  def needleDetectionThread13_1(self, A, imageData, colorVar, spacing, script=False, imgLabelData=None,manName="",bDrawNeedle=True):
+  def needleDetectionThread13_1(self, Aori, imageData, colorVar, spacing, script=False, imgLabelData=None,manName="",bDrawNeedle=True,whetherfeedback=False,ControlPointsPackage=None,ControlPointsPackageIJK=None,WrongPosition=None,GlobalDirection=None, Punish=None):
     '''MICCAI2013 suspect version, 3/11/13
     iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
     https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
@@ -3752,6 +3760,17 @@ class NeedleFinderLogic:
     radiusNeedleParameter = widget.radiusNeedleParameter.value
     axialSegmentationLimit = widget.axialSegmentationLimit
     autoStopTip = widget.autoStopTip.isChecked()
+    
+    if(whetherfeedback):
+        WrongIndex = WrongPosition[0]
+        NumberOfRelatedIndexs = len(WrongPosition) - 1
+        RelatedIndex = []    
+        for k in range(NumberOfRelatedIndexs):
+            RelatedIndex.append(WrongPosition[k+1])
+        A = ControlPointsPackageIJK[WrongIndex][0]
+        NeighbourAttenuation = 0
+    else:
+        A = Aori
 
     # ## length needle = distance Aijk[2]*0.9
     # lenghtNeedle = abs(self.ijk2ras(A)[2]*0.9)
@@ -3852,12 +3871,16 @@ class NeedleFinderLogic:
 
               M[t][i] = (1 - tt) * A[i] + tt * C[i]
               ijk[i] = int(round(M[t][i]))
-
+              
+             
             # first, test if points are in the image space
             if ijk[0] < dims[0] and ijk[0] > 0 and  ijk[1] < dims[1] and ijk[1] > 0 and ijk[2] < dims[2] and ijk[2] > 0:
               center = self.interp3(imageData, ijk[0], ijk[1], ijk[2],0)#ruibin interpolation
               #center = imageData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
               total += center
+              if(whetherfeedback):
+                  NeighbourAttenuation = self.Feedback(ControlPointsPackage, Punish, radiusNeedleParameter, NumberOfRelatedIndexs, len, RelatedIndex, range, M[t]) 
+                  total +=NeighbourAttenuation
               if gradient == 1 :
 
                 radiusNeedle = int(round(radiusNeedleParameter / float(spacing[0])))
@@ -4224,6 +4247,45 @@ class NeedleFinderLogic:
     fid.GetDisplayNode().SetGlyphScale(glyphScale)
     fid.GetAnnotationTextDisplayNode().SetTextScale(textScale)
 
+
+  def Feedback(self, ControlPointsPackage, Punish, iRadiusNeedle_mm, NumberOfRelatedIndexs, len, RelatedIndex, range, ijk):
+      ras = [0,0,0]
+      ras = self.ijk2ras(ijk)
+      NeighbourAttenuation = 0
+      for w in range(NumberOfRelatedIndexs):
+          distance = 9999
+          NumberOfPointsOnThatNeedle = len(ControlPointsPackage[RelatedIndex[w]])
+          if ras[2] >= ControlPointsPackage[RelatedIndex[w]][0][2]:
+              distance = ((ras[2] - ControlPointsPackage[RelatedIndex[w]][0][2]) ** 2 + (ras[2] - ControlPointsPackage[RelatedIndex[w]][0][2]) ** 2 + (ras[2] - ControlPointsPackage[RelatedIndex[w]][0][2]) ** 2) ** 0.5
+          elif ras[2] <= ControlPointsPackage[RelatedIndex[w]][NumberOfPointsOnThatNeedle - 1][2]:
+              distance = ((ras[2] - ControlPointsPackage[RelatedIndex[w]][NumberOfPointsOnThatNeedle - 1][2]) ** 2 + (ras[2] - ControlPointsPackage[RelatedIndex[w]][NumberOfPointsOnThatNeedle - 1][2]) ** 2 + (ras[2] - ControlPointsPackage[RelatedIndex[w]][NumberOfPointsOnThatNeedle - 1][2]) ** 2) ** 0.5
+          else:
+              for q in range(NumberOfPointsOnThatNeedle - 1):
+                  pointabove = ControlPointsPackage[RelatedIndex[w]][q]
+                  pointbelow = ControlPointsPackage[RelatedIndex[w]][q + 1]
+                  if pointabove[2] <= ras[2]:
+                      h = ((ras[0] - pointabove[0]) ** 2 + (ras[1] - pointabove[1]) ** 2 + (ras[2] - pointabove[2]) ** 2) ** 0.5
+                  elif pointbelow[2] >= ras[2]:
+                      h = ((ras[0] - pointbelow[0]) ** 2 + (ras[1] - pointbelow[1]) ** 2 + (ras[2] - pointbelow[2]) ** 2) ** 0.5
+                  else:
+                      a = ((pointabove[0] - ras[0]) ** 2 + (pointabove[1] - ras[1]) ** 2 + (pointabove[2] - ras[2]) ** 2) ** 0.5
+                      b = ((pointbelow[0] - ras[0]) ** 2 + (pointbelow[1] - ras[1]) ** 2 + (pointbelow[2] - ras[2]) ** 2) ** 0.5
+                      c = ((pointabove[0] - pointbelow[0]) ** 2 + (pointabove[1] - pointbelow[1]) ** 2 + (pointabove[2] - pointbelow[2]) ** 2) ** 0.5
+                      hc = (a + b + c) / 2
+                      h = (hc * (hc - a) * (hc - b) * (hc - c)) ** 0.5 * 2 / c
+                  if h < distance:
+                      distance = h
+          
+          # using attenuation like Gaussian
+          if distance == 0:
+              NeighbourAttenuation += 3000
+          elif distance >= iRadiusNeedle_mm * Punish:
+              NeighbourAttenuation += 0
+          else:
+              NeighbourAttenuation += 1000 * (iRadiusNeedle_mm / distance)
+      
+      return NeighbourAttenuation
+
   def needleDetectionThread15_RM_Feedback(self ,ControlPointsPackage,ControlPointsPackageIJK,WrongPosition,imgData, fvSpacing, imgLabelData, GlobalDirection, Punish, bScript,bUp):
     profprint()
     t0 = time.clock()
@@ -4488,36 +4550,7 @@ class NeedleFinderLogic:
             #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> new attenuation from Ruibin
             NeighbourAttenuation = 0
             
-            for w in range(NumberOfRelatedIndexs): 
-                distance = 9999
-                NumberOfPointsOnThatNeedle = len(ControlPointsPackage[RelatedIndex[w]])
-                if ras[2]>=ControlPointsPackage[RelatedIndex[w]][0][2]:
-                    distance = ((ras[2]-ControlPointsPackage[RelatedIndex[w]][0][2])**2+(ras[2]-ControlPointsPackage[RelatedIndex[w]][0][2])**2+(ras[2]-ControlPointsPackage[RelatedIndex[w]][0][2])**2)**0.5
-                elif ras[2]<=ControlPointsPackage[RelatedIndex[w]][NumberOfPointsOnThatNeedle-1][2]:
-                    distance = ((ras[2]-ControlPointsPackage[RelatedIndex[w]][NumberOfPointsOnThatNeedle-1][2])**2+(ras[2]-ControlPointsPackage[RelatedIndex[w]][NumberOfPointsOnThatNeedle-1][2])**2+(ras[2]-ControlPointsPackage[RelatedIndex[w]][NumberOfPointsOnThatNeedle-1][2])**2)**0.5
-                else:
-                    for q in range(NumberOfPointsOnThatNeedle-1):
-                        pointabove = ControlPointsPackage[RelatedIndex[w]][q]
-                        pointbelow = ControlPointsPackage[RelatedIndex[w]][q+1]
-                        if pointabove[2]<=ras[2]:
-                            h = ((ras[0]-pointabove[0])**2+(ras[1]-pointabove[1])**2+(ras[2]-pointabove[2])**2)**0.5
-                        elif pointbelow[2]>=ras[2]:
-                            h = ((ras[0]-pointbelow[0])**2+(ras[1]-pointbelow[1])**2+(ras[2]-pointbelow[2])**2)**0.5
-                        else:
-                            a = ((pointabove[0]-ras[0])**2+(pointabove[1]-ras[1])**2+(pointabove[2]-ras[2])**2)**0.5
-                            b = ((pointbelow[0]-ras[0])**2+(pointbelow[1]-ras[1])**2+(pointbelow[2]-ras[2])**2)**0.5
-                            c = ((pointabove[0]-pointbelow[0])**2+(pointabove[1]-pointbelow[1])**2+(pointabove[2]-pointbelow[2])**2)**0.5
-                            hc= (a+b+c)/2
-                            h = (hc*(hc-a)*(hc-b)*(hc-c))**0.5*2/c
-                        if h< distance:
-                            distance = h
-                # using attenuation like Gaussian
-                if distance==0:
-                    NeighbourAttenuation += 3000
-                elif distance >= iRadiusNeedle_mm * Punish:
-                    NeighbourAttenuation += 0
-                else:
-                    NeighbourAttenuation += 1000*(iRadiusNeedle_mm/distance)
+            NeighbourAttenuation = self.Feedback(ControlPointsPackage, Punish, iRadiusNeedle_mm, NumberOfRelatedIndexs, len, RelatedIndex, range, lijkM[iTStep])
 
 
             # first, test if points are in the image space
@@ -4577,6 +4610,7 @@ class NeedleFinderLogic:
                     fTotal = fTotal / fGaussianAttenuation
             
             #>>>>>>>>>>> new direction attenuation of Ruibin
+            """
             if ijkA[2]!=ijkB[2]:
                 direction = [(ijkA[0]-ijkB[0])*fvSpacing[0],(ijkA[1]-ijkB[1])*fvSpacing[1],(ijkA[2]-ijkB[2])*fvSpacing[2]]
                 l = (direction[0]**2+direction[1]**2+direction[2]**2)**0.5
@@ -4590,6 +4624,7 @@ class NeedleFinderLogic:
                         estimator = 5000
                     else:
                         estimator = fTotal /DirectionAttenuation
+            """
             #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< end of Ruibins direction attenuation
             
           #fi gauss
@@ -4690,6 +4725,7 @@ class NeedleFinderLogic:
     
     return lvControlPointsRAS, lvControlPointsIJK 
     
+
   def needleDetectionThread13_RM_FeedBack(self ,ControlPointsPackage,ControlPointsPackageIJK,WrongPosition,imageData, spacing, imgLabelData, GlobalDirection, Punish):
     """
     use attenuation between two needles who affected each other
@@ -4808,36 +4844,7 @@ class NeedleFinderLogic:
             ras = self.ijk2ras(M[t])
             
             NeighbourAttenuation = 0
-            for w in range(NumberOfRelatedIndexs): 
-                distance = 9999
-                NumberOfPointsOnThatNeedle = len(ControlPointsPackage[RelatedIndex[w]])
-                if ras[2]>=ControlPointsPackage[RelatedIndex[w]][0][2]:
-                    distance = ((ras[2]-ControlPointsPackage[RelatedIndex[w]][0][2])**2+(ras[2]-ControlPointsPackage[RelatedIndex[w]][0][2])**2+(ras[2]-ControlPointsPackage[RelatedIndex[w]][0][2])**2)**0.5
-                elif ras[2]<=ControlPointsPackage[RelatedIndex[w]][NumberOfPointsOnThatNeedle-1][2]:
-                    distance = ((ras[2]-ControlPointsPackage[RelatedIndex[w]][NumberOfPointsOnThatNeedle-1][2])**2+(ras[2]-ControlPointsPackage[RelatedIndex[w]][NumberOfPointsOnThatNeedle-1][2])**2+(ras[2]-ControlPointsPackage[RelatedIndex[w]][NumberOfPointsOnThatNeedle-1][2])**2)**0.5
-                else:
-                    for q in range(NumberOfPointsOnThatNeedle-1):
-                        pointabove = ControlPointsPackage[RelatedIndex[w]][q]
-                        pointbelow = ControlPointsPackage[RelatedIndex[w]][q+1]
-                        if pointabove[2]<=ras[2]:
-                            h = ((ras[0]-pointabove[0])**2+(ras[1]-pointabove[1])**2+(ras[2]-pointabove[2])**2)**0.5
-                        elif pointbelow[2]>=ras[2]:
-                            h = ((ras[0]-pointbelow[0])**2+(ras[1]-pointbelow[1])**2+(ras[2]-pointbelow[2])**2)**0.5
-                        else:
-                            a = ((pointabove[0]-ras[0])**2+(pointabove[1]-ras[1])**2+(pointabove[2]-ras[2])**2)**0.5
-                            b = ((pointbelow[0]-ras[0])**2+(pointbelow[1]-ras[1])**2+(pointbelow[2]-ras[2])**2)**0.5
-                            c = ((pointabove[0]-pointbelow[0])**2+(pointabove[1]-pointbelow[1])**2+(pointabove[2]-pointbelow[2])**2)**0.5
-                            hc= (a+b+c)/2
-                            h = (hc*(hc-a)*(hc-b)*(hc-c))**0.5*2/c
-                        if h< distance:
-                            distance = h
-                # using attenuation like Gaussian
-                if distance==0:
-                    NeighbourAttenuation += 3000
-                elif distance >= radiusNeedleParameter * Punish:
-                    NeighbourAttenuation += 0
-                else:
-                    NeighbourAttenuation += 1000*(radiusNeedleParameter/distance)  
+            NeighbourAttenuation = self.Feedback(ControlPointsPackage, Punish, radiusNeedleParameter, NumberOfRelatedIndexs, len, RelatedIndex, range, M[t])  
 
             # first, test if points are in the image space
             if ijk[0] < dims[0] and ijk[0] > 0 and  ijk[1] < dims[1] and ijk[1] > 0 and ijk[2] < dims[2] and ijk[2] > 0:
@@ -4880,9 +4887,10 @@ class NeedleFinderLogic:
               # <<<<<<<<<<<<<<<<<<<<
           if R == 0:
             estimator = total
-            
+         
           if gaussianAttenuationChecked == 1 and step >= 2 :
             
+              """
               if C[2]!=A[2]:
                   direction = [(A[0]-C[0])*spacing[0],(A[1]-C[1])*spacing[1],(A[2]-C[2])*spacing[2]]
                   l = (direction[0]**2+direction[1]**2+direction[2]**2)**0.5
@@ -4896,8 +4904,7 @@ class NeedleFinderLogic:
                           estimator = 5000
                       else:
                           estimator = total /DirectionAttenuation
-              
-          
+              """
               
               if tip0[2] - A[2] != 0:
     
@@ -4954,7 +4961,7 @@ class NeedleFinderLogic:
     return controlPoints, controlPointsIJK
     
     
-  def needleDetectionThread15_1(self, ijkA, imgData, imgLabelData, lrasTempPoints, iColorVar, fvSpacing, bUp=False, bScript=False, strManualName="", tipOnly=False, bDrawNeedle=True):
+  def needleDetectionThread15_1(self, ijkAori, imgData, imgLabelData, lrasTempPoints, iColorVar, fvSpacing, bUp=False, bScript=False, strManualName="", tipOnly=False, bDrawNeedle=True,whetherfeedback=False,ControlPointsPackage=None,ControlPointsPackageIJK=None,WrongPosition=None,GlobalDirection=None, Punish=None):
     '''MICCAI2015 version, 4/16/15
     based on iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
     https://github.com/gpernelle/iGyne_old/commit/b16872c19a3bc6be1f4a9722e5daf16a603393f6#diff-8ab0fe8b431d2af8b1aff51977e85ca2
@@ -4995,6 +5002,17 @@ class NeedleFinderLogic:
     fModelSegmentLength_mm=fModelNeedleLength_mm/20.
     fK=2*np.pi*2050/(1000.) # 18 gauge brachy needle
     # refactored local functions:
+    if(whetherfeedback):
+        WrongIndex = WrongPosition[0]
+        NumberOfRelatedIndexs = len(WrongPosition) - 1
+        RelatedIndex = []    
+        for k in range(NumberOfRelatedIndexs):
+            RelatedIndex.append(WrongPosition[k+1])
+        ijkA = ControlPointsPackageIJK[WrongIndex][0]
+        NeighbourAttenuation = 0
+    else:
+        ijkA = ijkAori
+    
     def norm(fv):
         return np.sqrt(np.dot(fv,fv))
     def normalized(fv):
@@ -5228,6 +5246,9 @@ class NeedleFinderLogic:
               #dCenter = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
               dCenter = self.interp3(imgData, ijk[0], ijk[1], ijk[2], 0)
               fTotal += dCenter
+              if(whetherfeedback):
+                  NeighbourAttenuation = self.Feedback(ControlPointsPackage, Punish, iRadiusNeedle_mm, NumberOfRelatedIndexs, len, RelatedIndex, range, lijkM[iTStep])
+                  fTotal +=NeighbourAttenuation
               if 1 and bGradient == 1 : #<<< feature on/off
 
                 iRadiusNeedle = iRadiusNeedle_mm / float(fvSpacing[0])
