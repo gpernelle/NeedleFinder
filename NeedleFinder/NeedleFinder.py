@@ -2647,29 +2647,44 @@ class NeedleFinderLogic:
     """
     # productive
     profprint()
+    widget = slicer.modules.NeedleFinderWidget
     asl = [0, 0, -float("inf")]
     coord = [0, 0, 0]
-    try:
-      nodes = slicer.util.getNodes('template slice position*')
-      found = False
-      for node in nodes.values():
-        node.GetFiducialCoordinates(coord)
-        aslNew = coord
-        if aslNew[2] > asl[2]:
-          asl = aslNew
-          if found:
-            print "higher limit marker found in scene, z-limit [ras]: ", coord[2]
-          else:
-            print "first limit marker found in scene, z-limit [ras]: ", coord[2]
+    nodes = slicer.util.getNodes('template slice position*')
+    found = False
+    for node in nodes.values():
+      node.GetFiducialCoordinates(coord)
+      aslNew = coord
+      if aslNew[2] > asl[2]:
+        asl = aslNew
         if found:
-          print "/!\ there should be only one axial limit marker!"
-        found = True
-    except:
-      print "/!\ no z-limit marker in scene (required)!"
-      msgbox("/!\ no z-limit marker in scene (required)!")
+          print "higher limit marker found in scene, z-limit [ras]: ", coord[2]
+        else:
+          print "first limit marker found in scene, z-limit [ras]: ", coord[2]
+      if found:
+        print "/!\ there should be only one axial limit marker!"
+      found = True
+    if not found:
+      print "/!\ no z-limit marker in scene (required)! --> fallback"
+      #msgbox("/!\ no z-limit marker in scene (required)! --> fallback")
+      bases, names=self.returnBasesFromNeedleModels()
+      bases2=numpy.array(bases)[:,2]
+      i = bases2.argmax()
+      asl=bases[i]
+      #print "ijk bases: ",repr(bases)
+      #print "ijk asl: ",asl
+      asl=self.ijk2ras(asl)
+      asl = [0, 0, asl[2]]
+      self.fiducialNode = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+      self.fiducialNode.Initialize(slicer.mrmlScene)
+      self.fiducialNode.SetName('template slice position')
+      self.fiducialNode.SetFiducialCoordinates(asl)
+      fd = self.fiducialNode.GetDisplayNode()
+      fd.SetVisibility(1)
+      fd.SetColor([0, 1, 0])
     if asl[2] == -float("inf"):
       asl = [0, 0, 0]
-    return int(round(self.ras2ijk(asl)[2])), coord[2]
+    return int(round(self.ras2ijk(asl)[2])), asl[2]
 
   def needleDetectionThread_old(self, A, imageData, colorVar, spacing, script=False, strName=""):
     """
@@ -5436,6 +5451,7 @@ class NeedleFinderLogic:
       else:
         # print i
         pass
+    self.findAxialSegmentationLimitFromMarker() #AM force the presence of the limit marker
 
   def addCSplineToScene(self, controlPoint, colorVar, needleType='Detection', endMarker=False, name="^", script=False, manualName=""):
     """Adds visual needle representation as interpolating cardinal spline to the scene.
