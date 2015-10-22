@@ -7406,7 +7406,7 @@ class NeedleFinderLogic:
           try: strI=str(int(t[i][2]))
           except: strI=str(t[i][2])
           print i,'\t', strI,'\t',t[i][0],'\t',t[i][1]
-          if t[i][1]>3: nOutliers+=1
+          if t[i][1]>outlierThresh_mm: nOutliers+=1
         print 'nOutliers_'+str(outlierThresh_mm)+'mm=',nOutliers
         print '=========================='
     if not script: msgbox('Validation ready!')
