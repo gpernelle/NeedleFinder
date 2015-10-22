@@ -7397,6 +7397,7 @@ class NeedleFinderLogic:
         self.needleDetectionUPThread(A, imageData, colorVar, spacing, script=script,strName=name,tipOnly=False)
     '''
     # print tips
+    nOutliers=0
     if script == False:
         t = self.evaluate()
         print '----------Alg.#%d---------'%widget.algoVersParameter.value
