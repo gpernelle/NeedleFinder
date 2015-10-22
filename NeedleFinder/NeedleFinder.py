@@ -2674,7 +2674,7 @@ class NeedleFinderLogic:
       #print "ijk bases: ",repr(bases)
       #print "ijk asl: ",asl
       asl=self.ijk2ras(asl)
-      asl = [0, 0, asl[2]]
+      asl = [coord[0], coord[1], asl[2]]
       if not node:      
         self.fiducialNode = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
         self.fiducialNode.Initialize(slicer.mrmlScene)
