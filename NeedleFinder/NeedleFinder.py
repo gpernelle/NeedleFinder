@@ -560,7 +560,7 @@ class NeedleFinderWidget:
     validationFrame.addRow(self.startValidationButton)
     validationFrame.addRow(self.resetValidationButton)
     validationFrame.addRow(self.hideAnnotationTextButton)
-    validationFrame.addRow(self.templateRegistrationButton)
+    #validationFrame.addRow(self.templateRegistrationButton)
     validationFrame.addRow(self.analysisGroupBoxCTL)
 
     # self.scrollPointButton = qt.QPushButton('Scroll Ctrl Pt for Needle ' + str(self.editNeedleTxtBox.value))
@@ -832,6 +832,7 @@ class NeedleFinderWidget:
     devFrame.addRow(self.filterButton)
     devFrame.addRow(self.parSearchButton)
     devFrame.addRow(self.setAsValNeedlesButton)
+    devFrame.addRow(self.templateRegistrationButton)
 
     #put frames on the tab########################################
     self.layout.addRow(self.__segmentationFrame)
