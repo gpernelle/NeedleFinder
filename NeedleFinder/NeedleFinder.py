@@ -8835,11 +8835,28 @@ class NeedleFinderLogic:
             slicer.mrmlScene.RemoveNode(previousPt)
 
           ctrlPts = []
+          centerline = self.getCenterLine(polyData)
+
           for i in range(N):
-              p = polyData.GetPoint(int(i*2500/(N-1)))
+              # p = polyData.GetPoint(int(i*2500/(N-1)))
+              p = centerline[min(int(i*50)/(N-1), len(centerline)-1)]
               ctrlPts.append(p)
               self.placeNeedleShaftEvalMarker(p,int(needleNumber), i, type='ras' )
 
+
+  def getCenterLine(self, polydata):
+      '''
+
+      :param polydata: vtkPolydata
+      :return: list of 50 points at the center of the needle
+      '''
+      centerline = []
+      for i in range(50):
+          p1 = polydata.GetPoint(i*50)
+          p2 = polydata.GetPoint(i*50 + 25)
+          p = (np.array(p1) + np.array(p2))/2
+          centerline.append(p)
+      return centerline
 
 """
 
