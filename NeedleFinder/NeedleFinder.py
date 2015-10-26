@@ -7394,7 +7394,7 @@ class NeedleFinderLogic:
     print "\n"*10
     profprint()
     widget = slicer.modules.NeedleFinderWidget
-    self.deleteNeedleDetectionModelsFromScene()
+    if needleNr==None: self.deleteNeedleDetectionModelsFromScene()
     tips, names = self.returnTipsFromNeedleModels(offset=offset)
     if needleNr!=None:
       needleName='manual-seg_'+str(needleNr)
