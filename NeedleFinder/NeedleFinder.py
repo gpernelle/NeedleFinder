@@ -7382,7 +7382,7 @@ class NeedleFinderLogic:
               names.append(node.GetName())
     return returnTips, names
 
-  def startValidation(self, script=False, offset=0):
+  def startValidation(self, script=False, offset=0, needleNr=None):
     """Start the evaluation process:
     * Calls returnTipsFromNeedleModels() to build an array of the tip of manually segmented needles
     * Use theses tips to generate auto segmented needles
@@ -7396,6 +7396,15 @@ class NeedleFinderLogic:
     widget = slicer.modules.NeedleFinderWidget
     self.deleteNeedleDetectionModelsFromScene()
     tips, names = self.returnTipsFromNeedleModels(offset=offset)
+    if needleNr!=None:
+      needleName='manual-seg_'+str(needleNr)
+      for tip,name in zip(tips,names):
+        if name!=needleName:
+          try:
+            names.remove(name)
+            tips.remove(tip)
+          except:
+            print "not found: ", needleName 
     # delete old needles as they will be recalculated
     self.deleteAllAutoNeedlesFromScene()
     # select the image node from the Red slice viewer
@@ -7421,7 +7430,7 @@ class NeedleFinderLogic:
     # print tips
     nOutliers=0
     if script == False:
-        t = self.evaluate()
+        t = self.evaluate(needleNr=needleNr)
         print '----------Alg.#%d---------'%widget.algoVersParameter.value
         print 'New HD Validation Results:'
         print 'i\tman.-seg_\ttipHD [mm]\tHD [mm]'
@@ -7645,7 +7654,7 @@ class NeedleFinderLogic:
     hausdorff21 = max(minima)
     return max(hausdorff12, hausdorff21)
 
-  def evaluate(self, script=False):
+  def evaluate(self, script=False, needleNr=None):
     """
     This function first invokes needleMatching() with, for each automatically segmented needle in the vtkMRMLScene,
     associates it with its manually segmented version.
@@ -7678,6 +7687,8 @@ class NeedleFinderLogic:
         val = self.hausdorffDistance13(result[i][1], result[i][2])
       try: needleNrFromFilename=int(result[i][3].strip('manual-seg_'))
       except: needleNrFromFilename=-1
+      if needleNr!=None and needleNr!=needleNrFromFilename:
+        continue
       if script == True:
         results = [result[i][0], float(val), int(needleNrFromFilename), int(result[i][1].strip('vtkMRMLModelNode')), int(result[i][2].strip('vtkMRMLModelNode'))]+[val>outlierThresh_mm] + self.valuesExperience
       else:
