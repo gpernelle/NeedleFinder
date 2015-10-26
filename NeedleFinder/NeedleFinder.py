@@ -8825,13 +8825,15 @@ class NeedleFinderLogic:
           # self.registered = 1
 
 
-  def controlPointsEstimation(self, N = 11):
+  def controlPointsEstimation(self, n=None, N = 11):
       nodes = slicer.util.getNodes('manual-seg_*')
-      for node in nodes.values():
+      for key, node in zip(nodes.keys(), nodes.values()):
+          needleNumber = int(key.lstrip('manual-seg_')) #node.GetAttribute('nth')
+          if n!=None and needleNumber!=n:
+            continue
           polyData = node.GetPolyData()
-          needleNumber = node.GetAttribute('nth')
 
-          previousPts = slicer.util.getNodes('.'+needleNumber+'-*')
+          previousPts = slicer.util.getNodes('.'+str(needleNumber)+'-*')
           for previousPt in previousPts.values():
             slicer.mrmlScene.RemoveNode(previousPt)
 
@@ -8844,10 +8846,8 @@ class NeedleFinderLogic:
               ctrlPts.append(p)
               self.placeNeedleShaftEvalMarker(p,int(needleNumber), i, type='ras' )
 
-
   def getCenterLine(self, polydata):
       '''
-
       :param polydata: vtkPolydata
       :return: list of 50 points at the center of the needle
       '''
