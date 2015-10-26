@@ -8823,6 +8823,24 @@ class NeedleFinderLogic:
           # pNode.SetParameter('followupTransformID', self.__followupTransform.GetID())
           # self.registered = 1
 
+
+  def controlPointsEstimation(self, N = 11):
+      nodes = slicer.util.getNodes('manual-seg_*')
+      for node in nodes.values():
+          polyData = node.GetPolyData()
+          needleNumber = node.GetAttribute('nth')
+
+          previousPts = slicer.util.getNodes('.'+needleNumber+'-*')
+          for previousPt in previousPts.values():
+            slicer.mrmlScene.RemoveNode(previousPt)
+
+          ctrlPts = []
+          for i in range(N):
+              p = polyData.GetPoint(int(i*2500/(N-1)))
+              ctrlPts.append(p)
+              self.placeNeedleShaftEvalMarker(p,int(needleNumber), i, type='ras' )
+
+
 """
 
 ########################################################################################################################
