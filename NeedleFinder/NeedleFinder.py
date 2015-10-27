@@ -8855,7 +8855,7 @@ class NeedleFinderLogic:
               # p = polyData.GetPoint(int(i*2500/(N-1)))
               p = centerline[min(int(i*50)/(N-1), len(centerline)-1)]
               ctrlPts.append(p)
-              self.placeNeedleShaftEvalMarker(p,int(needleNumber), i, type='ras' )
+              self.placeNeedleShaftEvalMarker(p,int(needleNumber), N-i, type='ras' )
 
   def getCenterLine(self, polydata):
       '''
