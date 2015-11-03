@@ -142,6 +142,7 @@ class NeedleFinder:
     fname = os.listdir(path)
     print fname
     pointList=[]
+    addPointBool = (slicer.util.getNode('Fiducials List') == None)
     for file in fname:
         if fnmatch.fnmatch(file, '*.acsv'):
             with open(path + file) as f:
@@ -162,7 +163,7 @@ class NeedleFinder:
     pointList = np.array(pointList)
 
     for point in pointList:
-      self.logic.placeNeedleShaftEvalMarker(point[2:], int(point[0]),int(point[1]), 'ras', 0)
+      self.logic.placeNeedleShaftEvalMarker(point[2:], int(point[0]),int(point[1]), 'ras', addPointBool)
 
     # observe visibility of manual needles to propagate on ctl points
     self.logic.observeManualNeedles()
@@ -2385,7 +2386,7 @@ class NeedleFinderLogic:
     # productive #onClick
     profprint()
     pointName = '.' + str(needleNumber) + "-" + str(stepValue)
-    if slicer.util.getNode(pointName) == None:
+    if slicer.util.getNode(pointName) == None and createPoint:
     # if createPoint == 1:
       fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
       # stepValue = self.findNextStepNumber(widget.editNeedleTxtBox.value)
@@ -6032,12 +6033,13 @@ class NeedleFinderLogic:
     :return:
     """
     widget = slicer.modules.NeedleFinderWidget
-    nodes = slicer.util.getNodes('vtkMRMLAnnotationTextDisplayNode*')
-    for node in nodes.values():
-      if widget.hideAnnotationTextButton.checked:
-        node.SetTextScale(0)
-      else:
-        node.SetTextScale(3)
+    nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationTextDisplayNode')
+    for i in range(nodes.GetNumberOfItems()):
+        node = nodes.GetItemAsObject(i)
+        if widget.hideAnnotationTextButton.checked:
+          node.SetTextScale(0)
+        else:
+          node.SetTextScale(3)
 
   def resetNeedleValidation(self):
     """
