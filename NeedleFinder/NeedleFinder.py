@@ -1708,22 +1708,29 @@ class NeedleFinderLogic:
 
 
 
+    self.deleteDuplicateMarkers()
+
+    if len(pointList) == 0:
+      pointList = []
+      nodes = slicer.util.getNodes('.*-*')
+      for node in nodes.values():
+        name = node.GetName()
+        name = name.strip('.')
+        nameArray = name.split('-')
+        coord = [0,0,0]
+        node.GetFiducialCoordinates(coord)
+        val = [int(nameArray[0]), int(nameArray[1]), coord[0], coord[1], coord[2] ]
+        pointList.append(val)
+
+
     for point in pointList:
       self.placeNeedleShaftEvalMarker(point[2:], int(point[0]),int(point[1]), type = 'ras', createPoint = addPointBool )
 
-    self.deleteDuplicateMarkers(pointList)
 
+    self.deleteDuplicateNeedles()
 
     self.renameObjects() # rename if \r was added
 
-    # look for duplicate list and delete it if necessary
-    nodes = slicer.mrmlScene.GetNodesByClassByName('vtkMRMLAnnotationHierarchyNode','Fiducials List')
-    if nodes.GetNumberOfItems()>1:
-      slicer.mrmlScene.RemoveNode(nodes.GetItemAsObject(1))
-
-    nodes = slicer.mrmlScene.GetNodesByClassByName('vtkMRMLAnnotationHierarchyNode','All Annotations')
-    if nodes.GetNumberOfItems()>1:
-      slicer.mrmlScene.RemoveNode(nodes.GetItemAsObject(1))
 
     # observe visibility of manual needles to propagate on ctl points
     self.observeManualNeedles()
@@ -2411,7 +2418,7 @@ class NeedleFinderLogic:
         if modelNode.GetAttribute("ValidationNeedle") == "1" and int(modelNode.GetAttribute("NeedleNumber")) == needleNumber:
           modelNode.SetLocked(0)
 
-  def deleteDuplicateMarkers(self, pointList):
+  def deleteDuplicateMarkers(self):
     """
     Remove duplice marker
     :param needleNumber:
@@ -2420,56 +2427,54 @@ class NeedleFinderLogic:
     """
     scene = slicer.mrmlScene
     nodes = slicer.mrmlScene.GetNodesByClassByName('vtkMRMLAnnotationHierarchyNode','Fiducials List')
-    hnode = None
     if nodes.GetNumberOfItems()>1:
-      hnode = nodes.GetItemAsObject(1)
+      for i in range(1,nodes.GetNumberOfItems()):
+        hnode = nodes.GetItemAsObject(i)
 
-    if(hnode):
-      children = vtk.vtkCollection()
-      hnode.GetAssociatedChildrenNodes(children, "vtkMRMLAnnotationFiducialNode")
+        if(hnode):
+          children = vtk.vtkCollection()
+          hnode.GetAssociatedChildrenNodes(children, "vtkMRMLAnnotationFiducialNode")
 
-      for i in range(children.GetNumberOfItems()):
-        annotNode = children.GetItemAsObject(i)
-      # for point in pointList:
-      #   pointName = '.' + str(point[0]) + "-" + str(point[1])
-      #   nodes = slicer.mrmlScene.GetNodesByClassByName('vtkMRMLAnnotationFiducialNode', pointName)
-      #   if nodes.GetNumberOfItems()>1:
-      #     annotNode = nodes.GetItemAsObject(1)
-        oneToOneHierarchyNode = hnode.GetAssociatedHierarchyNode(annotNode.GetScene(), annotNode.GetID())
-        pointDisplayNode = annotNode.GetAnnotationPointDisplayNode()
-        textDisplayNode = annotNode.GetAnnotationTextDisplayNode()
-        storageNode = annotNode.GetStorageNode()
-        if (oneToOneHierarchyNode):
-          scene.RemoveNode(oneToOneHierarchyNode)
-        if (pointDisplayNode):
-          scene.RemoveNode(pointDisplayNode)
-        if (textDisplayNode):
-          scene.RemoveNode(textDisplayNode)
-        if (storageNode):
-          scene.RemoveNode(storageNode)
-        if(annotNode):
-          scene.RemoveNode(annotNode)
+          for i in range(children.GetNumberOfItems()):
+            annotNode = children.GetItemAsObject(i)
 
-      # # strange thing happening here with \r at the end of the name
-      # pointName = '.' + str(point[0]) + "-" + str(point[1]) + '\r'
-      # nodes = slicer.mrmlScene.GetNodesByClassByName('vtkMRMLAnnotationFiducialNode', pointName)
-      # if nodes.GetNumberOfItems()>1:
-      #   annotNode = nodes.GetItemAsObject(1)
-      #   oneToOneHierarchyNode = hnode.GetAssociatedHierarchyNode(annotNode.GetScene(), annotNode.GetID())
-      #   pointDisplayNode = annotNode.GetAnnotationPointDisplayNode()
-      #   textDisplayNode = annotNode.GetAnnotationTextDisplayNode()
-      #   storageNode = annotNode.GetStorageNode()
-      #   if (oneToOneHierarchyNode):
-      #     scene.RemoveNode(oneToOneHierarchyNode)
-      #   if (pointDisplayNode):
-      #     scene.RemoveNode(pointDisplayNode)
-      #   if (textDisplayNode):
-      #     scene.RemoveNode(textDisplayNode)
-      #   if (storageNode):
-      #     scene.RemoveNode(storageNode)
-      #   if(annotNode):
-      #     scene.RemoveNode(annotNode)
+            oneToOneHierarchyNode = hnode.GetAssociatedHierarchyNode(annotNode.GetScene(), annotNode.GetID())
+            pointDisplayNode = annotNode.GetAnnotationPointDisplayNode()
+            textDisplayNode = annotNode.GetAnnotationTextDisplayNode()
+            storageNode = annotNode.GetStorageNode()
+            if (oneToOneHierarchyNode):
+              scene.RemoveNode(oneToOneHierarchyNode)
+            if (pointDisplayNode):
+              scene.RemoveNode(pointDisplayNode)
+            if (textDisplayNode):
+              scene.RemoveNode(textDisplayNode)
+            if (storageNode):
+              scene.RemoveNode(storageNode)
+            if(annotNode):
+              scene.RemoveNode(annotNode)
+    # look for duplicate list and delete it if necessary
+    nodes = slicer.mrmlScene.GetNodesByClassByName('vtkMRMLAnnotationHierarchyNode','Fiducials List')
+    if nodes.GetNumberOfItems()>1:
+      for i in range(1,nodes.GetNumberOfItems()):
+        slicer.mrmlScene.RemoveNode(nodes.GetItemAsObject(i))
 
+    nodes = slicer.mrmlScene.GetNodesByClassByName('vtkMRMLAnnotationHierarchyNode','All Annotations')
+    if nodes.GetNumberOfItems()>1:
+      for i in range(1,nodes.GetNumberOfItems()):
+        slicer.mrmlScene.RemoveNode(nodes.GetItemAsObject(i))
+
+  def deleteDuplicateNeedles(self):
+    '''
+    Remove duplicate needle by filtering names
+    :return:
+    '''
+    nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLModelNode')
+    for i in range(nodes.GetNumberOfItems()):
+      node = nodes.GetItemAsObject(i)
+      name = node.GetName()
+      if len(name.split('manual-seg'))>1:
+        if len(name.split('_'))>2:
+          slicer.mrmlScene.RemoveNode(node)
 
 
   def placeNeedleShaftEvalMarker(self, A, needleNumber, stepValue, type = 'ijk', createPoint=1):
