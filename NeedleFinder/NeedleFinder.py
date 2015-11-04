@@ -1673,8 +1673,16 @@ class NeedleFinderLogic:
     pointList=[]
 
     nodes = slicer.mrmlScene.GetNodesByClassByName('vtkMRMLAnnotationHierarchyNode','Fiducials List')
-
-    addPointBool = (nodes.GetNumberOfItems()==0)
+    addPointBool = 0
+    if nodes.GetNumberOfItems()==0:
+      addPointBool = 1
+    elif nodes.GetNumberOfItems()==1:
+      l = nodes.GetItemAsObject(0)
+      v = vtk.vtkCollection()
+      l.GetAssociatedChildrenNodes(v)
+      print 'number of children: ', v.GetNumberOfItems()
+      if v.GetNumberOfItems()==0:
+        addPointBool = 1
     print '*'*50
     print '%d list(s) of fiducials found with the same name - add point bool: %d' % (int(nodes.GetNumberOfItems()), addPointBool)
     print '*'*50
@@ -6781,6 +6789,14 @@ class NeedleFinderLogic:
     # widget.viewCTL = None
     # widget.model = None
     # widget.modelCTL = None
+    # look for duplicate list and delete it if necessary
+    nodes = slicer.mrmlScene.GetNodesByClassByName('vtkMRMLAnnotationHierarchyNode','Fiducials List')
+    for i in range(nodes.GetNumberOfItems()):
+      slicer.mrmlScene.RemoveNode(nodes.GetItemAsObject(i))
+
+    nodes = slicer.mrmlScene.GetNodesByClassByName('vtkMRMLAnnotationHierarchyNode','All Annotations')
+    for i in range(nodes.GetNumberOfItems()):
+      slicer.mrmlScene.RemoveNode(nodes.GetItemAsObject(i))
 
     self.observeManualNeedles()
 
