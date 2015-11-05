@@ -43,6 +43,8 @@ import vtk, qt, ctk, slicer
 import shutil
 import fnmatch
 from functools import partial
+import xml.etree.ElementTree
+from xml.etree.ElementTree import Element, SubElement, Comment, tostring
 
 import EditorLib
 from Editor import EditorWidget
@@ -793,8 +795,14 @@ class NeedleFinderWidget:
     editorWidgetParent.show()
     self.editUtil.setCurrentEffect("NeedleFinder")
 
+    self.scenePath = qt.QLineEdit()
+    self.cleanSceneButton = qt.QPushButton('Clean Scene')
+    self.cleanSceneButton.connect('clicked()', logic.cleanScene)
+
     # devFrame.addRow(self.displayFiducialButton)
     devFrame.addWidget(editorWidgetParent)
+    devFrame.addRow(self.scenePath)
+    devFrame.addRow(self.cleanSceneButton)
     devFrame.addRow(self.skipSegLimitButton)
     devFrame.addRow(self.fiducialObturatorButton)
     devFrame.addRow(self.displayContourButton)
@@ -8993,6 +9001,90 @@ class NeedleFinderLogic:
           p = (np.array(p1) + np.array(p2))/2
           centerline.append(p)
       return centerline
+
+  def cleanScene(self, path = None):
+    '''
+    Clean the MRML scene from duplicates
+    :param path: ex '/cases/01/'
+    :return:
+    '''
+    # path  = './'
+
+    if not path:
+      path  = slicer.modules.NeedleFinderWidget.scenePath.text
+    print path
+
+    fname = os.listdir(path)
+    print fname
+
+    mrmlfile = None
+    for file in fname:
+            if fnmatch.fnmatch(file, '20*Scene.mrml'):
+                mrmlfile =  path + file
+
+    print mrmlfile
+    e = xml.etree.ElementTree.parse(mrmlfile).getroot()
+    e = self.removeDuplicateMRMLFromScene(e)
+    e = self.removeAnnotationFromScene(e)
+    e = self.removeDuplicateNeedlesFromScene(e)
+
+    tostring(e)
+    text_file = open(path + "/cleanedScene.mrml", "w")
+    text_file.write(tostring(e))
+    text_file.close()
+
+
+  def removeDuplicateNeedlesFromScene(self, e):
+      c = e.getchildren()
+      indexToRemove = []
+      for i, child in enumerate(e):
+              if child.tag[:5] == 'Model':
+      #             print i, child.tag, child.attrib['name']
+                  if len(child.attrib['name'].split('_'))>2:
+                      indexToRemove.append(i)
+                      if c[i-2].tag[:5] == 'Model':
+                          indexToRemove.append(i-2)
+                      if c[i-1].tag[:5] == 'Model':
+                          indexToRemove.append(i-1)
+
+      indexToRemove.sort()
+      indexToRemove.reverse()
+
+      for i in indexToRemove:
+          e.remove(c[i])
+
+      return e
+
+
+  def removeDuplicateMRMLFromScene(self, e):
+      c = e.getchildren()
+      indexToRemove = []
+      for i, child in enumerate(e):
+          if child.tag[:6] == 'Volume' and child.attrib['selected'] == 'false':
+              indexToRemove.append(i)
+
+      indexToRemove.sort()
+      indexToRemove.reverse()
+
+      for i in indexToRemove:
+          e.remove(c[i])
+
+      return e
+
+  def removeAnnotationFromScene(self, e):
+      c = e.getchildren()
+      indexToRemove = []
+      for i, child in enumerate(e):
+          if child.tag[:10] == 'Annotation':
+              indexToRemove.append(i)
+
+      indexToRemove.sort()
+      indexToRemove.reverse()
+
+      for i in indexToRemove:
+          e.remove(c[i])
+
+      return e
 
 """
 
