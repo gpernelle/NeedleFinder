@@ -9014,18 +9014,27 @@ class NeedleFinderLogic:
       path  = slicer.modules.NeedleFinderWidget.scenePath.text
     print path
 
-    fname = os.listdir(path)
-    print fname
 
-    mrmlfile = None
-    for file in fname:
-            if fnmatch.fnmatch(file, '20*Scene.mrml'):
-                mrmlfile =  path + file
+    if path[-4:] != 'mrml':
+      if path[-1:] != '/':
+        path += '/'
+      fname = os.listdir(path)
+      mrmlfile = None
+      for file in fname:
+              if fnmatch.fnmatch(file, '20*Scene.mrml'):
+                  mrmlfile =  path + file
 
-    print mrmlfile
+    else:
+      mrmlfile = path
+      a = mrmlfile.split('/')
+      path = ''
+      for s in range(len(a)-1):
+          path += a[s]+'/'
+
     e = xml.etree.ElementTree.parse(mrmlfile).getroot()
     e = self.removeDuplicateMRMLFromScene(e)
-    e = self.removeAnnotationFromScene(e)
+    # e = self.removeAnnotationFromScene(e)
+    e = self.removeAnnotationButKeepTemplate(e)
     e = self.removeDuplicateNeedlesFromScene(e)
 
     tostring(e)
@@ -9055,6 +9064,32 @@ class NeedleFinderLogic:
 
       return e
 
+  def removeAnnotationButKeepTemplate(self, e):
+    c = e.getchildren()
+    indexToRemove = []
+    removeListIDS = []
+    for i, child in enumerate(e):
+        if child.tag == 'AnnotationFiducials' and child.attrib['name'] != 'template slice position':
+            n = child.attrib['references'].split(';')
+            for t in n:
+                t2 = t.split(':')
+                if len(t2)>1:
+                    t3 = t2[1].split(' ')
+                    removeListIDS.append(t3)
+                    removeListIDS.append([child.attrib['id']])
+
+    r = [item for sublist in removeListIDS for item in sublist]
+    for i, child in enumerate(e):
+        if child.attrib['id'] in r or child.tag == 'AnnotationHierarchyNode':
+            indexToRemove.append(i)
+
+    indexToRemove.sort()
+    indexToRemove.reverse()
+
+    for i in indexToRemove:
+        e.remove(c[i])
+
+    return e
 
   def removeDuplicateMRMLFromScene(self, e):
       c = e.getchildren()
