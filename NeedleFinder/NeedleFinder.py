@@ -9070,13 +9070,16 @@ class NeedleFinderLogic:
     removeListIDS = []
     for i, child in enumerate(e):
         if child.tag == 'AnnotationFiducials' and child.attrib['name'] != 'template slice position':
-            n = child.attrib['references'].split(';')
-            for t in n:
-                t2 = t.split(':')
-                if len(t2)>1:
-                    t3 = t2[1].split(' ')
-                    removeListIDS.append(t3)
-                    removeListIDS.append([child.attrib['id']])
+            try:
+              n = child.attrib['references'].split(';')
+              for t in n:
+                  t2 = t.split(':')
+                  if len(t2)>1:
+                      t3 = t2[1].split(' ')
+                      removeListIDS.append(t3)
+                      removeListIDS.append([child.attrib['id']])
+            except:
+              pass
 
     r = [item for sublist in removeListIDS for item in sublist]
     for i, child in enumerate(e):
@@ -9092,19 +9095,39 @@ class NeedleFinderLogic:
     return e
 
   def removeDuplicateMRMLFromScene(self, e):
-      c = e.getchildren()
-      indexToRemove = []
-      for i, child in enumerate(e):
-          if child.tag[:6] == 'Volume' and child.attrib['selected'] == 'false':
-              indexToRemove.append(i)
+    c = e.getchildren()
+    indexToRemove = []
+    keepIDS = []
 
-      indexToRemove.sort()
-      indexToRemove.reverse()
+    for i, child in enumerate(e):
+        if child.tag == 'SliceComposite' and child.attrib['name'] == 'SliceComposite':
+            IDToKeep = child.attrib['backgroundVolumeID']
+            keepIDS.append(child.attrib['backgroundVolumeID'])
 
-      for i in indexToRemove:
-          e.remove(c[i])
+    for i, child in enumerate(e):
+        if child.tag == 'Volume' and child.attrib['id'] == IDToKeep:
+            try:
+                n = child.attrib['references'].split(';')
+                for t in n:
+                    t2 = t.split(':')
+                    if len(t2)>1:
+                        t3 = t2[1].split(' ')
+                        keepIDS.append(t3[0])
+                        keepIDS.append([child.attrib['id']])
+            except:
+                pass
 
-      return e
+    for i, child in enumerate(e):
+        if child.tag[:6] == 'Volume' and child.attrib['id'] not in keepIDS:
+            indexToRemove.append(i)
+
+    indexToRemove.sort()
+    indexToRemove.reverse()
+
+    for i in indexToRemove:
+        e.remove(c[i])
+
+    return e
 
   def removeAnnotationFromScene(self, e):
       c = e.getchildren()
