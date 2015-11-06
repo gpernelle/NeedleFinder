@@ -1773,6 +1773,9 @@ class NeedleFinderLogic:
     widget.viewCTL.sortByColumn(2)
     widget.viewCTL.sortByColumn(1)
 
+    self.lockControlPoints(widget.editNeedleTxtBox.value)
+    self.unlockControlPoints(widget.editNeedleTxtBox.value)
+
   def observeFiducialPoints(self):
     widget = slicer.modules.NeedleFinderWidget
     nodes = slicer.util.getNodes('.*-*')
@@ -1789,10 +1792,13 @@ class NeedleFinderLogic:
         widget.observerTagsFid[nth] = node.AddObserver('ModifiedEvent', self.addToUndoList)
 
   def observeSingleFiducial(self, node, event):
-    widget = slicer.modules.NeedleFinderWidget
-    if node != None and node.GetClassName() == 'vtkMRMLAnnotationFiducialNode':
-        nth = node.GetName()
-        widget.observerTagsFid[nth] = node.AddObserver('ModifiedEvent', self.addToUndoList)
+    try:
+      widget = slicer.modules.NeedleFinderWidget
+      if node != None and node.GetClassName() == 'vtkMRMLAnnotationFiducialNode':
+          nth = node.GetName()
+          widget.observerTagsFid[nth] = node.AddObserver('ModifiedEvent', self.addToUndoList)
+    except:
+      pass
 
 
   def addToUndoList(self, modifiedNode, event):
