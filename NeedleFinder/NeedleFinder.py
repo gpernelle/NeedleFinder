@@ -44,7 +44,7 @@ import shutil
 import fnmatch
 from functools import partial
 import xml.etree.ElementTree
-from xml.etree.ElementTree import Element, SubElement, Comment, tostring
+from xml.etree.ElementTree import tostring
 
 import EditorLib
 from Editor import EditorWidget
@@ -78,7 +78,23 @@ def breakbox(text):
   if ret != qt.QMessageBox.Ok:
     raise #allows the debugger to start when attached and exceptions are caught
 def profprint(className=""):
-  if profiling: print "%s.%s -----------------------" % (className, whosdaddy())
+  if profiling:
+    profString = "%s.%s -----------------------" % (className, whosdaddy())
+    print profString
+    if loggingInfos:
+      try:
+        with open("/tmp/debug.log", "a") as myfile:
+          myfile.write(profString+'\n')
+      except:
+        pass
+def logprint(className="", msg = ""):
+  if loggingInfos:
+    msg += ' from %s.%s' % (className, whosdaddy())
+    try:
+      with open("/tmp/debug.log", "a") as myfile:
+        myfile.write(msg+'\n')
+    except:
+      pass
 def profbox(className=""):
   if profiling: strg = "%s.%s -----------------------" % (className, whosdaddy()); print strg; msgbox(strg)
 def getClassName(self):
@@ -86,6 +102,7 @@ def getClassName(self):
 
 # global constants:
 profiling = True
+loggingInfos = False
 #if profiling: msgbox("turned on")
 frequent = False
 MAXNEEDLES = MAXCOL = 206 # we have no more than 206 distinct colors defines here for display
@@ -1740,26 +1757,32 @@ class NeedleFinderLogic:
                   pointList.append(coord)
     pointList = np.array(pointList)
 
-
-
     self.deleteDuplicateMarkers()
 
-    if len(pointList) == 0:
-      pointList = []
-      nodes = slicer.util.getNodes('.*-*')
-      for node in nodes.values():
-        name = node.GetName()
-        name = name.strip('.')
-        nameArray = name.split('-')
-        coord = [0,0,0]
-        node.GetFiducialCoordinates(coord)
-        val = [int(nameArray[0]), int(nameArray[1]), coord[0], coord[1], coord[2] ]
-        pointList.append(val)
-
+    # get fiducial nodes from scene file ---> May crash slicer
+    # if len(pointList) == 0:
+    #   pointList = []
+    #   nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
+    #   nbNodes = nodes.GetNumberOfItems()
+    #
+    #   for i in range(nbNodes):
+    #     try:
+    #       node = nodes.GetItemAsObject(i)
+    #       name = node.GetName()
+    #       name = name.strip('.')
+    #       nameArray = name.split('-')
+    #       coord = [0,0,0]
+    #       try:
+    #         node.GetFiducialCoordinates(coord)
+    #         val = [int(nameArray[0]), int(nameArray[1]), coord[0], coord[1], coord[2] ]
+    #         pointList.append(val)
+    #       except:
+    #         logprint(msg = 'cannot add fid to list')
+    #     except:
+    #       logprint(msg = 'cannot access node')
 
     for point in pointList:
       self.placeNeedleShaftEvalMarker(point[2:], int(point[0]),int(point[1]), type = 'ras', createPoint = addPointBool )
-
 
     self.deleteDuplicateNeedles()
 
@@ -1777,6 +1800,11 @@ class NeedleFinderLogic:
     self.unlockControlPoints(widget.editNeedleTxtBox.value)
 
   def observeFiducialPoints(self):
+    '''
+    Add observers to all fiducial points to trigger an event if modified
+    :return:
+    '''
+    profprint()
     widget = slicer.modules.NeedleFinderWidget
     nodes = slicer.util.getNodes('.*-*')
     for node in nodes.values():
@@ -1792,6 +1820,12 @@ class NeedleFinderLogic:
         widget.observerTagsFid[nth] = node.AddObserver('ModifiedEvent', self.addToUndoList)
 
   def observeSingleFiducial(self, node, event):
+    '''
+    Add observer to a single fiducial point to trigger an event if modified
+    :param node:
+    :param event:
+    :return:
+    '''
     try:
       widget = slicer.modules.NeedleFinderWidget
       if node != None and node.GetClassName() == 'vtkMRMLAnnotationFiducialNode':
@@ -1802,24 +1836,16 @@ class NeedleFinderLogic:
 
 
   def addToUndoList(self, modifiedNode, event):
+    '''
+    Add node name and node coord to the undo list
+    :param modifiedNode:
+    :param event:
+    :return:
+    '''
     widget = slicer.modules.NeedleFinderWidget
     if t.time() - self.lastTime>1:
       p = [0,0,0]
-      # if self.undoListFid[-1] == {}:  # the list is filled with empty dict
-      #   nodes = slicer.util.getNodes('.*-*')
-      #   d = {}
-      #   for node in nodes.values():
-      #     nth = node.GetName()
-      #     node.GetFiducialCoordinates(p)
-      #     d[nth] = p
-      # else: # the last dict is not empty: copy it and modify/add new coordinates
-      #   d = self.undoListFid[-1].copy()
-      #   nth = modifiedNode.GetName()
-      #   modifiedNode.GetFiducialCoordinates(p)
-      #   d[nth] = p
-      # d['lastModified'] = modifiedNode.GetName()
-      # self.undoListFid.append(d)
-      # self.lastTime = t.time()
+
       d = {}
       modifiedNode.GetFiducialCoordinates(p)
       d['name'] = modifiedNode.GetName()
@@ -1830,6 +1856,11 @@ class NeedleFinderLogic:
         self.lastTime = t.time()
 
   def undoFid(self):
+    '''
+    Revert the last modified fiducial point to its previously recorded position
+    :return:
+    '''
+    profprint()
     widget = slicer.modules.NeedleFinderWidget
     print '..Undoing fiducial point mvt for pt ', widget.undoListFid[-1].get('name')
     d = widget.undoListFid[-1]
@@ -2501,6 +2532,12 @@ class NeedleFinderLogic:
     return stepValue + 1
 
   def lockControlPoints(self, needleNumber):
+    '''
+    Lock every control points except the one of this needle number
+    :param needleNumber:
+    :return:
+    '''
+    profprint()
     modelNodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
     nbNode = modelNodes.GetNumberOfItems()
     stepValue = 0
@@ -2511,6 +2548,12 @@ class NeedleFinderLogic:
 
 
   def unlockControlPoints(self, needleNumber):
+    '''
+    Unlock control points from this needle
+    :param needleNumber:
+    :return:
+    '''
+    profprint()
     modelNodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
     nbNode = modelNodes.GetNumberOfItems()
     stepValue = 0
@@ -2521,17 +2564,17 @@ class NeedleFinderLogic:
 
   def deleteDuplicateMarkers(self):
     """
-    Remove duplice marker
+    Remove duplice markers
     :param needleNumber:
     :param stepValue:
     :return:
     """
+    profprint()
     scene = slicer.mrmlScene
-    nodes = slicer.mrmlScene.GetNodesByClassByName('vtkMRMLAnnotationHierarchyNode','Fiducials List')
+    nodes = scene.GetNodesByClassByName('vtkMRMLAnnotationHierarchyNode','Fiducials List')
     if nodes.GetNumberOfItems()>1:
       for i in range(1,nodes.GetNumberOfItems()):
         hnode = nodes.GetItemAsObject(i)
-
         if(hnode):
           children = vtk.vtkCollection()
           hnode.GetAssociatedChildrenNodes(children, "vtkMRMLAnnotationFiducialNode")
@@ -2544,31 +2587,54 @@ class NeedleFinderLogic:
             textDisplayNode = annotNode.GetAnnotationTextDisplayNode()
             storageNode = annotNode.GetStorageNode()
             if (oneToOneHierarchyNode):
-              scene.RemoveNode(oneToOneHierarchyNode)
+              try:
+                scene.RemoveNode(oneToOneHierarchyNode)
+              except:
+                logprint(msg = 'pb removing onetoone')
             if (pointDisplayNode):
-              scene.RemoveNode(pointDisplayNode)
+              try:
+                scene.RemoveNode(pointDisplayNode)
+              except:
+                logprint(msg = 'pb removing pointDisplayNode')
             if (textDisplayNode):
-              scene.RemoveNode(textDisplayNode)
+              try:
+                scene.RemoveNode(textDisplayNode)
+              except:
+                logprint(msg = 'pb removing textDisplayNode')
             if (storageNode):
-              scene.RemoveNode(storageNode)
+              try:
+                scene.RemoveNode(storageNode)
+              except:
+                logprint(msg = 'pb removing storageNode')
             if(annotNode):
-              scene.RemoveNode(annotNode)
+              try:
+                scene.RemoveNode(annotNode)
+              except:
+                logprint(msg = 'pb removing annotNode')
+
     # look for duplicate list and delete it if necessary
     nodes = slicer.mrmlScene.GetNodesByClassByName('vtkMRMLAnnotationHierarchyNode','Fiducials List')
     if nodes.GetNumberOfItems()>1:
       for i in range(1,nodes.GetNumberOfItems()):
-        slicer.mrmlScene.RemoveNode(nodes.GetItemAsObject(i))
+        try:
+          slicer.mrmlScene.RemoveNode(nodes.GetItemAsObject(i))
+        except:
+          pass
 
     nodes = slicer.mrmlScene.GetNodesByClassByName('vtkMRMLAnnotationHierarchyNode','All Annotations')
     if nodes.GetNumberOfItems()>1:
       for i in range(1,nodes.GetNumberOfItems()):
-        slicer.mrmlScene.RemoveNode(nodes.GetItemAsObject(i))
+        try:
+          slicer.mrmlScene.RemoveNode(nodes.GetItemAsObject(i))
+        except:
+          pass
 
   def deleteDuplicateNeedles(self):
     '''
     Remove duplicate needle by filtering names
     :return:
     '''
+    profprint()
     nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLModelNode')
     for i in range(nodes.GetNumberOfItems()):
       node = nodes.GetItemAsObject(i)
@@ -2625,6 +2691,7 @@ class NeedleFinderLogic:
     :param listArgs: [id, needlenumber, needlestep]
     :return:
     """
+    profprint()
     print(listArgs)
     ID = listArgs[0]
     profprint()
