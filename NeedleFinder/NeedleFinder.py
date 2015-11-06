@@ -120,6 +120,15 @@ class NeedleFinder:
       slicer.selfTests = {}
     slicer.selfTests['NeedleFinder'] = self.runTest
 
+    def __onNodeAdded__(self, caller, eventId, callData):
+      ''' IF fiducial node, observe mvt for undo function
+      '''
+      self.logic.observeSingleFiducial(callData, eventId)
+
+    def __onNodeRemoved__(self, caller, eventId, callData):
+      ''' Delete observer if fiducial node removed
+      '''
+      self.logic.removeNodeObserver(caller, eventId)
 
     def __onSceneLoaded__(self, caller, eventId, callData):
       """Load CTRL points AFTER scene finished to be loaded"""
@@ -135,9 +144,13 @@ class NeedleFinder:
     self.__onSceneLoaded__.CallDataType = vtk.VTK_OBJECT
     self.__onSceneClosed__ = partial(__onSceneClosed__, self)
     self.__onSceneClosed__.CallDataType = vtk.VTK_OBJECT
+    self.__onNodeAdded__ = partial(__onNodeAdded__, self)
+    self.__onNodeAdded__.CallDataType = vtk.VTK_OBJECT
 
     slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.EndImportEvent, self.__onSceneLoaded__)
     slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.EndCloseEvent, self.__onSceneClosed__)
+    slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, self.__onNodeAdded__)
+    # slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeRemovedEvent, self.__onNodeRemoved__)
 
   def __del__(self):
     if self.NeedleFinderWidget:
@@ -186,6 +199,7 @@ class NeedleFinderWidget:
     self.buttonsGroupBox = None
     self.interactorObserverTags = []
     self.styleObserverTags = []
+    self.observerTagsFid = {}
     self.axialSegmentationLimit = None
     self.templateSliceButton = None
     self.fiducialButton = None
@@ -236,6 +250,7 @@ class NeedleFinderWidget:
     self.labelMapNode = None
     self.currentLabel = None
     self.tempPointList = []
+    self.undoListFid = [{} for i in range(30)]
 
   def __del__(self):
     self.removeObservers()
@@ -505,12 +520,20 @@ class NeedleFinderWidget:
     # Reset Needle Validation Button
     self.resetValidationButton = qt.QPushButton('Reset Manual Segmentation')
     self.templateRegistrationButton = qt.QPushButton('[Beta] Template Registration')
+
+    # Hide Markers Button
     self.hideAnnotationTextButton = qt.QPushButton('Hide Marker Texts')
     self.hideAnnotationTextButton.checkable = True
+
+    # Undo Button
+    self.undoButton = qt.QPushButton('Undo Fiducial Mvt')
+    self.undoButton.checkable = False
+
 
     self.resetValidationButton.connect('clicked()', logic.resetNeedleValidation)
     self.templateRegistrationButton.connect('clicked()', logic.autoregistration)
     self.hideAnnotationTextButton.connect('clicked()', logic.hideAnnotations)
+    self.undoButton.connect('clicked()', logic.undoFid)
 
     self.editNeedleTxtBox = qt.QSpinBox()
     self.editNeedleTxtBox.connect("valueChanged(int)", logic.changeValue)
@@ -532,6 +555,7 @@ class NeedleFinderWidget:
     validationFrame.addRow(self.startValidationButton)
     validationFrame.addRow(self.resetValidationButton)
     validationFrame.addRow(self.hideAnnotationTextButton)
+    validationFrame.addRow(self.undoButton)
     #validationFrame.addRow(self.templateRegistrationButton)
     validationFrame.addRow(self.analysisGroupBoxCTL)
 
@@ -1660,11 +1684,13 @@ class NeedleFinderLogic:
     self.controlPoints = []
     self.observerTags = {}
     self.observeManualNeedles()
+    self.lastTime = t.time()
 
     self.previousValues = [[0, 0, 0]]
     self.tableValueCtrPt = [[[999, 999, 999] for i in range(100)] for j in range(100)]
     self.obtuNeedleValueCtrPt = [[[999, 999, 999] for i in range(10)] for j in range(10)]
     self.obtuNeedlePt = [[[999, 999, 999] for i in range(10)] for j in range(10)]
+
 
   def getName(self):
     """
@@ -1746,6 +1772,67 @@ class NeedleFinderLogic:
     widget = slicer.modules.NeedleFinderWidget
     widget.viewCTL.sortByColumn(2)
     widget.viewCTL.sortByColumn(1)
+
+  def observeFiducialPoints(self):
+    widget = slicer.modules.NeedleFinderWidget
+    nodes = slicer.util.getNodes('.*-*')
+    for node in nodes.values():
+      nth = node.GetName()
+      val = widget.observerTagsFid.get(nth)
+      if val:
+        node.RemoveObserver(val)
+        del widget.observerTagsFid[nth]
+
+    for node in nodes.values():
+      if node != None and node.GetClassName() == 'vtkMRMLAnnotationFiducialNode':
+        nth = node.GetName()
+        widget.observerTagsFid[nth] = node.AddObserver('ModifiedEvent', self.addToUndoList)
+
+  def observeSingleFiducial(self, node, event):
+    widget = slicer.modules.NeedleFinderWidget
+    if node != None and node.GetClassName() == 'vtkMRMLAnnotationFiducialNode':
+        nth = node.GetName()
+        widget.observerTagsFid[nth] = node.AddObserver('ModifiedEvent', self.addToUndoList)
+
+
+  def addToUndoList(self, modifiedNode, event):
+    widget = slicer.modules.NeedleFinderWidget
+    if t.time() - self.lastTime>1:
+      p = [0,0,0]
+      # if self.undoListFid[-1] == {}:  # the list is filled with empty dict
+      #   nodes = slicer.util.getNodes('.*-*')
+      #   d = {}
+      #   for node in nodes.values():
+      #     nth = node.GetName()
+      #     node.GetFiducialCoordinates(p)
+      #     d[nth] = p
+      # else: # the last dict is not empty: copy it and modify/add new coordinates
+      #   d = self.undoListFid[-1].copy()
+      #   nth = modifiedNode.GetName()
+      #   modifiedNode.GetFiducialCoordinates(p)
+      #   d[nth] = p
+      # d['lastModified'] = modifiedNode.GetName()
+      # self.undoListFid.append(d)
+      # self.lastTime = t.time()
+      d = {}
+      modifiedNode.GetFiducialCoordinates(p)
+      d['name'] = modifiedNode.GetName()
+      d['coord'] = p
+      if d != widget.undoListFid[-1]:
+        widget.undoListFid.append(d)
+        widget.undoListFid.pop(0)
+        self.lastTime = t.time()
+
+  def undoFid(self):
+    widget = slicer.modules.NeedleFinderWidget
+    print '..Undoing fiducial point mvt for pt ', widget.undoListFid[-1].get('name')
+    d = widget.undoListFid[-1]
+    if d.get('name'):
+      coord = d['coord']
+      node = slicer.util.getNode(d['name'])
+      node.SetFiducialCoordinates(coord)
+    widget.undoListFid.pop(-1)
+    widget.undoListFid.insert(0,{})
 
 
 
