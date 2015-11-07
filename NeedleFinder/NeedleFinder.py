@@ -232,6 +232,7 @@ class NeedleFinderWidget:
     self.logic = NeedleFinderLogic()
     self.needleValidationClicks = 1
     self.addManualTipClicks = 2
+    self.addCTLPoints = 14
     self.obturatorNeedleTipClicks = 3
     self.caseNr = 0
     self.userNr = 0
@@ -515,6 +516,10 @@ class NeedleFinderWidget:
 
     self.startGivingControlPointsButton.connect('toggled(bool)', self.onStartStopGivingValidationControlPointsToggled)
 
+    self.startAssistModeButton = qt.QPushButton('Assisted Manual Segmentation')
+    self.startAssistModeButton.checkable = True
+    self.startAssistModeButton.connect('toggled(bool)', self.onStartAssistModeToggled)
+
     self.validationNeedleButton = qt.QPushButton('Next Validation Needle: (0)->(1)')
     self.validationNeedleButton.toolTip = "By clicking on this button, you will increment the number of the needle"
     self.validationNeedleButton.toolTip += "that you want to manually segment. Thus, the points you will add will be used to draw a new needle.<br/>"
@@ -568,6 +573,7 @@ class NeedleFinderWidget:
     # validationFrame.addRow(self.validationNeedleButton)
     validationFrame.layout().addRow(self.configFrameCTL)
     validationFrame.addRow(self.startGivingControlPointsButton)
+    validationFrame.addRow(self.startAssistModeButton)
     validationFrame.addRow(self.drawValidationNeedlesButton)
     validationFrame.addRow(self.startValidationButton)
     validationFrame.addRow(self.resetValidationButton)
@@ -1197,6 +1203,23 @@ class NeedleFinderWidget:
       self.stop()
       self.startGivingControlPointsButton.text = "Start Giving Control Points"
 
+  def onStartAssistModeToggled(self, checked):
+    """
+    Start/stop needle validation control points. When checked is true, the mouse clicks are observed and leads to an action
+    (here a new control point for a validation needle)
+    """
+    # productive
+    profprint()
+    if checked:
+      self.fiducialObturatorButton.checked = 0
+      self.fiducialButton.checked = 0
+      self.fiducialButton.text = "2. Start Giving Needle Tips [CTRL + ENTER]"
+      self.start(self.addCTLPoints)
+      self.startAssistModeButton.text = "Stop Assisted Manual Segmentation"
+    else:
+      self.stop()
+      self.startAssistModeButton.text = "Start Assisted Manual Segmentation"
+
   def start(self, process=0):
     """
     Start to observe the mouse clicks given by user (clicks on needle tips)
@@ -1223,6 +1246,8 @@ class NeedleFinderWidget:
             tag = style.AddObserver(event, self.processEventNeedleValidation)
           elif process == self.addManualTipClicks:
             tag = style.AddObserver(event, self.processEventAddManualTips)
+          elif process == self.addCTLPoints:
+            tag = style.AddObserver(event, self.processEventAddCTLPoints)
           elif process == self.obturatorNeedleTipClicks:
             tag = style.AddObserver(event, self.processEventAddObturatorNeedleTips)
             dn = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode().GetDisplayNode()
@@ -1499,25 +1524,13 @@ class NeedleFinderWidget:
     # productive #frequent #event-handler
     if frequent: profprint();
     if self.sliceWidgetsPerStyle.has_key(observee) and event == "LeftButtonPressEvent":
-      if slicer.app.repositoryRevision <= 21022:
-        sliceWidget = self.sliceWidgetsPerStyle[observee]
-        style = sliceWidget.sliceView().interactorStyle()
-        xy = style.GetInteractor().GetEventPosition()
-        xyz = sliceWidget.convertDeviceToXYZ(xy)
-        ras = sliceWidget.convertXYZToRAS(xyz)
-      else:
-        sliceWidget = self.sliceWidgetsPerStyle[observee]
-        sliceLogic = sliceWidget.sliceLogic()
-        sliceNode = sliceWidget.mrmlSliceNode()
-        interactor = observee.GetInteractor()
-        xy = interactor.GetEventPosition()
-        xyz = sliceWidget.sliceView().convertDeviceToXYZ(xy);
-        ras = sliceWidget.sliceView().convertXYZToRAS(xyz)
 
-      colorVar = random.randrange(50, 100, 1)  # ???/(100.)
-      volumeNode = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
-      imageData = volumeNode.GetImageData()
-      spacing = volumeNode.GetSpacing()
+      sliceWidget = self.sliceWidgetsPerStyle[observee]
+      interactor = observee.GetInteractor()
+      xy = interactor.GetEventPosition()
+      xyz = sliceWidget.sliceView().convertDeviceToXYZ(xy);
+      ras = sliceWidget.sliceView().convertXYZToRAS(xyz)
+
       ijk = self.logic.ras2ijk(ras)
 
       self.logic.t0 = time.clock()
@@ -1526,9 +1539,33 @@ class NeedleFinderWidget:
       self.logic.placeNeedleShaftEvalMarker(ijk, widget.editNeedleTxtBox.value, self.logic.findNextStepNumber(widget.editNeedleTxtBox.value))
       self.logic.drawValidationNeedles()
 
+  def processEventAddCTLPoints(self, observee, event=None):
+    """
+    Get the mouse clicks and create a fiducial node at this position.
+    """
+    # productive #frequent #event-handler
+    if frequent: profprint();
+    if self.sliceWidgetsPerStyle.has_key(observee) and event == "LeftButtonPressEvent":
 
-    # if self.sliceWidgetsPerStyle.has_key(observee) and event == "LeaveEvent":
-      # self.stop()
+      sliceWidget = self.sliceWidgetsPerStyle[observee]
+      interactor = observee.GetInteractor()
+      xy = interactor.GetEventPosition()
+      xyz = sliceWidget.sliceView().convertDeviceToXYZ(xy);
+      ras = sliceWidget.sliceView().convertXYZToRAS(xyz)
+
+      needleNumber = self.logic.assignNeedle(ras)
+      print 'needlenumber to assign: ', needleNumber
+      if needleNumber == None:
+        needleNumber = max(self.logic.findNeedles(all=1))+1
+
+      ijk = self.logic.ras2ijk(ras)
+
+      self.logic.t0 = time.clock()
+      widget = slicer.modules.NeedleFinderWidget
+      widget.stepNeedle += 1
+      self.logic.placeNeedleShaftEvalMarker(ijk, needleNumber, self.logic.findNextStepNumber(needleNumber))
+      self.logic.drawValidationNeedles(needleNumber)
+
 
   def processEventAddObturatorNeedleTips(self, observee, event=None):
     """
@@ -1537,20 +1574,11 @@ class NeedleFinderWidget:
     # productive
     profprint()
     if self.sliceWidgetsPerStyle.has_key(observee) and event == "LeftButtonPressEvent":
-      if slicer.app.repositoryRevision <= 21022:
-        sliceWidget = self.sliceWidgetsPerStyle[observee]
-        style = sliceWidget.sliceView().interactorStyle()
-        xy = style.GetInteractor().GetEventPosition()
-        xyz = sliceWidget.convertDeviceToXYZ(xy)
-        ras = sliceWidget.convertXYZToRAS(xyz)
-      else:
-        sliceWidget = self.sliceWidgetsPerStyle[observee]
-        sliceLogic = sliceWidget.sliceLogic()
-        sliceNode = sliceWidget.mrmlSliceNode()
-        interactor = observee.GetInteractor()
-        xy = interactor.GetEventPosition()
-        xyz = sliceWidget.sliceView().convertDeviceToXYZ(xy);
-        ras = sliceWidget.sliceView().convertXYZToRAS(xyz)
+      sliceWidget = self.sliceWidgetsPerStyle[observee]
+      interactor = observee.GetInteractor()
+      xy = interactor.GetEventPosition()
+      xyz = sliceWidget.sliceView().convertDeviceToXYZ(xy);
+      ras = sliceWidget.sliceView().convertXYZToRAS(xyz)
 
       colorVar = random.randrange(50, 100, 1)  # ???/(100.)
       volumeNode = slicer.app.layoutManager().sliceWidget("Red").sliceLogic().GetBackgroundLayer().GetVolumeNode()
@@ -1753,7 +1781,10 @@ class NeedleFinderLogic:
                 fss = fs[1].split('-')
                 if len(fss)>1:
                   # print fss
-                  coord = np.array([int(fss[0]),int(fss[1]),float(sArray[1]),float(sArray[2]),float(sArray[3])])
+                  try:
+                    coord = np.array([int(fss[0]),int(fss[1]),float(sArray[1]),float(sArray[2]),float(sArray[3])])
+                  except:
+                    print fss
                   pointList.append(coord)
     pointList = np.array(pointList)
 
@@ -5685,7 +5716,7 @@ class NeedleFinderLogic:
           if ((i == 0 and len(controlPoints) >= 1) or i >= 1) :
             self.addNeedleToScene(controlPoints, i, 'Obturator')
 
-  def drawValidationNeedles(self):
+  def drawValidationNeedles(self, nb=None):
     """This function takes the values inside the table tableValueCtrPt and add attributes such as color, name ,.. for every
      validation needle.
      * To add the needle to the scene, the points given for every needle has to be sorted sagitally,so they can be used as
@@ -5700,6 +5731,7 @@ class NeedleFinderLogic:
     # self.table =None
     # self.row=0
     widget = slicer.modules.NeedleFinderWidget
+    if nb: widget.editNeedleTxtBox.value = nb
     widget.initTableView()
     self.deleteEvaluationNeedlesFromTable()
     while slicer.util.getNodes('manual-seg_'+str(widget.editNeedleTxtBox.value)) != {}:
@@ -9303,6 +9335,196 @@ class NeedleFinderLogic:
           e.remove(c[i])
 
       return e
+
+  ######################################################################################################################
+  # ASSISTED MANUAL SEGMENTATION
+  ######################################################################################################################
+
+  def angle(self, v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'    """
+    cosang = np.dot(v1, v2)
+    sinang = np.linalg.norm(np.cross(v1, v2))
+    return np.arctan2(sinang, cosang)
+
+  def getOrientationVect(self, a,b):
+      """ Returns the AB vector"""
+      return np.array(a)-np.array(b)
+
+  def getNeedleOrientation(self, needleNumber):
+      """ Returns the vector define by lowest point | highest point of a needle"""
+      controlPoints = self.sortNeedlePoints(needleNumber)
+
+      return self.getOrientationVect(controlPoints[0], controlPoints[-1])
+
+  def sortNeedlePoints(self, needleNumber):
+      """ Returns Needle Lowest point"""
+      # sort needle points
+      nodes = slicer.util.getNodes('.%d-*' % needleNumber)
+      controlPointsUnsorted = []
+      for node in nodes.values():
+          p = [0,0,0]
+          node.GetFiducialCoordinates(p)
+          controlPointsUnsorted.append(p)
+      controlPoints = self.sortTable(controlPointsUnsorted, (2, 1, 0))
+      return controlPoints
+
+  def getNeedleLowestPoint(self, needleNumber):
+      controlPoints = self.sortNeedlePoints(needleNumber)
+      return controlPoints[0]
+
+  def getNeedleHighestPoint(self, needleNumber):
+      controlPoints = self.sortNeedlePoints(needleNumber)
+      return controlPoints[-1]
+
+  def findHigherNeedles(self, pt):
+      """ Return the needle that is the best aligned to the point"""
+      nodes = slicer.util.getNodes('manual-seg_*')
+      candidates = []
+      validNeedles = self.findNeedles()
+      for node in nodes.values():
+          name = node.GetName()
+          nb = int(name.split('_')[1]) # get needle number
+          if nb in validNeedles:
+              lp = self.getNeedleLowestPoint(nb)
+              if lp[2] > pt[2]:
+                  candidates.append([name, self.angle(self.getOrientationVect(pt,lp), self.getNeedleOrientation(nb))])
+
+      return candidates
+
+  def findLowerNeedles(self, pt):
+      """ Return the needle that is the best aligned to the point"""
+      nodes = slicer.util.getNodes('manual-seg_*')
+      candidates = []
+      validNeedles = self.findNeedles()
+      for node in nodes.values():
+          name = node.GetName()
+          nb = int(name.split('_')[1]) # get needle number
+          if nb in validNeedles:
+              hp = self.getNeedleHighestPoint(nb)
+              if hp[2] < pt[2]:
+                  theta = self.angle(self.getNeedleOrientation(nb),-self.getOrientationVect(pt, hp))
+                  candidates.append([name, min(theta,abs(theta-np.pi))])
+
+      return candidates
+
+  # findBestLowerNeedles(pt)
+  # pt = [-15,-23,-29]
+
+  def findCloseNeedles(self, pt, filterOutNeedles=[]):
+      ''' Find the closest needle to the point, which is in not in the list filteroutneedles
+      '''
+      nodes = slicer.util.getNodes('manual-seg_*')
+      candidates = []
+      validNeedles = self.findNeedles()
+      for node in nodes.values():
+          name = node.GetName()
+          nb = int(name.split('_')[1]) # get needle number
+          if nb in validNeedles and name not in filterOutNeedles:
+              p = node.GetPolyData()
+              x = self.getCenterLine(p)
+              dists = []
+              for q in x:
+                  dists.append(self.distance(q,pt))
+              candidates.append([name, min(dists)])
+
+      return candidates
+
+  def findMatchingCTLPoint(self, mo,pt):
+      candidates = []
+      for isolPt in self.findIsolatedCTLPoints():
+          pt2 = [0,0,0]
+          isolPt.GetFiducialCoordinates(pt2)
+          a = self.angle(self.getOrientationVect(pt2,pt), mo)
+          ori = min([a, abs(np.pi-a)])
+          print isolPt.GetName(), ori
+          if ori <0.1:
+              candidates.append([int(isolPt.GetName().strip('.').split('-')[0]), ori])
+      if not candidates: 'no matching point'
+      return candidates
+
+  def assignNeedle(self, pt):
+      ''' Assign needle number to point
+      '''
+      candidate = None
+      result = None
+      lowest = None
+      highest = None
+      closest = None
+
+      mo = self.meanOrientation()
+      cLow = self.findLowerNeedles(pt)
+      cHigh = self.findHigherNeedles(pt)
+      cClose = self.findCloseNeedles(pt)
+
+      if cLow: lowest = self.sortTable(cLow,(1,0))[0]
+      if cHigh: highest = self.sortTable(cHigh,(1,0))[0]
+      if cClose: closest = self.sortTable(cClose,(1,0))[0]
+
+      if lowest and highest:
+          candidate = self.sortTable([lowest,highest], (1,0))[0]
+      elif lowest:
+          candidate = lowest
+      elif highest:
+          candidate = highest
+
+      if closest:
+          if closest[1]<1:
+              result = closest[0]
+          elif closest[1]<2:
+              if candidate and candidate[1]<0.3:
+                  result = candidate[0]
+              else:
+                  result = closest[0]
+          elif candidate and candidate[1]<0.3:
+              result = candidate[0]
+
+      elif candidate and candidate[1]<0.3:
+          result = candidate[0]
+
+      if result: result = int(result.strip('manual-seg_'))
+      if not result:
+          candidates = self.findMatchingCTLPoint(mo,pt)
+          if candidates : result = self.sortTable(candidates,(1,0))[0][0]
+      if not result: print 'no good candidate to assign to -> new point'
+      return result
+
+  def findNeedles(self, all = None):
+      needleNbs = []
+      needles = slicer.util.getNodes('manual-seg_*')
+      for needle in needles.values():
+          name = needle.GetName()
+          nb = int(name.split('_')[1])
+          points = slicer.util.getNodes('.%d-*'% nb)
+          if len(points)>1 or all != None:
+              needleNbs.append(nb)
+
+      return needleNbs
+
+  def meanOrientation(self):
+      ''' Compute Mean orientation of needles'''
+      orientation = 0
+      c = 1
+      for nb in self.findNeedles():
+          c += 1
+          orientation += self.getNeedleOrientation(nb)
+
+      return orientation/c
+
+  def findIsolatedCTLPoints(self):
+      needles = slicer.util.getNodes('manual-seg_*')
+
+      needleNbs = []
+      isolatedPts = []
+      for needle in needles.values():
+          name = needle.GetName()
+          needleNbs.append(int(name.split('_')[1]))
+
+      for nb in needleNbs:
+          points = slicer.util.getNodes('.%d-*'% nb)
+          if len(points)<2:
+              isolatedPts.append(points.values()[0])
+
+      return isolatedPts
 
 """
 
