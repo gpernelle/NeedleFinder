@@ -1494,7 +1494,8 @@ class NeedleFinderWidget:
         imageData = volumeNode.GetImageData()
         spacing = volumeNode.GetSpacing()
         ijk = self.logic.ras2ijk(ras)
-        self.logic.needleDetectionThread(ijk, imageData, colorVar, spacing)
+        print 'spacing: ', spacing
+        self.logic.needleDetectionThread(ijk, imageData, spacing=np.array(spacing))
         if self.autoStopTip.isChecked():
           self.logic.needleDetectionUPThread(ijk, imageData, colorVar, spacing)
         # change requested by Lauren: remove temp marker after detection
@@ -3063,7 +3064,7 @@ class NeedleFinderLogic:
         value = V.GetScalarComponentAsDouble(int(round(x)),int(round(y)),int(round(z)),0)
     return value
       
-  def needleDetectionThread(self, tips, imageData, spacing, script=False, names=""):
+  def needleDetectionThread(self, tips = [], imageData = None, spacing=[1,1,1], script=False, names=""):
     """ Ruibin: comment...
     Switches between the versions of the algorithm. For comparison tests.
     """
@@ -3076,31 +3077,30 @@ class NeedleFinderLogic:
     else:
       labelData=None
     # select algo version
-    NumberOfNeedles = len(tips)
-    if widget.algoVersParameter.value == 0:
+    if len(tips)!=2:
+      NeedleIndex = len(self.returnTipsFromNeedleModels('Detection')[0])+1
+    if widget.algoVersParameter.value in range(0,4):
+      if script:
         for NeedleIndex in range(NumberOfNeedles):
+            print 'tips', tips
             A = tips[NeedleIndex]
             colorVar = NeedleIndex
-            strName = names[NeedleIndex]
-            self.needleDetectionThreadCurrentDev(A, imageData, colorVar, spacing, script, labelData, manualName=strName)
-    elif widget.algoVersParameter.value == 1:
-        for NeedleIndex in range(NumberOfNeedles):
-            A = tips[NeedleIndex]
-            colorVar = NeedleIndex
-            strName = names[NeedleIndex]
-            self.needleDetectionThread13_1(A, imageData, colorVar, spacing, script, labelData, manName=strName)
-    elif widget.algoVersParameter.value == 2:
-        for NeedleIndex in range(NumberOfNeedles):
-            A = tips[NeedleIndex]
-            colorVar = NeedleIndex
-            strName = names[NeedleIndex]
-            self.needleDetectionThread13_2(A, imageData, colorVar, spacing, script, labelData,manualName=strName)
-    elif widget.algoVersParameter.value == 3:
-        for NeedleIndex in range(NumberOfNeedles):
-            A = tips[NeedleIndex]
-            colorVar = NeedleIndex
-            strName = names[NeedleIndex]
-            self.needleDetectionThread15_1(A, imageData, labelData, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script, strManualName=strName,bDrawNeedle=True)
+            if names == "":
+              strName = 'auto-seg_%d' % NeedleIndex
+            else:
+              strName = names[NeedleIndex]
+      else:
+        strName = 'auto-seg_%d' % NeedleIndex
+        colorVar = NeedleIndex
+        A = tips
+      if widget.algoVersParameter.value == 0:
+          self.needleDetectionThreadCurrentDev(A, imageData, colorVar, spacing, script, labelData, manualName=strName)
+      elif widget.algoVersParameter.value == 1:
+          self.needleDetectionThread13_1(A, imageData, colorVar, spacing, script, labelData, manName=strName)
+      elif widget.algoVersParameter.value == 2:
+          self.needleDetectionThread13_2(A, imageData, colorVar, spacing, script, labelData,manualName=strName)
+      elif widget.algoVersParameter.value == 3:
+          self.needleDetectionThread15_1(A, imageData, labelData, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script, strManualName=strName,bDrawNeedle=True)
     elif widget.algoVersParameter.value == 4: # 1 with Ruibins post-processing
         widget.algoVersParameter.value = 1
         self.needleDetectionThread_RM(tips, imageData, labelData, widget.tempPointList, spacing, bUp=False, bScript=script,  names=names)
@@ -7749,8 +7749,8 @@ class NeedleFinderLogic:
     spacing = volumeNode.GetSpacing()
     # chrono starts
     self.t0 = time.clock()
-
-    self.needleDetectionThread(tips, imageData, spacing, script=script, names=names) # <<< Ruibin
+    print 'spacing: ', spacing
+    self.needleDetectionThread(tips, imageData, spacing=spacing, script=script, names=names) # <<< Ruibin
           
     ''' old due to Ruibins code:
     for i in range(len(tips)):
