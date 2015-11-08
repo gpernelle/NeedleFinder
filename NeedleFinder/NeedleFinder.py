@@ -155,6 +155,9 @@ class NeedleFinder:
     def __onSceneClosed__(self, caller, eventId, callData):
       """Clean report table and internal variables"""
       self.logic.cleanTable()
+      w = slicer.modules.NeedleFinderWidget
+      w.initObturatorNeedles()
+
 
 
     self.__onSceneLoaded__ = partial(__onSceneLoaded__, self)
@@ -246,6 +249,9 @@ class NeedleFinderWidget:
     self.model = None
     self.modelCTL = None
 
+    self.initObturatorNeedles()
+
+
     # keep list of pairs: [observee,tag] so they can be removed easily
     self.styleObserverTags = []
     # keep a map of interactor styles to sliceWidgets so we can easily get sliceLogic
@@ -278,6 +284,11 @@ class NeedleFinderWidget:
     return class name
     """
     return self.__class__.__name__
+
+  def initObturatorNeedles(self):
+    self.obtuNeedle = 0
+    self.obtuNeedleValueCtrPt = [[[999, 999, 999] for i in range(10)] for j in range(10)]
+    self.obtuNeedlePt = [[[999, 999, 999] for i in range(10)] for j in range(10)]
 
   #----------------------------------------------------------------------------------------------
   """ Needle Segmentation report"""
@@ -790,6 +801,10 @@ class NeedleFinderWidget:
     self.fiducialObturatorButton.checkable = True
     self.fiducialObturatorButton.connect('toggled(bool)', self.onStartStopGivingObturatorNeedleTipsToggled)
 
+    self.renderObturatorNeedlesButton = qt.QPushButton('Render Obturator Needles')
+    self.renderObturatorNeedlesButton.checkable = False
+    self.renderObturatorNeedlesButton.connect('clicked()', self.logic.drawObturatorNeedles)
+
     self.displayFiducialButton = qt.QPushButton('Display Labels On Needles')
     self.displayFiducialButton.connect('clicked()', logic.displayFiducial)
 
@@ -852,6 +867,7 @@ class NeedleFinderWidget:
     devFrame.addRow(self.cleanSceneButton)
     devFrame.addRow(self.skipSegLimitButton)
     devFrame.addRow(self.fiducialObturatorButton)
+    devFrame.addRow(self.renderObturatorNeedlesButton)
     devFrame.addRow(self.displayContourButton)
     devFrame.addRow(self.hideContourButton)
     devFrame.addRow(self.filterButton)
@@ -1587,10 +1603,7 @@ class NeedleFinderWidget:
       ijk = self.logic.ras2ijk(ras)
       self.logic.t0 = time.clock()
       self.logic.obturatorNeedle(ijk, imageData, colorVar, spacing)
-      self.logic.obtuNeedle += 1
-
-    if self.sliceWidgetsPerStyle.has_key(observee) and event == "LeaveEvent":
-      self.stop()
+      self.obtuNeedle += 1
 
   def processEventAddManualTips(self, observee, event=None):
     """
@@ -1708,7 +1721,7 @@ class NeedleFinderLogic:
     self.color255 = self.setColors255()
     self.p = self.setHolesCoordinates()
     self.t0 = 0
-    self.obtuNeedle = 0
+
     self.row = 0
     self.col = 0
     self.round = 1
@@ -1733,8 +1746,6 @@ class NeedleFinderLogic:
 
     self.previousValues = [[0, 0, 0]]
     self.tableValueCtrPt = [[[999, 999, 999] for i in range(100)] for j in range(100)]
-    self.obtuNeedleValueCtrPt = [[[999, 999, 999] for i in range(10)] for j in range(10)]
-    self.obtuNeedlePt = [[[999, 999, 999] for i in range(10)] for j in range(10)]
 
 
   def getName(self):
@@ -2756,14 +2767,14 @@ class NeedleFinderLogic:
     fiducial.Initialize(slicer.mrmlScene)
     fiducial.SetFiducialCoordinates(self.ijk2ras(A))
     fiducial.SetAttribute('ObturatorNeedle', '1')
-    if self.obtuNeedle <= 1:
+    if widget.obtuNeedle <= 1:
       needleNumber = 0
     else:
-      needleNumber = self.obtuNeedle - 1
+      needleNumber = widget.obtuNeedle - 1
       needleStep = 0
-    if self.obtuNeedle == 1:
+    if widget.obtuNeedle == 1:
       needleStep = 1
-    elif self.obtuNeedle == 0:
+    elif widget.obtuNeedle == 0:
       needleStep = 0
 
     fiducial.SetAttribute('NeedleNumber', str(needleNumber))
@@ -2779,14 +2790,14 @@ class NeedleFinderLogic:
     textNode.SetTextScale(4)
     textNode.SetColor(self.color[int(nth)][0], self.color[int(nth)][1], self.color[int(nth)][2])
 
-    self.obtuNeedleValueCtrPt[needleNumber][needleStep] = self.ijk2ras(A)
+    widget.obtuNeedleValueCtrPt[needleNumber][needleStep] = self.ijk2ras(A)
     # print self.ijk2ras(A)
     # print "ctr pt: ",self.obtuNeedleValueCtrPt
 
     if needleNumber >= 1:
-      Vx = self.obtuNeedleValueCtrPt[0][1][0] - self.obtuNeedleValueCtrPt[0][0][0]
-      Vy = self.obtuNeedleValueCtrPt[0][1][1] - self.obtuNeedleValueCtrPt[0][0][1]
-      Vz = self.obtuNeedleValueCtrPt[0][1][2] - self.obtuNeedleValueCtrPt[0][0][2]
+      Vx = widget.obtuNeedleValueCtrPt[0][1][0] - widget.obtuNeedleValueCtrPt[0][0][0]
+      Vy = widget.obtuNeedleValueCtrPt[0][1][1] - widget.obtuNeedleValueCtrPt[0][0][1]
+      Vz = widget.obtuNeedleValueCtrPt[0][1][2] - widget.obtuNeedleValueCtrPt[0][0][2]
 
       L = float(Vx ** 2 + Vy ** 2 + Vz ** 2) ** 0.5
 
@@ -2794,7 +2805,7 @@ class NeedleFinderLogic:
       Ex = E[0] + 100 * Vx / L
       Ey = E[1] + 100 * Vy / L
       Ez = E[2] + 100 * Vz / L
-      self.obtuNeedleValueCtrPt[needleNumber][1] = [Ex, Ey, Ez]
+      widget.obtuNeedleValueCtrPt[needleNumber][1] = [Ex, Ey, Ez]
 
     self.drawObturatorNeedles()
     widget.stop()
@@ -5666,10 +5677,12 @@ class NeedleFinderLogic:
       for node in nodes.values():
         slicer.mrmlScene.RemoveNode(node)
 
-    if self.obtuNeedleValueCtrPt == [[[]]]:
-      self.obtuNeedleValueCtrPt = [[[999, 999, 999] for i in range(10)] for j in range(10)]
-    if self.obtuNeedlePt == [[[]]]:
-      self.obtuNeedlePt = [[[999, 999, 999] for i in range(10)] for j in range(10)]
+    if widget.obtuNeedleValueCtrPt == [[[]]]:
+      widget.obtuNeedleValueCtrPt = [[[999, 999, 999] for i in range(10)] for j in range(10)]
+    if widget.obtuNeedlePt == [[[]]]:
+      widget.obtuNeedlePt = [[[999, 999, 999] for i in range(10)] for j in range(10)]
+
+
     modelNodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
     nbNode = modelNodes.GetNumberOfItems()
     for nthNode in range(nbNode):
@@ -5679,40 +5692,37 @@ class NeedleFinderLogic:
         needleStep = int(modelNode.GetAttribute("NeedleStep"))
         coord = [0, 0, 0]
         modelNode.GetFiducialCoordinates(coord)
-        if needleNumber == 0:
-          self.obtuNeedleValueCtrPt[needleNumber][needleStep] = coord
+        widget.obtuNeedleValueCtrPt[needleNumber][needleStep] = coord
 
-    for i in range(0, len(self.obtuNeedleValueCtrPt)):
+    for i in range(0, len(widget.obtuNeedleValueCtrPt)):
 
-      sign = cmp(self.obtuNeedleValueCtrPt[0][0][2], self.obtuNeedleValueCtrPt[0][1][2])
+      sign = cmp(widget.obtuNeedleValueCtrPt[0][0][2], widget.obtuNeedleValueCtrPt[0][1][2])
       if (i == 0 and sign <= -1):
-        AA = self.obtuNeedleValueCtrPt[0][0][2]
-        BB = self.obtuNeedleValueCtrPt[0][1][2]
-        self.obtuNeedleValueCtrPt[0][0][2] = BB
-        self.obtuNeedleValueCtrPt[0][1][2] = AA
+        AA = widget.obtuNeedleValueCtrPt[0][0][2]
+        BB = widget.obtuNeedleValueCtrPt[0][1][2]
+        widget.obtuNeedleValueCtrPt[0][0][2] = BB
+        widget.obtuNeedleValueCtrPt[0][1][2] = AA
 
       # As we give the tip of the obturator needles, we only want to g in the increasing z direction.
 
-      Vx = self.obtuNeedleValueCtrPt[0][1][0] - self.obtuNeedleValueCtrPt[0][0][0]
-      Vy = self.obtuNeedleValueCtrPt[0][1][1] - self.obtuNeedleValueCtrPt[0][0][1]
-      Vz = self.obtuNeedleValueCtrPt[0][1][2] - self.obtuNeedleValueCtrPt[0][0][2]
+      Vx = widget.obtuNeedleValueCtrPt[0][1][0] - widget.obtuNeedleValueCtrPt[0][0][0]
+      Vy = widget.obtuNeedleValueCtrPt[0][1][1] - widget.obtuNeedleValueCtrPt[0][0][1]
+      Vz = widget.obtuNeedleValueCtrPt[0][1][2] - widget.obtuNeedleValueCtrPt[0][0][2]
 
       L = float(Vx ** 2 + Vy ** 2 + Vz ** 2) ** 0.5
+      if L:
+        E = widget.obtuNeedleValueCtrPt[i][0]
+        Ex = E[0] + realNeedleLength * Vx / L
+        Ey = E[1] + realNeedleLength * Vy / L
+        Ez = E[2] + realNeedleLength * Vz / L
+        widget.obtuNeedlePt[i][1] = [Ex, Ey, Ez]
+        widget.obtuNeedlePt[i][0] = [E[0], E[1], E[2]]
+            # print needleNumber,needleStep,coord
 
-      E = self.obtuNeedleValueCtrPt[i][0]
-      Ex = E[0] + realNeedleLength * Vx / L
-      Ey = E[1] + realNeedleLength * Vy / L
-      Ez = E[2] + realNeedleLength * Vz / L
-      self.obtuNeedlePt[i][1] = [Ex, Ey, Ez]
-      self.obtuNeedlePt[i][0] = [E[0], E[1], E[2]]
-          # print needleNumber,needleStep,coord
-
-    for i in range(len(self.obtuNeedlePt)):
-      if self.obtuNeedlePt[i][0][0] != 999:
-          colorVar = random.randrange(50, 100, 1)  # ## ??? /(100.)
-          controlPointsUnsorted = [val for val in self.obtuNeedlePt[i] if val != [999, 999, 999]]
+    for i in range(len(widget.obtuNeedlePt)):
+      if widget.obtuNeedlePt[i][0][0] != 999:
+          controlPointsUnsorted = [val for val in widget.obtuNeedlePt[i] if val != [999, 999, 999]]
           controlPoints = controlPointsUnsorted
-          # controlPoins = self.obtuNeedlePt[i]
           if ((i == 0 and len(controlPoints) >= 1) or i >= 1) :
             self.addNeedleToScene(controlPoints, i, 'Obturator')
 
