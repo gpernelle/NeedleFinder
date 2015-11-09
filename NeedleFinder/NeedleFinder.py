@@ -3077,31 +3077,29 @@ class NeedleFinderLogic:
     else:
       labelData=None
     # select algo version
-    if len(tips)!=2:
+    if len(tips)==3: # 3: its a point; 2: its a list of lists with points, names
       NeedleIndex = len(self.returnTipsFromNeedleModels('Detection')[0])+1
+      tips=[tips]
     if widget.algoVersParameter.value in range(0,4):
-      if script:
-        for NeedleIndex in range(NumberOfNeedles):
-            print 'tips', tips
-            A = tips[NeedleIndex]
-            colorVar = NeedleIndex
-            if names == "":
-              strName = 'auto-seg_%d' % NeedleIndex
-            else:
-              strName = names[NeedleIndex]
-      else:
-        strName = 'auto-seg_%d' % NeedleIndex
-        colorVar = NeedleIndex
-        A = tips
-      if widget.algoVersParameter.value == 0:
-          self.needleDetectionThreadCurrentDev(A, imageData, colorVar, spacing, script, labelData, manualName=strName)
-      elif widget.algoVersParameter.value == 1:
-          self.needleDetectionThread13_1(A, imageData, colorVar, spacing, script, labelData, manName=strName)
-      elif widget.algoVersParameter.value == 2:
-          self.needleDetectionThread13_2(A, imageData, colorVar, spacing, script, labelData,manualName=strName)
-      elif widget.algoVersParameter.value == 3:
-          self.needleDetectionThread15_1(A, imageData, labelData, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script, strManualName=strName,bDrawNeedle=True)
-    elif widget.algoVersParameter.value == 4: # 1 with Ruibins post-processing
+      #print 'tips', tips
+      for NeedleIndex in range(len(tips)):
+          A = tips[NeedleIndex]
+          #print 'tip: ',A
+          colorVar = NeedleIndex
+          if names == "":
+            strName = 'auto-seg_%d' % NeedleIndex
+          else:
+            strName = names[NeedleIndex]
+          if widget.algoVersParameter.value == 0:
+              self.needleDetectionThreadCurrentDev(A, imageData, colorVar, spacing, script, labelData, manualName=strName)
+          elif widget.algoVersParameter.value == 1:
+              self.needleDetectionThread13_1(A, imageData, colorVar, spacing, script, labelData, manName=strName)
+          elif widget.algoVersParameter.value == 2:
+              self.needleDetectionThread13_2(A, imageData, colorVar, spacing, script, labelData,manualName=strName)
+          elif widget.algoVersParameter.value == 3:
+              self.needleDetectionThread15_1(A, imageData, labelData, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script, strManualName=strName,bDrawNeedle=True)
+
+    if widget.algoVersParameter.value == 4: # 1 with Ruibins post-processing
         widget.algoVersParameter.value = 1
         self.needleDetectionThread_RM(tips, imageData, labelData, widget.tempPointList, spacing, bUp=False, bScript=script,  names=names)
         widget.algoVersParameter.value = 4
@@ -3109,7 +3107,7 @@ class NeedleFinderLogic:
         widget.algoVersParameter.value = 3
         self.needleDetectionThread_RM(tips, imageData, labelData, widget.tempPointList, spacing, bUp=False, bScript=script,  names=names)
         widget.algoVersParameter.value = 5
-    else:
+    if not widget.algoVersParameter.value in range(0,6):
       msgbox ("/!\ needleDetectionThread %d not defined"%widget.algoVersParameter.value)
 
   def needleDetectionThread_RM(self, tips, imgData, imgLabelData, lrasTempPoints, fvSpacing, bUp=False, bScript=False, names="", tipOnly=False):
