@@ -2993,7 +2993,7 @@ class NeedleFinderLogic:
       print "/!\ z-limit marker in scene required! --> fallback"
       bases, names=self.returnBasesFromNeedleModels()
       bases2=numpy.array(bases)[:,2]
-      i = bases2.argmax()
+      i = bases2.argmin() #argmax highest, argmin lowest
       asl=bases[i]
       #print "ijk bases: ",repr(bases)
       #print "ijk asl: ",asl
