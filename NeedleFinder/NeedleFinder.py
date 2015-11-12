@@ -1495,7 +1495,7 @@ class NeedleFinderWidget:
         spacing = volumeNode.GetSpacing()
         ijk = self.logic.ras2ijk(ras)
         print 'spacing: ', spacing
-        self.logic.needleDetectionThread(ijk, imageData, spacing=np.array(spacing))
+        self.logic.needleDetectionThread([ijk], imageData, spacing=np.array(spacing))
         if self.autoStopTip.isChecked():
           self.logic.needleDetectionUPThread(ijk, imageData, colorVar, spacing)
         # change requested by Lauren: remove temp marker after detection
@@ -3077,19 +3077,20 @@ class NeedleFinderLogic:
     else:
       labelData=None
     # select algo version
-    if len(tips)==3: # 3: its a point; 2: its a list of lists with points, names
-      NeedleIndex = len(self.returnTipsFromNeedleModels('Detection')[0])+1
-      tips=[tips]
+    NeedleIndex0=0
+    if not script:
+      NeedleIndex0 = len(self.returnTipsFromNeedleModels('Detection')[0])+1
     if widget.algoVersParameter.value in range(0,4):
       #print 'tips', tips
       for NeedleIndex in range(len(tips)):
           A = tips[NeedleIndex]
           #print 'tip: ',A
-          colorVar = NeedleIndex
+          colorVar = NeedleIndex0+NeedleIndex
           if names == "":
-            strName = 'auto-seg_%d' % NeedleIndex
+            strName = 'auto-seg_%d' % colorVar
           else:
             strName = names[NeedleIndex]
+          print 'strName: ',strName
           if widget.algoVersParameter.value == 0:
               self.needleDetectionThreadCurrentDev(A, imageData, colorVar, spacing, script, labelData, manualName=strName)
           elif widget.algoVersParameter.value == 1:
@@ -3098,6 +3099,7 @@ class NeedleFinderLogic:
               self.needleDetectionThread13_2(A, imageData, colorVar, spacing, script, labelData,manualName=strName)
           elif widget.algoVersParameter.value == 3:
               self.needleDetectionThread15_1(A, imageData, labelData, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script, strManualName=strName,bDrawNeedle=True)
+          NeedleIndex+=1
 
     if widget.algoVersParameter.value == 4: # 1 with Ruibins post-processing
         widget.algoVersParameter.value = 1
@@ -4241,7 +4243,7 @@ class NeedleFinderLogic:
         break
 
     if not autoStopTip:
-      self.addNeedleToScene(self.controlPoints, colorVar, 'Detection', script, manualName=manualName)
+      self.addNeedleToScene(self.controlPoints, colorVar, 'Detection', script,0, manualName=manualName)
 
   def needleDetectionThread13_1(self, Aori, imageData, colorVar, spacing, script=False, imgLabelData=None,manName="",bDrawNeedle=False,whetherfeedback=False,ControlPointsPackage=None,ControlPointsPackageIJK=None,WrongPosition=None,GlobalDirection=None, Punish=None):
     '''MICCAI2013 suspect version, 3/11/13
@@ -4493,7 +4495,7 @@ class NeedleFinderLogic:
 
     # self.addNeedleToScene(controlPoints,colorVar)
     if not autoStopTip:
-      self.addNeedleToScene(controlPoints, colorVar, 'Detection', script,manualName=manName)
+      self.addNeedleToScene(controlPoints, colorVar, 'Detection', script,0,manualName=manName)
     
     return controlPoints,controlPointsIJK # <<< Ruibin
 
@@ -6044,8 +6046,7 @@ class NeedleFinderLogic:
     lenghtTotal = 0
     for i in range(len(controlPoint) - 1):
         lenghtTotal += self.distanceTwoPoints(controlPointListSorted[i + 1], controlPointListSorted[i])
-    print "Needle added to scene, ",
-    print 'lenght tube: ', lenghtTotal
+    print "Needle tube length: ",lenghtTotal
 
     # in case we want to extend the needle to the wanted length
     """
@@ -6081,7 +6082,6 @@ class NeedleFinderLogic:
       for j in range(3):
         for i in range(n + 1):
           Q[t][j] += self.binomial(n, i) * (1 - tt) ** (n - i) * tt ** i * controlPointListSorted[i][j]
-
       pointIndex = points.InsertNextPoint(*Q[t])
       linesIDArray.InsertNextTuple1(pointIndex)
       linesIDArray.SetTuple1(0, linesIDArray.GetNumberOfTuples() - 1)
