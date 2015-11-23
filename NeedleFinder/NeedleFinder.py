@@ -7631,7 +7631,7 @@ class NeedleFinderLogic:
   """
   #----------------------------------------------------------------------------------------------
 
-  def returnTipsFromNeedleModels(self, type="Validation", offset=0):
+  def returnTipsFromNeedleModels(self, type="Validation", offset=0, center=False):
     """ Returns the IJK coordinates of the tips of manually segmented needle polygon models
     :return: array of IJK coordinates of validation needle tips
     """
@@ -7647,17 +7647,26 @@ class NeedleFinderLogic:
         node = slicer.mrmlScene.GetNthNodeByClass(nthNode, 'vtkMRMLModelNode')
         if node.GetAttribute('type') == type:
             polydata = node.GetPolyData()
-            p, pbis = [0, 0, 0], [0, 0, 0]
+            p, pOpp, pbis = [0, 0, 0], [0, 0, 0], [0, 0, 0]
             #if not polydata: breakbox("/!!!\ needle tube not found as polydata in scene/vtk file missing: "+widget.caseNr+" "+node.GetName())
             if polydata and polydata.GetNumberOfPoints() > 100:  # ??? this is risky when u have other models in the scene (not only neeedles(
                 if not widget.autoStopTip.isChecked():
                   polydata.GetPoint(0+offset, p)
+                  if center: 
+                    polydata.GetPoint(0+offset+25, pOpp)
+                    p = (np.array(p) + np.array(pOpp))/2
                   polydata.GetPoint(int(polydata.GetNumberOfPoints() - 1 - offset), pbis)
+                  if center: 
+                    polydata.GetPoint(0+offset+25, pOpp)
+                    pbis = (np.array(pbis) + np.array(pOpp))/2
                   if pbis[2] > p[2]:
                       p = pbis
                 else:
                   # get a point from the middle (low=/4, high=/4*3) of the needle shaft polygon model
                   polydata.GetPoint(int(polydata.GetNumberOfPoints() / 2)+ offset, p) #CONST
+                  if center: 
+                    polydata.GetPoint(int(polydata.GetNumberOfPoints() / 2)+offset+25, pOpp)
+                    p = (np.array(p) + np.array(pOpp))/2
                 returnTips.append(self.ras2ijk(p))
                 names.append(node.GetName())
     return returnTips, names
@@ -7727,7 +7736,7 @@ class NeedleFinderLogic:
     profprint()
     widget = slicer.modules.NeedleFinderWidget
     if needleNr==None: self.deleteNeedleDetectionModelsFromScene()
-    tips, names = self.returnTipsFromNeedleModels(offset=offset)
+    tips, names = self.returnTipsFromNeedleModels(offset=offset, center=not script)
     if needleNr!=None:
       needleName='manual-seg_'+str(needleNr)
       for tip,name in zip(tips,names):
