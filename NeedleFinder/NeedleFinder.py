@@ -6020,6 +6020,19 @@ class NeedleFinderLogic:
       textNode.SetColor(0, 0, 0)
     if bPause: breakbox('Inspect this situation in the viewer!')
 
+
+  def unique(self, a):
+    '''
+    Remove duplicates in 2D array
+    '''
+    order = np.lexsort(a.T)
+    a = a[order]
+    diff = np.diff(a, axis=0)
+    ui = np.ones(len(a), 'bool')
+    ui[1:] = (diff != 0).any(axis=1)
+    return a[ui]
+
+
   def addNeedleToScene(self, controlPoint, colorVar, needleType='Detection', script=False, trans=0, manualName="", bPause=False):
     """Computes the Bezier's curve and adds visual representation of a needle to the scene
 
@@ -6038,7 +6051,9 @@ class NeedleFinderLogic:
 
     realNeedleLength = widget.realNeedleLength.value
     extendNeedle = widget.extendNeedle.isChecked()
-
+    # remove duplicates from list (bug with miccai2013)
+    controlPoint = self.unique(np.array(controlPoint)).tolist()
+    
     # sort the points in a decreasing order (from tip to bottom)
     controlPointListSorted = self.sortTableReverse(controlPoint, (2, 1, 0))
 
