@@ -3013,31 +3013,6 @@ class NeedleFinderLogic:
       asl = [0, 0, 0]
     return int(round(self.ras2ijk(asl)[2])), asl[2]
 
-  def needleDetectionThread_old(self, A, imageData, colorVar, spacing, script=False, strName=""):
-    """
-    Switches between the versions of the algorithm. For comparison tests.
-    """
-    # productive #onbutton #obsolete
-    profprint()
-    msgbox ("/!\ this needleDetectionThread entry point is deprecated")
-    widget = slicer.modules.NeedleFinderWidget
-    widget.axialSegmentationLimit, widget.axialSegmentationLimitRAS = self.findAxialSegmentationLimitFromMarker()
-    if widget.labelMapNode:
-      labelData=widget.labelMapNode.GetImageData()
-    else:
-      labelData=None
-    # select algo version
-    if widget.algoVersParameter.value == 0:
-      self.needleDetectionThreadCurrentDev(A, imageData, colorVar, spacing, script, labelData, manualName=strName)
-    elif widget.algoVersParameter.value == 1:
-      self.needleDetectionThread13_1(A, imageData, colorVar, spacing, script, labelData, manName=strName)
-    elif widget.algoVersParameter.value == 2:
-      self.needleDetectionThread13_2(A, imageData, colorVar, spacing, script, labelData,manualName=strName)
-    elif widget.algoVersParameter.value == 3:
-      self.needleDetectionThread15_1(A, imageData, labelData, widget.tempPointList, colorVar, spacing, bUp=False, bScript=script, strManualName=strName)
-    else:
-      msgbox ("/!\ needleDetectionThread not defined")
-
   def interp3(self,V, x, y, z,interpswitch):
     '''
     Ruibin: comment on this interpolation...
@@ -3094,7 +3069,7 @@ class NeedleFinderLogic:
           if widget.algoVersParameter.value == 0:
               self.needleDetectionThreadCurrentDev(A, imageData, colorVar, spacing, script, labelData, manualName=strName)
           elif widget.algoVersParameter.value == 1:
-              self.needleDetectionThread13_1(A, imageData, colorVar, spacing, script, labelData, manName=strName)
+              self.needleDetectionThread13_1(A, imageData, colorVar, spacing, script, labelData, manName=strName,bDrawNeedle=True)
           elif widget.algoVersParameter.value == 2:
               self.needleDetectionThread13_2(A, imageData, colorVar, spacing, script, labelData,manualName=strName)
           elif widget.algoVersParameter.value == 3:
@@ -4495,7 +4470,7 @@ class NeedleFinderLogic:
 
     # self.addNeedleToScene(controlPoints,colorVar)
     if not autoStopTip:
-      self.addNeedleToScene(controlPoints, colorVar, 'Detection', script,0,manualName=manName)
+      if bDrawNeedle: self.addNeedleToScene(controlPoints, colorVar, 'Detection', script,0,manualName=manName)
     
     return controlPoints,controlPointsIJK # <<< Ruibin
 
@@ -5234,10 +5209,10 @@ class NeedleFinderLogic:
     #rof iStep
     for i in range(len(lvControlPointsRAS)): self.controlPoints.append(lvControlPointsRAS[i])
     if not bAutoStopTip:
-      self.addNeedleToScene(lvControlPointsRAS, (205)% MAXCOL, 'Detection', bScript,0, manualName=strManualName)
+      if bDrawNeedle: self.addNeedleToScene(lvControlPointsRAS, (205)% MAXCOL, 'Detection', bScript,0, manualName=strManualName)
       self.controlPoints = []
     if bAutoStopTip and bUp:
-      self.addNeedleToScene(self.controlPoints, (205)% MAXCOL, 'Detection', bScript,0, manualName=strManualName)
+      if bDrawNeedle: self.addNeedleToScene(self.controlPoints, (205)% MAXCOL, 'Detection', bScript,0, manualName=strManualName)
       self.controlPoints = []
     print time.clock() - t0, "seconds process time"
     #self.deleteTempModels() # otw. too much clutter on view
