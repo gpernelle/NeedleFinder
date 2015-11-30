@@ -514,6 +514,9 @@ class NeedleFinderWidget:
     self.resetDetectionButton.connect('clicked()', logic.resetNeedleDetection)
     self.resetDetectionButton.setEnabled(0)
 
+    # auto segmentation report
+    segmentationFrame.addRow(self.__reportFrame)
+
     #Validation Frame##########################################
     self.__validationFrame = ctk.ctkCollapsibleButton()
     self.__validationFrame.text = "Validation"
@@ -877,7 +880,7 @@ class NeedleFinderWidget:
 
     #put frames on the tab########################################
     self.layout.addRow(self.__segmentationFrame)
-    self.layout.addRow(self.__reportFrame)
+    #self.layout.addRow(self.__reportFrame)
     # self.layout.addRow(self.__reportFrameCTL)
     self.layout.addRow(self.__validationFrame)
     self.layout.addRow(self.__parameterFrame)
