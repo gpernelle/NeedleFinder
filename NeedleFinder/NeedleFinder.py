@@ -460,17 +460,17 @@ class NeedleFinderWidget:
 
     #-----------------------------------------------------------------------------
 
-    # #Report Frame Control Point########################################
-    # self.__reportFrameCTL = ctk.ctkCollapsibleButton()
-    # self.__reportFrameCTL.text = "Manual Segmentation Report"
-    # self.__reportFrameCTL.collapsed = 1
-    # reportFrameCTL = qt.QFormLayout(self.__reportFrameCTL)
+    #Report Frame Control Point########################################
+    self.__reportFrameCTL = ctk.ctkCollapsibleButton()
+    self.__reportFrameCTL.text = "Manual Segmentation Report"
+    self.__reportFrameCTL.collapsed = 1
+    reportFrameCTL = qt.QFormLayout(self.__reportFrameCTL)
 
     # manual segmentation report
     self.analysisGroupBoxCTL = qt.QGroupBox()
     self.analysisGroupBoxCTL.setFixedHeight(330)
     self.analysisGroupBoxCTL.setTitle('Manual Segmentation Report')
-    # reportFrameCTL.addRow(self.analysisGroupBoxCTL)
+    reportFrameCTL.addRow(self.analysisGroupBoxCTL)
     self.analysisGroupBoxLayoutCTL = qt.QFormLayout(self.analysisGroupBoxCTL)
 
     #-----------------------------------------------------------------------------
@@ -591,7 +591,7 @@ class NeedleFinderWidget:
     validationFrame.addRow(self.hideAnnotationTextButton)
     validationFrame.addRow(self.undoButton)
     #validationFrame.addRow(self.templateRegistrationButton)
-    validationFrame.addRow(self.analysisGroupBoxCTL)
+    validationFrame.addRow(self.__reportFrameCTL)
 
     # self.scrollPointButton = qt.QPushButton('Scroll Ctrl Pt for Needle ' + str(self.editNeedleTxtBox.value))
     # validationFrame.addRow(self.scrollPointButton)
