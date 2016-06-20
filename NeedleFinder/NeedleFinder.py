@@ -45,6 +45,7 @@ import fnmatch
 from functools import partial
 import xml.etree.ElementTree
 from xml.etree.ElementTree import tostring
+from LabelStatistics import LabelStatisticsLogic
 
 import EditorLib
 from Editor import EditorWidget
@@ -275,6 +276,9 @@ class NeedleFinderWidget:
     self.currentLabel = None
     self.tempPointList = []
     self.undoListFid = [{} for i in range(30)]
+
+    # icp reg
+    self.threshval = 80
 
   def __del__(self):
     self.removeObservers()
@@ -8808,6 +8812,7 @@ class NeedleFinderLogic:
     #####################################################################################
     # First we get the volume node
     #####################################################################################
+    w = slicer.modules.NeedleFinderWidget
     vl = slicer.modules.volumes.logic()
     red_logic = slicer.app.layoutManager().sliceWidget("Red").sliceLogic()
     volumeNode = red_logic.GetBackgroundLayer().GetVolumeNode()
@@ -8823,7 +8828,7 @@ class NeedleFinderLogic:
     #####################################################################################
     # We put back the volume node
     #####################################################################################
-    Helper.SetBgFgVolumes(imageData.GetID(), None)
+    self.SetBgFgVolumes(imageData.GetID(), None)
     print 'BG set'
     #####################################################################################
     # set ROI
@@ -8835,7 +8840,9 @@ class NeedleFinderLogic:
     slicer.mrmlScene.AddNode(roi)
     roi.SetROIAnnotationVisibility(1)
     roi.SetRadiusXYZ(100,100,imageDimensions[2]/c)
-    roi.SetXYZ(0,0,m.GetElement(2,3)+imageDimensions[2]/c)
+    roi.SetRadiusXYZ(100,100,30)
+    # roi.SetXYZ(0,0,m.GetElement(2,3)+imageDimensions[2]/c)
+    roi.SetXYZ(0,0,m.GetElement(2,3)+30)
     roi.SetLocked(1)
     print 'roi set'
     #####################################################################################
@@ -8865,106 +8872,301 @@ class NeedleFinderLogic:
     # Indeed, the markers are bright
     #####################################################################################
     print 'threshold'
-    thresh = vtk.vtkImageThreshold()
-    thresh.SetInputData(roiVolume.GetImageData())
-    maxThresh = roiVolume.GetImageData().GetScalarRange()[1]
-    thresh.ThresholdBetween(80, maxThresh)
-    thresh.SetInValue(255)
-    thresh.SetOutValue(0)
-    # thresh.ReplaceOutOn()
-    # thresh.ReplaceInOn()
-    # thresh.Update()
-    #####################################################################################
-    # We apply an erode filter
-    #####################################################################################
-    print 'erode'
-    erode = slicer.vtkImageErode()
-    erode.SetInputConnection(thresh.GetOutputPort())
-    erode.SetNeighborTo4()
-    erode.Update()
-    roiSegmentation.SetAndObserveImageData(erode.GetOutputDataObject(0))
-    #####################################################################################
-    # Set Label
-    #####################################################################################
-    print 'set label'
+    threshval = w.threshval
+    success = 0
+    while not success:
+      # w.threshval += 20
+      print '-'*50
+      print 'try thresholding with thresh val: %d'% threshval
+      thresh = vtk.vtkImageThreshold()
+      thresh.SetInputData(roiVolume.GetImageData())
+      maxThresh = roiVolume.GetImageData().GetScalarRange()[1]
+      thresh.ThresholdBetween(threshval, maxThresh)
+      thresh.SetInValue(255)
+      thresh.SetOutValue(0)
+      # thresh.ReplaceOutOn()
+      # thresh.ReplaceInOn()
+      # thresh.Update()
+      #####################################################################################
+      # We apply an erode filter
+      #####################################################################################
+      print 'erode'
+      erode = slicer.vtkImageErode()
+      erode.SetInputConnection(thresh.GetOutputPort())
+      erode.SetNeighborTo4()
+      erode.Update()
+      roiSegmentation.SetAndObserveImageData(erode.GetOutputDataObject(0))
+      #####################################################################################
+      # Set Label
+      #####################################################################################
+      print 'set label'
+      appLogic = slicer.app.applicationLogic()
+      selectionNode = appLogic.GetSelectionNode()
+      selectionNode.SetReferenceActiveLabelVolumeID(roiSegmentation.GetID())
+      appLogic.PropagateVolumeSelection()
+      #####################################################################################
+      # island effect
+      # We apply the island effect that isolates each group of white voxels and apply a
+      # different label to each
+      #####################################################################################
+      print 'island effect'
+      editUtil = EditorLib.EditUtil.EditUtil()
+      parameterNode = editUtil.getParameterNode()
+      sliceLogic = editUtil.getSliceLogic()
+      islandsEffect = EditorLib.IdentifyIslandsEffectOptions()
+      islandsEffect.setMRMLDefaults()
+      islandsEffect.__del__()
+      islandTool = EditorLib.IdentifyIslandsEffectLogic(sliceLogic)
+      parameterNode.SetParameter("IslandEffect,minimumSize",'80')
+      islandTool.removeIslands()
+      LabelStatisticsLogic(volumeNode,roiSegmentation)
+      labelData = roiSegmentation.GetImageData()
+      stataccum = vtk.vtkImageAccumulate()
+      stataccum.SetInputData(labelData)
+      stataccum.Update()
+      lo = int(stataccum.GetMin()[0])
+      hi = int(stataccum.GetMax()[0])
+      # label stats
+      labelStats = {}
+      labelStats['Labels'] = []
+      hierarchyNode = slicer.vtkMRMLModelHierarchyNode()
+      hierarchyNode.SetScene( slicer.mrmlScene )
+      hierarchyNode.SetName('LabelMarkers')
+      slicer.mrmlScene.AddNode(hierarchyNode)
+      #
+      labelsColorNodeX = slicer.modules.colors.logic().GetColorTableNodeID(10)
+      labelX = vl.CreateAndAddLabelVolume(slicer.mrmlScene, roiVolume, 'labelX')
+      labelX.GetDisplayNode().SetAndObserveColorNodeID(labelsColorNodeX)
+      #####################################################################################
+      # We compute the size of each island to filter out the one that do not fit our
+      # size criteria
+      #####################################################################################
+      #
+      center = []
+      #
+      stats = LabelStatisticsLogic(roiVolume, roiSegmentation).labelStats
+      print 'labels'
+      for i in xrange(lo,hi+1):
+          #
+          print '\t...%d' % i
+          labelsColorNodeX = slicer.modules.colors.logic().GetColorTableNodeID(10)
+          labelX = vl.CreateAndAddLabelVolume(slicer.mrmlScene, roiVolume, 'labelX')
+          labelX.GetDisplayNode().SetAndObserveColorNodeID(labelsColorNodeX)
+          thresholder = vtk.vtkImageThreshold()
+          thresholder.SetInputConnection(roiSegmentation.GetImageDataConnection())
+          thresholder.SetInValue(i+1)
+          thresholder.SetOutValue(0)
+          thresholder.ReplaceOutOn()
+          thresholder.ThresholdBetween(i,i)
+          thresholder.SetOutputScalarType(roiSegmentation.GetImageData().GetScalarType())
+          thresholder.Update()
+          labelX.SetAndObserveImageData(thresholder.GetOutput())
+          mm3 = stats.get((i, 'Volume mm^3'))
+          if mm3 <465 and mm3> 100:
+            center.append(self.ijk2ras(self.getCenterOfMass(labelX, 1 ),labelX))
+            # self.__registrationStatus.setText('Found Marker ' +str(i)+'...')
+      # print(center)
+      #####################################################################################
+      # We filter and sort the mass centers
+      #####################################################################################
+      print self.ICPRegistration(center)
+      if len(center)>=4:
+        # success = self.getAndSortFiducialPoints(center)
+
+        success = 1
+      else:
+        success = 1
+    w = slicer.modules.NeedleFinderWidget
+    w.center = center
+    if success:
+      print 'fiducial sorted'
+      #####################################################################################
+      # We do the landmark registration
+      #####################################################################################
+      self.firstRegistration()
+      print 'Registration Done!!!'
+    else:
+      print 'Could not detect markers'
+    self.SetBgFgVolumes(imageData.GetID(), None)
+
+
+  def SetBgFgVolumes(self,bg, fg):
     appLogic = slicer.app.applicationLogic()
     selectionNode = appLogic.GetSelectionNode()
-    selectionNode.SetReferenceActiveLabelVolumeID(roiSegmentation.GetID())
+    selectionNode.SetReferenceActiveVolumeID(bg)
+    selectionNode.SetReferenceSecondaryVolumeID(fg)
     appLogic.PropagateVolumeSelection()
-    #####################################################################################
-    # island effect
-    # We apply the island effect that isolates each group of white voxels and apply a
-    # different label to each
-    #####################################################################################
-    print 'island effect'
-    editUtil = EditorLib.EditUtil.EditUtil()
-    parameterNode = editUtil.getParameterNode()
-    sliceLogic = editUtil.getSliceLogic()
-    lm = slicer.app.layoutManager()
-    islandsEffect = EditorLib.IdentifyIslandsEffectOptions()
-    islandsEffect.setMRMLDefaults()
-    islandsEffect.__del__()
-    islandTool = EditorLib.IdentifyIslandsEffectLogic(sliceLogic)
-    parameterNode.SetParameter("IslandEffect,minimumSize",'100')
-    islandTool.removeIslands()
-    LabelStatisticsLogic(volumeNode,roiSegmentation)
-    labelData = roiSegmentation.GetImageData()
-    stataccum = vtk.vtkImageAccumulate()
-    stataccum.SetInputData(labelData)
-    stataccum.Update()
-    lo = int(stataccum.GetMin()[0])
-    hi = int(stataccum.GetMax()[0])
-    # label stats
-    labelStats = {}
-    labelStats['Labels'] = []
-    hierarchyNode = slicer.vtkMRMLModelHierarchyNode()
-    hierarchyNode.SetScene( slicer.mrmlScene )
-    hierarchyNode.SetName('LabelMarkers')
-    slicer.mrmlScene.AddNode(hierarchyNode)
-    #
-    labelsColorNodeX = slicer.modules.colors.logic().GetColorTableNodeID(10)
-    labelX = vl.CreateAndAddLabelVolume(slicer.mrmlScene, roiVolume, 'labelX')
-    labelX.GetDisplayNode().SetAndObserveColorNodeID(labelsColorNodeX)
-    #####################################################################################
-    # We compute the size of each island to filter out the one that do not fit our
-    # size criteria
-    #####################################################################################
-    #
-    center = []
-    #
-    stats = LabelStatisticsLogic(roiVolume, roiSegmentation).labelStats
-    print 'labels'
-    for i in xrange(lo,hi+1):
-        #
-        print '\t...%d' % i
-        labelsColorNodeX = slicer.modules.colors.logic().GetColorTableNodeID(10)
-        labelX = vl.CreateAndAddLabelVolume(slicer.mrmlScene, roiVolume, 'labelX')
-        labelX.GetDisplayNode().SetAndObserveColorNodeID(labelsColorNodeX)
-        thresholder = vtk.vtkImageThreshold()
-        thresholder.SetInputConnection(roiSegmentation.GetImageDataConnection())
-        thresholder.SetInValue(i+1)
-        thresholder.SetOutValue(0)
-        thresholder.ReplaceOutOn()
-        thresholder.ThresholdBetween(i,i)
-        thresholder.SetOutputScalarType(roiSegmentation.GetImageData().GetScalarType())
-        thresholder.Update()
-        labelX.SetAndObserveImageData(thresholder.GetOutput())
-        mm3 = stats.get((i, 'Volume mm^3'))
-        if mm3 <465 and mm3> 100:
-          center.append(self.ijk2ras(self.getCenterOfMass(labelX, 1 ),labelX))
-          # self.__registrationStatus.setText('Found Marker ' +str(i)+'...')
-    # print(center)
-    #####################################################################################
-    # We filter and sort the mass centers
-    #####################################################################################
-    self.getAndSortFiducialPoints(center)
-    print 'fiducial sorted'
-    #####################################################################################
-    # We do the landmark registration
-    #####################################################################################
-    self.firstRegistration()
-    print 'Registration Done!!!'
-    Helper.SetBgFgVolumes(imageData.GetID(), None)
+
+  def ICPRegistration(self, center):
+    '''
+    ICP Registration based on vtk.vtkIterativeClosestPointTransform()
+    '''
+    #  Initialisation
+    print 'ICP registration'
+    sourcePoints = vtk.vtkPoints()
+    sourceVertices = vtk.vtkCellArray()
+    source = vtk.vtkPolyData()
+
+
+    #  Set the transformation matrix
+    self.vtkMatInitial = vtk.vtkMatrix4x4()
+
+    v = vtk.vtkMatrix4x4()
+    m = [[0,1,0],[1,0,0],[0,0,-1]]
+    for i in range(3):
+        for j in range(3):
+            v.SetElement(i,j,m[i][j])
+
+    #  Set a list of known points from template CAD Model
+    for i in range(4):
+      fid = slicer.util.getNode('F_%d'%(i+1))
+      p = [0,0,0]
+      fid.GetFiducialCoordinates(p)
+      o = [0,0,0,0]
+      p.append(1)
+      v.MultiplyPoint(p,o)
+      id = sourcePoints.InsertNextPoint(o[0],o[1],o[2])
+      sourceVertices.InsertNextCell(1)
+      sourceVertices.InsertCellPoint(id)
+
+    source.SetPoints(sourcePoints)
+    source.SetVerts(sourceVertices)
+
+    # ============ display source points ==============
+    pointCount = 4
+    for index in range(pointCount):
+        point = [0,0,0]
+        sourcePoints.GetPoint(index, point)
+        print("source point[%s]=%s" % (index,point))
+
+    # #  Set a list of islands
+    # for i in range(len(center)):
+    #   id = targetPoints.InsertNextPoint(center[i][0], center[i][1], center[i][2])
+    #   targetVertices.InsertNextCell(1)
+    #   targetVertices.InsertCellPoint(id)
+
+    targetPoints = vtk.vtkPoints()
+    targetVertices = vtk.vtkCellArray()
+    target = vtk.vtkPolyData()
+    l = slicer.util.getNode('*marker*')
+    labelImage = l.GetImageData()
+    shape = list(labelImage.GetDimensions())
+    labelArray = vtk.util.numpy_support.vtk_to_numpy(labelImage.GetPointData().GetScalars()).reshape(shape)
+    labels = []
+    for i in range(np.max(labelArray)):
+        ar = np.where(labelArray==i)
+        if len(ar[0])>20 and len(ar[0])<500:
+            labels.append(ar)
+    labs= np.concatenate(labels,1)
+    nbOfPoints = len(labs[0])
+    for i in range(nbOfPoints):
+      id = targetPoints.InsertNextPoint(labs[0][1], labs[1][i], labs[2][i])
+      targetVertices.InsertNextCell(1)
+      targetVertices.InsertCellPoint(id)
+
+    target.SetPoints(targetPoints)
+    target.SetVerts(targetVertices)
+    print("%d target points set..." % nbOfPoints)
+
+    # ============ display target points ==============
+    print("Displaying 4 target points...")
+    pointCount = 4
+    for index in range(pointCount):
+        point = [0,0,0]
+        targetPoints.GetPoint(index, point)
+        print("target point[%s]=%s" % (index,point))
+
+    print("Running ICP ----------------")
+    # ============ run ICP ==============
+
+    #  Set parameters to the ICP transformation
+    icpTransform = vtk.vtkIterativeClosestPointTransform()
+    icpTransform.SetSource(source)
+    icpTransform.SetTarget(target)
+    icpTransform.SetMaximumNumberOfIterations(1000)
+    icpTransform.StartByMatchingCentroidsOn()
+    icpTransform.SetMaximumNumberOfLandmarks(1000)
+    icpTransform.SetMeanDistanceModeToRMS()
+    icpTransform.GetLandmarkTransform().SetModeToRigidBody()
+    icpTransform.Modified()
+    icpTransform.Update()
+    self.nIterations = icpTransform.GetNumberOfIterations()
+
+    icpTransformFilter = vtk.vtkTransformPolyDataFilter()
+    icpTransformFilter.SetInputData(source)
+
+    icpTransformFilter.SetTransform(icpTransform)
+
+    icpTransformFilter.Update()
+
+    transformedSource = icpTransformFilter.GetOutput()
+
+    # ============ display transformed points ==============
+    pointCount = 3
+    for index in range(pointCount):
+        point = [0,0,0]
+        transformedSource.GetPoint(index, point)
+        print("transformed source point[%s]=%s" % (index,point))
+
+    w = slicer.modules.NeedleFinderWidget
+    w.tranformMatrix = icpTransform.GetMatrix()
+    w.icpTransform = icpTransform
+    w.icpTransformFilter = icpTransformFilter
+    self.processRegistrationCompletion()
+    w.tNode = slicer.util.getNode('vtkMRMLLinearTransformNode_Template')
+    out = vtk.vtkMatrix4x4()
+    v.Multiply4x4(w.tranformMatrix,v,out)
+    w.tNode.SetAndObserveMatrixTransformToParent(out)
+    return out
+
+  def sortFiducials(self, markerCenters):
+    minX = [999,999,999,999]
+    maxX = [-999,-999,-999,-999]
+    sorted = [[0,0,0] for l in range(4)]
+    sortedMarkers = [[0,0,0] for l in range(4)]
+
+    for i in range(2):
+        for k in range(4):
+            if markerCenters[k][0]<= minX[0]:
+                minX[0] = markerCenters[k][0]
+                minX[1] = k
+            elif markerCenters[k][0]<= minX[2]:
+                minX[2] = markerCenters[k][0]
+                minX[3] = k
+            if markerCenters[k][0]>= maxX[0]:
+                maxX[0] = markerCenters[k][0]
+                maxX[1] = k
+            elif markerCenters[k][0]>= maxX[2]:
+                maxX[2] = markerCenters[k][0]
+                maxX[3] = k
+    if markerCenters[minX[1]][1] < markerCenters[minX[3]][1]:
+        sorted[0] = minX[1]
+        sorted[1] = minX[3]
+    else:
+        sorted[0] = minX[3]
+        sorted[1] = minX[1]
+    if markerCenters[maxX[1]][1]>markerCenters[maxX[3]][1]:
+        sorted[2] = maxX[1]
+        sorted[3] = maxX[3]
+    else:
+        sorted[2] = maxX[3]
+        sorted[3] = maxX[1]
+    sorted2 = [0,0,0,0]
+    if 1:#self.horizontalTemplate.isChecked():
+        sorted2[0]=sorted[2]
+        sorted2[2]=sorted[0]
+        sorted2[1]=sorted[3]
+        sorted2[3]=sorted[1]
+    else:
+        sorted2[0]=sorted[3]
+        sorted2[2]=sorted[1]
+        sorted2[1]=sorted[0]
+        sorted2[3]=sorted[2]
+
+    for k in range(4) :
+      sortedMarkers[k] = markerCenters[sorted2[k]]
+
+    return sortedMarkers
 
   def getAndSortFiducialPoints(self, center):
       """
@@ -8980,94 +9182,99 @@ class NeedleFinderLogic:
       #   fixedAnnotationList.RemoveAllChildrenNodes()
       markerCenters = center
       nbCenter = len(center)
-      for k in range(nbCenter):
-          point = [0]
-          for i in range(nbCenter):
-              U,V,W = 0,0,0
-              for j in range(nbCenter):
-                  d = 0
-                  if i != j and markerCenters[i]!=(0,0,0):
-                      d2 = (markerCenters[i][0]-markerCenters[j][0])**2+(markerCenters[i][1]-markerCenters[j][1])**2+(markerCenters[i][2]-markerCenters[j][2])**2
-                      d = d2**0.5
-                  # print markerCenters[i],markerCenters[j]
-                  #print d
-                  if d >=45 and d<=53:
-                      U += 1
-                  elif d >53 and d<60:
-                      V +=1
-                  elif d >=70 and d<80:
-                      W +=1
-              #print U,V,W
-              if U+V+W>=3:
-                #print markerCenters[i]
-                  point.extend([i])
-      point.remove(0)
-      minX = [999,999,999,999]
-      maxX = [-999,-999,-999,-999]
-      sorted = [[0,0,0] for l in range(4)]
-      sortedConverted = [[0,0,0] for l in range(4)]
-      for i in range(2):
-          for k in point:
-              if markerCenters[k][0]<= minX[0]:
-                  minX[0] = markerCenters[k][0]
-                  minX[1] = k
-              elif markerCenters[k][0]<= minX[2]:
-                  minX[2] = markerCenters[k][0]
-                  minX[3] = k
-              if markerCenters[k][0]>= maxX[0]:
-                  maxX[0] = markerCenters[k][0]
-                  maxX[1] = k
-              elif markerCenters[k][0]>= maxX[2]:
-                  maxX[2] = markerCenters[k][0]
-                  maxX[3] = k
-      if markerCenters[minX[1]][1] < markerCenters[minX[3]][1]:
-          sorted[0] = minX[1]
-          sorted[1] = minX[3]
-      else:
-          sorted[0] = minX[3]
-          sorted[1] = minX[1]
-      if markerCenters[maxX[1]][1]>markerCenters[maxX[3]][1]:
-          sorted[2] = maxX[1]
-          sorted[3] = maxX[3]
-      else:
-          sorted[2] = maxX[3]
-          sorted[3] = maxX[1]
-      sorted2 = [0,0,0,0]
-      if 1:#self.horizontalTemplate.isChecked():
-          sorted2[0]=sorted[2]
-          sorted2[2]=sorted[0]
-          sorted2[1]=sorted[3]
-          sorted2[3]=sorted[1]
-      else:
-          sorted2[0]=sorted[3]
-          sorted2[2]=sorted[1]
-          sorted2[1]=sorted[0]
-          sorted2[3]=sorted[2]
-      # logic = slicer.modules.annotations.logic()
-      # logic.SetActiveHierarchyNodeID(pNode.GetParameter('fixedLandmarksListID'))
-      # if pNode.GetParameter("Template")=='4points':
-      #     nbPoints=4
-      # elif pNode.GetParameter("Template")=='3pointsCorners':
-      #     nbPoints=3
-      l = slicer.modules.annotations.logic()
-      l.SetActiveHierarchyNodeID(slicer.util.getNode('Fiducial List_fixed').GetID())
-      for k in range(4) :
-          fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
-          fiducial.SetReferenceCount(fiducial.GetReferenceCount()-1)
-          fiducial.SetFiducialCoordinates(markerCenters[sorted2[k]])
-          fiducial.SetName(str(k))
-          fiducial.Initialize(slicer.mrmlScene)
+      if nbCenter > 3:
+        point = [0]
+        for i in range(nbCenter):
+            U,V,W = 0,0,0
+            for j in range(nbCenter):
+                d = 0
+                if i != j and markerCenters[i]!=(0,0,0):
+                    d2 = (markerCenters[i][0]-markerCenters[j][0])**2+(markerCenters[i][1]-markerCenters[j][1])**2+(markerCenters[i][2]-markerCenters[j][2])**2
+                    d = d2**0.5
+                # print markerCenters[i],markerCenters[j]
+                #print d
+                if d >=45 and d<=51:
+                    U = 1
+                elif d >51 and d<60:
+                    V =1
+                elif d >=70 and d<80:
+                    W =1
+            #print U,V,W
+            if U+V+W>=2:
+              #print markerCenters[i]
+                point.extend([i])
+        point.remove(0)
+        if len(point) != 4:
+          return 0
+        else:
+          minX = [999,999,999,999]
+          maxX = [-999,-999,-999,-999]
+          sorted = [[0,0,0] for l in range(4)]
+          sortedConverted = [[0,0,0] for l in range(4)]
+          for i in range(2):
+              for k in point:
+                  if markerCenters[k][0]<= minX[0]:
+                      minX[0] = markerCenters[k][0]
+                      minX[1] = k
+                  elif markerCenters[k][0]<= minX[2]:
+                      minX[2] = markerCenters[k][0]
+                      minX[3] = k
+                  if markerCenters[k][0]>= maxX[0]:
+                      maxX[0] = markerCenters[k][0]
+                      maxX[1] = k
+                  elif markerCenters[k][0]>= maxX[2]:
+                      maxX[2] = markerCenters[k][0]
+                      maxX[3] = k
+          if markerCenters[minX[1]][1] < markerCenters[minX[3]][1]:
+              sorted[0] = minX[1]
+              sorted[1] = minX[3]
+          else:
+              sorted[0] = minX[3]
+              sorted[1] = minX[1]
+          if markerCenters[maxX[1]][1]>markerCenters[maxX[3]][1]:
+              sorted[2] = maxX[1]
+              sorted[3] = maxX[3]
+          else:
+              sorted[2] = maxX[3]
+              sorted[3] = maxX[1]
+          sorted2 = [0,0,0,0]
+          if 1:#self.horizontalTemplate.isChecked():
+              sorted2[0]=sorted[2]
+              sorted2[2]=sorted[0]
+              sorted2[1]=sorted[3]
+              sorted2[3]=sorted[1]
+          else:
+              sorted2[0]=sorted[3]
+              sorted2[2]=sorted[1]
+              sorted2[1]=sorted[0]
+              sorted2[3]=sorted[2]
+          # logic = slicer.modules.annotations.logic()
+          # logic.SetActiveHierarchyNodeID(pNode.GetParameter('fixedLandmarksListID'))
+          # if pNode.GetParameter("Template")=='4points':
+          #     nbPoints=4
+          # elif pNode.GetParameter("Template")=='3pointsCorners':
+          #     nbPoints=3
+          l = slicer.modules.annotations.logic()
+          l.SetActiveHierarchyNodeID(slicer.util.getNode('Fiducial List_fixed').GetID())
+          for k in range(4) :
+              fiducial = slicer.mrmlScene.CreateNodeByClass('vtkMRMLAnnotationFiducialNode')
+              fiducial.SetReferenceCount(fiducial.GetReferenceCount()-1)
+              fiducial.SetFiducialCoordinates(markerCenters[sorted2[k]])
+              fiducial.SetName(str(k))
+              fiducial.Initialize(slicer.mrmlScene)
 
-      sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
-      if sRed ==None :
-          sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode1")
-      # sRed.SetSliceVisible(1)
-      m= sRed.GetSliceToRAS()
-      m.SetElement(0,3,sortedConverted[3][0])
-      m.SetElement(1,3,sortedConverted[3][1])
-      m.SetElement(2,3,sortedConverted[3][2])
-      sRed.Modified()
-      return sorted2
+          sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
+          if sRed ==None :
+              sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode1")
+          # sRed.SetSliceVisible(1)
+          m= sRed.GetSliceToRAS()
+          m.SetElement(0,3,sortedConverted[3][0])
+          m.SetElement(1,3,sortedConverted[3][1])
+          m.SetElement(2,3,sortedConverted[3][2])
+          sRed.Modified()
+          return 1
+      else:
+        return 0
 
   def loadTemplate(self):
       '''
@@ -9088,7 +9295,7 @@ class NeedleFinderLogic:
       :return:
       '''
       centerOfMass = [0,0,0]
-      if volumeNode.GetLabelMap() == 0:
+      if not slicer.util.getNode('labelX') == 0:
         print('Warning: input volume is not labelmap: \'' + volumeNode.GetName() + '\'')
       #
       numberOfStructureVoxels = 0
@@ -9142,16 +9349,18 @@ class NeedleFinderLogic:
       # self.firstRegButton.setEnabled(0)
 
 
-  def processRegistrationCompletion(self,node, event):
+  def processRegistrationCompletion(self,node=None, event=None):
       '''
       Once the registration is done, display a message to say it is finished
       :param node:
       :param event:
       :return:
       '''
-      status = node.GetStatusString()
-      # self.__registrationStatus.setText('Registration '+status)
-      if status == 'Completed':
+      status = ""
+      if node:
+        status = node.GetStatusString()
+        # self.__registrationStatus.setText('Registration '+status)
+      if event is None or status == 'Completed' :
           # self.firstRegButton.setEnabled(1)
           # pNode = self.parameterNode()
           templateNode = slicer.util.getNode('Template')
