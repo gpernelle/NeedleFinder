@@ -4934,6 +4934,7 @@ class NeedleFinderLogic:
         rasB=rasA  +   rasEstStepVector1*fStepSize_mm # TODO check sign, and if this still makes sense
         fDistBDef2BMod=norm(rasBDef-rasB)
         fMaxDistBDef2BMod_mm=0 #.25 # CONST
+        fSumAngle_deg = 0
         if 1 and fDistBDef2BMod>fMaxDistBDef2BMod_mm:
           #compromise between model and heuristic based default vector
           rasBDef2BMod=rasB-rasBDef; rasBDef2BMod1, fDistBDef2BMod_mm=normalized(rasBDef2BMod)
