@@ -4967,7 +4967,7 @@ class NeedleFinderLogic:
     #widget.clearLabelMap()
 
     if iAxialSegmentationLimit != None:
-      fEstNeedleLength_mm = abs(ijkA[2] - iAxialSegmentationLimit) * 1.15 * fvSpacing[2] #<<< CONST was 1.15
+      fEstNeedleLength_mm = abs(ijkA[2] - iAxialSegmentationLimit) #* 1.15 * fvSpacing[2] #<<< CONST was 1.15
     else:
       fEstNeedleLength_mm = ijkA[2] * 0.9 * fvSpacing[2] # CONST
     #load external needle model matrices (variable = file name)
@@ -8150,6 +8150,7 @@ class NeedleFinderLogic:
     """
     # productive
     profprint()
+    print('NeedleMatching started')
     modelNodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLModelNode')
     nbNode = modelNodes.GetNumberOfItems()
     result = []
@@ -8161,17 +8162,16 @@ class NeedleFinderLogic:
         dist = []
         polydata = node.GetPolyData()
         if polydata != None:
-          bounds = polydata.GetBounds()
           for nthNode2 in range(nbNode):
             node2 = slicer.mrmlScene.GetNthNodeByClass(nthNode2, 'vtkMRMLModelNode')
             if node2.GetID() not in found and node2.GetAttribute('type') == 'Validation':
               polydata2 = node2.GetPolyData()
               if polydata2 != None and polydata2.GetNumberOfPoints() > 100 and polydata.GetNumberOfPoints() > 100:
                 tipDistance = self.distTip(int(node.GetID().strip('vtkMRMLModelNode')) , int(node2.GetID().strip('vtkMRMLModelNode')))
-                baseDistance = self.distBase(int(node.GetID().strip('vtkMRMLModelNode')) , int(node2.GetID().strip('vtkMRMLModelNode')))
                 name = node.GetName()
                 manualName = name.lstrip('auto-seg_').lstrip('manual-seg_').lstrip('obturator-seg_').lstrip('0123456789').lstrip('-ID-vtkMRMLModelNode').lstrip('0123456789-')
-                if manualName==node2.GetName(): dist.append([tipDistance, node2.GetID(), node2.GetName()])
+                # if manualName==node2.GetName():
+                dist.append([tipDistance, node2.GetID(), node2.GetName()])
                 # print tipDistance
           if dist != []:
             match = [min(dist)[0], min(dist)[1], node.GetID(), min(dist)[2]]
