@@ -393,8 +393,9 @@ class NeedleFinderWidget:
     volLogic = slicer.modules.volumes.logic()
     sliceLogic = slicer.app.layoutManager().sliceWidget("Red").sliceLogic()
     vn = sliceLogic.GetBackgroundLayer().GetVolumeNode()
-    self.labelMapNode = slicer.util.getNode(vn.GetName() + "-label")
-    if not self.labelMapNode:
+    try:
+      self.labelMapNode = slicer.util.getNode(vn.GetName() + "-label")
+    except:
       self.labelMapNode = volLogic.CreateAndAddLabelVolume(slicer.mrmlScene, vn, vn.GetName() + "-label")
     # select label volume
     if not script: #TODO guess there is a bug here (at least while testing with parSearch): also changes the main volume!!
@@ -3041,13 +3042,24 @@ class NeedleFinderLogic:
         value = V.GetScalarComponentAsDouble(int(round(x)),int(round(y)),int(round(z)),0)
     return value
 
-  def needleDetectionAPI(self, tips = [], imageData = None, spacing=[1,1,1], script=False, names="", segLimit=[]):
+  def needleDetectionAPI(self, args={}, tips = [], imageData = None, spacing=[1,1,1], script=False, names="", segLimit=[]):
     """ Ruibin: comment...
     Switches between the versions of the algorithm. For comparison tests.
     """
     # productive #onbutton
     profprint()
     widget = slicer.modules.NeedleFinderWidget
+    if args:
+      widget.algoVersParameter.value = int(args.algo)
+      widget.radiusMax.value = int(args.coneRadius)
+      widget.nbRadiusIterations.value = int(args.radIter)
+      widget.nbRotatingIterations.value = int(args.rotIter)
+      widget.numberOfPointsPerNeedle.value = int(args.point)
+      widget.exponent.value = int(args.exponent)
+      widget.gradientPonderation.value = int(args.gradient)
+      widget.sigmaValue.value = int(args.sigma)
+      widget.stepsize.value = int(args.stepsize)
+      widget.radiusNeedleParameter.value = int(args.radius)
     # widget.axialSegmentationLimit, widget.axialSegmentationLimitRAS = self.findAxialSegmentationLimitFromMarker()
     if widget.labelMapNode:
       labelData=widget.labelMapNode.GetImageData()
@@ -8158,19 +8170,16 @@ class NeedleFinderLogic:
     # print nbNode
     for nthNode in range(nbNode):
       node = slicer.mrmlScene.GetNthNodeByClass(nthNode, 'vtkMRMLModelNode')
-      if node.GetID() not in found and node.GetAttribute('type') != 'Validation':
+      if 'auto-seg' in node.GetName():
         dist = []
         polydata = node.GetPolyData()
-        if polydata != None:
+        if polydata is not None:
           for nthNode2 in range(nbNode):
             node2 = slicer.mrmlScene.GetNthNodeByClass(nthNode2, 'vtkMRMLModelNode')
-            if node2.GetID() not in found and node2.GetAttribute('type') == 'Validation':
+            if 'manual-seg' in node2.GetName():
               polydata2 = node2.GetPolyData()
-              if polydata2 != None and polydata2.GetNumberOfPoints() > 100 and polydata.GetNumberOfPoints() > 100:
+              if polydata2 is not None and polydata2.GetNumberOfPoints() > 100 and polydata.GetNumberOfPoints() > 100:
                 tipDistance = self.distTip(int(node.GetID().strip('vtkMRMLModelNode')) , int(node2.GetID().strip('vtkMRMLModelNode')))
-                name = node.GetName()
-                manualName = name.lstrip('auto-seg_').lstrip('manual-seg_').lstrip('obturator-seg_').lstrip('0123456789').lstrip('-ID-vtkMRMLModelNode').lstrip('0123456789-')
-                # if manualName==node2.GetName():
                 dist.append([tipDistance, node2.GetID(), node2.GetName()])
                 # print tipDistance
           if dist != []:
