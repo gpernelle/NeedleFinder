@@ -7914,6 +7914,10 @@ class NeedleFinderLogic:
     .. [HD] http://en.wikipedia.org/wiki/Hausdorff_distance
     """
     # productive #math
+    if isinstance(id1, int):
+      id1 = 'vtkMRMLModelNode%d' % id1
+    if isinstance(id2, int):
+      id2 = 'vtkMRMLModelNode%d' % id2
     if frequent: profprint()
     node1 = slicer.mrmlScene.GetNodeByID(id1)
     polydata1 = node1.GetPolyData()
@@ -7921,10 +7925,7 @@ class NeedleFinderLogic:
     polydata2 = node2.GetPolyData()
     nb1 = polydata1.GetNumberOfPoints()
     nb2 = polydata2.GetNumberOfPoints()
-    minimum = None
-    maximum = None
-    JJ, jj = None, None
-    II, ii = None, None
+
     pt1 = [0, 0, 0]
     pt2 = [0, 0, 0]
     polydata1.GetPoint(1, pt1)
@@ -7933,13 +7934,11 @@ class NeedleFinderLogic:
     maxVal1 = max(pt1[2], pt2[2])
     pt1 = [0, 0, 0]
     pt2 = [0, 0, 0]
-    pt1b, pt2b = None, None
     polydata2.GetPoint(1, pt1)
     polydata2.GetPoint(nb2 - 1, pt2)
     minVal2 = min(pt1[2], pt2[2])
     maxVal2 = max(pt1[2], pt2[2])
     valueBase = max(minVal1, minVal2)
-    valueTip = min(maxVal1, maxVal2)
 
     # truncate polydatas
     truncatedPolydata1 = self.clipPolyData(node1, valueBase)
@@ -7986,7 +7985,11 @@ class NeedleFinderLogic:
     iGyne_old 4450bbcb543e7432122f06c1905aab4eb8b446e6
     """
     # productive #math
-    if frequent: profprint()
+    if isinstance(id1, int):
+      id1 = 'vtkMRMLModelNode%d' % id1
+    if isinstance(id2, int):
+      id2 = 'vtkMRMLModelNode%d' % id2
+    profprint()
     node1 = slicer.mrmlScene.GetNodeByID(id1)
     polydata1 = node1.GetPolyData()
     node2 = slicer.mrmlScene.GetNodeByID(id2)
@@ -8020,7 +8023,7 @@ class NeedleFinderLogic:
     cl2.BuildLocator()
     # Hausforff 1 -> 2
     minima = []
-    for i in range(int(nb1 / float(100))):
+    for i in range(int(nb1 / float(10))):
       pt = [0, 0, 0]
       polydata1.GetPoint(100 * i, pt)
       closest = [0, 0, 0]
@@ -8047,6 +8050,55 @@ class NeedleFinderLogic:
           minima.append(0)
     hausdorff21 = max(minima)
     return max(hausdorff12, hausdorff21)
+
+  def distTipToNeedle(self, id1, id2):
+    """id1: ID of needle with tip
+      id2: ID of needle of which we measure the distance with the needle tip
+    """
+    # productive #math
+    if isinstance(id1, int):
+      id1 = 'vtkMRMLModelNode%d' % id1
+    if isinstance(id2, int):
+      id2 = 'vtkMRMLModelNode%d' % id2
+    profprint()
+    node1 = slicer.util.getNode(id1)
+    polydata1 = node1.GetPolyData()
+    node2 = slicer.util.getNode(id2)
+    polydata2 = node2.GetPolyData()
+    nb1 = polydata1.GetNumberOfPoints()
+
+    pt1 = [0, 0, 0]
+    pt2 = [0, 0, 0]
+    polydata1.GetPoint(1, pt1)
+    polydata1.GetPoint(nb1 - 1, pt2)
+    tip = max([pt1,pt2], key=lambda x:x[2])
+
+    cellId = vtk.mutable(1)
+    subid = vtk.mutable(1)
+    dist = vtk.mutable(1)
+    cl2 = vtk.vtkCellLocator()
+    cl2.SetDataSet(polydata2)
+    cl2.BuildLocator()
+
+    pt = tip
+    closest = [0, 0, 0]
+    cl2.FindClosestPoint(pt, closest, cellId, subid, dist)
+    return self.distance(pt, closest)
+
+  def removeBottomBrokenPart(self):
+    nodes = slicer.util.getNodes('auto-seg*')
+    for ni in nodes:
+      for nj in nodes:
+        try:
+          if ni != nj and self.distTipToNeedle(ni, nj) < 1:
+            node = slicer.util.getNode(ni)
+            slicer.mrmlScene.RemoveNode(node)
+            print("*"*80)
+            print("node %s removed" % ni)
+            del nodes[ni]
+        except:
+          pass
+
 
   def evaluate(self, script=False, needleNr=None):
     """
@@ -8075,10 +8127,10 @@ class NeedleFinderLogic:
                             widget.algoVersParameter.value]
 
     for i in range(len(result)):
-      if widget.algoVersParameter.value == 0:
-        val = self.hausdorffDistance(result[i][1], result[i][2])
-      else:
-        val = self.hausdorffDistance13(result[i][1], result[i][2])
+      # if widget.algoVersParameter.value <= 0:
+      #   val = self.hausdorffDistance(result[i][1], result[i][2])
+      # else:
+      val = self.hausdorffDistance(result[i][1], result[i][2])
       try: needleNrFromFilename=int(result[i][3].strip('manual-seg_'))
       except: needleNrFromFilename=-1
       if needleNr!=None and needleNr!=needleNrFromFilename:
