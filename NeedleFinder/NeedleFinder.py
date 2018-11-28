@@ -147,10 +147,10 @@ class NeedleFinder:
       '''
       self.logic.removeNodeObserver(caller, eventId)
 
-    def __onSceneLoaded__(self, caller, eventId, callData):
-      """Load CTRL points AFTER scene finished to be loaded"""
-      self.logic.loadCTLPointsInTable()
-      # return 0
+    # def __onSceneLoaded__(self, caller, eventId, callData):
+    #   """Load CTRL points AFTER scene finished to be loaded"""
+    #   self.logic.loadCTLPointsInTable()
+    #   # return 0
 
     def __onSceneClosed__(self, caller, eventId, callData):
       """Clean report table and internal variables"""
@@ -160,16 +160,16 @@ class NeedleFinder:
 
 
 
-    self.__onSceneLoaded__ = partial(__onSceneLoaded__, self)
-    self.__onSceneLoaded__.CallDataType = vtk.VTK_OBJECT
-    self.__onSceneClosed__ = partial(__onSceneClosed__, self)
-    self.__onSceneClosed__.CallDataType = vtk.VTK_OBJECT
-    self.__onNodeAdded__ = partial(__onNodeAdded__, self)
-    self.__onNodeAdded__.CallDataType = vtk.VTK_OBJECT
+    # self.__onSceneLoaded__ = partial(__onSceneLoaded__, self)
+    # self.__onSceneLoaded__.CallDataType = vtk.VTK_OBJECT
+    # self.__onSceneClosed__ = partial(__onSceneClosed__, self)
+    # self.__onSceneClosed__.CallDataType = vtk.VTK_OBJECT
+    # self.__onNodeAdded__ = partial(__onNodeAdded__, self)
+    # self.__onNodeAdded__.CallDataType = vtk.VTK_OBJECT
 
-    slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.EndImportEvent, self.__onSceneLoaded__)
-    slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.EndCloseEvent, self.__onSceneClosed__)
-    slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, self.__onNodeAdded__)
+    # slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.EndImportEvent, self.__onSceneLoaded__)
+    # slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.EndCloseEvent, self.__onSceneClosed__)
+    # slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, self.__onNodeAdded__)
     # slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeRemovedEvent, self.__onNodeRemoved__)
 
   def __del__(self):
@@ -394,7 +394,7 @@ class NeedleFinderWidget:
     sliceLogic = slicer.app.layoutManager().sliceWidget("Red").sliceLogic()
     vn = sliceLogic.GetBackgroundLayer().GetVolumeNode()
     try:
-      self.labelMapNode = slicer.util.getNode(vn.GetName() + "-label")
+      self.labelMapNode = slicer.util.getNode(vn.GetName())
     except:
       self.labelMapNode = volLogic.CreateAndAddLabelVolume(slicer.mrmlScene, vn, vn.GetName() + "-label")
     # select label volume
@@ -899,23 +899,23 @@ class NeedleFinderWidget:
     self.initTableViewControlPoints()  # init the report table
 
     # Lauren's feature request: set mainly unused coronal view to sagittal to display ground truth bitmap image (if available)
-    # Usage after fresh slicer start: 1. Load scene and 2. reference jpg. 3. Then open NeedleFinder from Modules selector
-    vnJPG = slicer.util.getNode("Case *")  # the naming convention for the ground truth JPG files: "Case XXX.jpg"
-    if vnJPG:
-      print "showing ground 2d image truth in green view"
-      # show JPG image if available
-      sw = slicer.app.layoutManager().sliceWidget("Green")
-      cn = sw.mrmlSliceCompositeNode()
-      cn.SetBackgroundVolumeID(vnJPG.GetID())
-      slicer.app.layoutManager().sliceWidget("Green").sliceLogic().GetBackgroundLayer().Modified()
-      sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
-      if sGreen == None :
-        sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
-      # set to axial view
-      sGreen.SetSliceVisible(0)
-      sGreen.SetOrientationToAxial()
-      sw.fitSliceToBackground()
-      sGreen.Modified()
+    # # Usage after fresh slicer start: 1. Load scene and 2. reference jpg. 3. Then open NeedleFinder from Modules selector
+    # vnJPG = slicer.util.getNode("Case *")  # the naming convention for the ground truth JPG files: "Case XXX.jpg"
+    # if vnJPG:
+    #   print "showing ground 2d image truth in green view"
+    #   # show JPG image if available
+    #   sw = slicer.app.layoutManager().sliceWidget("Green")
+    #   cn = sw.mrmlSliceCompositeNode()
+    #   cn.SetBackgroundVolumeID(vnJPG.GetID())
+    #   slicer.app.layoutManager().sliceWidget("Green").sliceLogic().GetBackgroundLayer().Modified()
+    #   sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
+    #   if sGreen == None :
+    #     sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
+    #   # set to axial view
+    #   sGreen.SetSliceVisible(0)
+    #   sGreen.SetOrientationToAxial()
+    #   sw.fitSliceToBackground()
+    #   sGreen.Modified()
 
     self.onResetParameters()
     self.setupShortcuts()
@@ -5127,7 +5127,11 @@ class NeedleFinderLogic:
               ijk[i] = int(round(lijkM[iTStep][i]))
 
             # first, test if points are in the image space
-            if ijk[0] < ivDims[0] and ijk[0] > 0 and  ijk[1] < ivDims[1] and ijk[1] > 0 and ijk[2] < ivDims[2] and ijk[2] > 0:
+            iRadiusNeedle = int(round(iRadiusNeedle_mm / float(fvSpacing[0])))
+            iRadiusNeedleCorner = int(round((iRadiusNeedle_mm / float(fvSpacing[0]) / 1.414)))
+            lim = max(iRadiusNeedle, iRadiusNeedleCorner) + 1
+
+            if ijk[0] < ivDims[0] - lim and ijk[0] > lim and  ijk[1] < ivDims[1] - lim and ijk[1] > lim and ijk[2] < ivDims[2] and ijk[2] > 0:
 
               dCenter = imgData.GetScalarComponentAsDouble(ijk[0], ijk[1], ijk[2], 0)
               fTotal += dCenter
@@ -5155,11 +5159,11 @@ class NeedleFinderLogic:
                 fTotal += 8 * dCenter - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8) * iGradientPonderation
               #fi gradient
               # >>>>>>>>>>>>>>>>>>>>>> exp.02
-              if imgLabelData:
-                fLabel = imgLabelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0)
-                if fLabel and fLabel < 300:
-                  fTotal -= 10000
-                if conesColor: imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, conesColor) #mark the search cones in fLabel volume
+              # if imgLabelData:
+              #   fLabel = imgLabelData.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0)
+              #   if fLabel and fLabel < 300:
+              #     fTotal -= 10000
+              #   if conesColor: imgLabelData.SetScalarComponentFromFloat(ijk[0], ijk[1], ijk[2], 0, conesColor) #mark the search cones in fLabel volume
               # <<<<<<<<<<<<<<<<<<<<
             #fi points in image space
           #rof iTStep
@@ -7940,45 +7944,48 @@ class NeedleFinderLogic:
     maxVal2 = max(pt1[2], pt2[2])
     valueBase = max(minVal1, minVal2)
 
-    # truncate polydatas
-    truncatedPolydata1 = self.clipPolyData(node1, valueBase)
-    truncatedPolydata2 = self.clipPolyData(node2, valueBase)
+    if polydata1.GetNumberOfPoints() > 100 and polydata2.GetNumberOfPoints() > 100:
+      # truncate polydatas
+      truncatedPolydata1 = self.clipPolyData(node1, valueBase)
+      truncatedPolydata2 = self.clipPolyData(node2, valueBase)
 
-    cellId = vtk.mutable(1)
-    subid = vtk.mutable(1)
-    dist = vtk.mutable(1)
-    cl2 = vtk.vtkCellLocator()
-    cl2.SetDataSet(truncatedPolydata2)
-    cl2.BuildLocator()
-    # Hausforff 1 -> 2
-    minima = []
-    for i in range(int(nb1 / float(10))):
-      pt = [0, 0, 0]
-      polydata1.GetPoint(10 * i, pt)
-      closest = [0, 0, 0]
-      cl2.FindClosestPoint(pt, closest, cellId, subid, dist)
-      if abs(closest[2] - pt[2]) <= 1:
-        minima.append(self.distance(pt, closest))
-      else:
-          minima.append(0)
-    hausdorff12 = max(minima)
+      if truncatedPolydata1.GetNumberOfPoints()>100 and truncatedPolydata2.GetNumberOfPoints()>100:
 
-    # Hausforff 2 -> 1
-    minima = []
-    cl1 = vtk.vtkCellLocator()
-    cl1.SetDataSet(truncatedPolydata1)
-    cl1.BuildLocator()
-    for i in range(int(nb2 / float(10))):
-      pt = [0, 0, 0]
-      polydata2.GetPoint(10 * i, pt)
-      closest = [0, 0, 0]
-      cl1.FindClosestPoint(pt, closest, cellId, subid, dist)
-      if abs(closest[2] - pt[2]) <= 1:
-        minima.append(self.distance(pt, closest))
-      else:
-          minima.append(0)
-    hausdorff21 = max(minima)
-    return max(hausdorff12, hausdorff21)
+        cellId = vtk.mutable(1)
+        subid = vtk.mutable(1)
+        dist = vtk.mutable(1)
+        cl2 = vtk.vtkCellLocator()
+        cl2.SetDataSet(truncatedPolydata2)
+        cl2.BuildLocator()
+        # Hausforff 1 -> 2
+        minima = []
+        for i in range(int(nb1 / float(10))):
+          pt = [0, 0, 0]
+          polydata1.GetPoint(10 * i, pt)
+          closest = [0, 0, 0]
+          cl2.FindClosestPoint(pt, closest, cellId, subid, dist)
+          if abs(closest[2] - pt[2]) <= 1:
+            minima.append(self.distance(pt, closest))
+          else:
+              minima.append(0)
+        hausdorff12 = max(minima)
+
+        # Hausforff 2 -> 1
+        minima = []
+        cl1 = vtk.vtkCellLocator()
+        cl1.SetDataSet(truncatedPolydata1)
+        cl1.BuildLocator()
+        for i in range(int(nb2 / float(10))):
+          pt = [0, 0, 0]
+          polydata2.GetPoint(10 * i, pt)
+          closest = [0, 0, 0]
+          cl1.FindClosestPoint(pt, closest, cellId, subid, dist)
+          if abs(closest[2] - pt[2]) <= 1:
+            minima.append(self.distance(pt, closest))
+          else:
+              minima.append(0)
+        hausdorff21 = max(minima)
+        return max(hausdorff12, hausdorff21)
 
   def hausdorffDistance13(self, id1, id2):
     """MICCAI13 Version
@@ -8090,7 +8097,7 @@ class NeedleFinderLogic:
     for ni in nodes:
       for nj in nodes:
         try:
-          if ni != nj and self.distTipToNeedle(ni, nj) < 1:
+          if ni != nj and self.distTipToNeedle(ni, nj) < 1.5:
             node = slicer.util.getNode(ni)
             slicer.mrmlScene.RemoveNode(node)
             print("*"*80)
@@ -8225,12 +8232,12 @@ class NeedleFinderLogic:
       if 'auto-seg' in node.GetName():
         dist = []
         polydata = node.GetPolyData()
-        if polydata is not None:
+        if polydata is not None and polydata.GetNumberOfPoints() > 100:
           for nthNode2 in range(nbNode):
             node2 = slicer.mrmlScene.GetNthNodeByClass(nthNode2, 'vtkMRMLModelNode')
             if 'manual-seg' in node2.GetName():
               polydata2 = node2.GetPolyData()
-              if polydata2 is not None and polydata2.GetNumberOfPoints() > 100 and polydata.GetNumberOfPoints() > 100:
+              if polydata2 is not None and polydata2.GetNumberOfPoints() > 100:
                 tipDistance = self.distTip(int(node.GetID().strip('vtkMRMLModelNode')) , int(node2.GetID().strip('vtkMRMLModelNode')))
                 dist.append([tipDistance, node2.GetID(), node2.GetName()])
                 # print tipDistance
@@ -8241,6 +8248,8 @@ class NeedleFinderLogic:
             found.append(node.GetID())
             node.GetDisplayNode().SetSliceIntersectionVisibility(1)
     # print result
+    print('NeedleMatching finished')
+
     return result
 
   def setAllNeedleTubesAsValidationNeedles(self):
@@ -8313,6 +8322,7 @@ class NeedleFinderLogic:
     """
     # productive
     profprint()
+    print('clipping ', node.GetName())
     # We clip with an implicit function. Here we use a plane positioned near
     # the center of the cow model and oriented at an arbitrary angle.
     plane = vtk.vtkPlane()
@@ -8330,21 +8340,21 @@ class NeedleFinderLogic:
     clipper.SetValue(value)
     clipper.Update()
     polyData = clipper.GetOutput()
-    if 1 == 1:
-        scene = slicer.mrmlScene
-        model = slicer.vtkMRMLModelNode()
-        model.SetScene(scene)
-        model.SetAndObservePolyData(polyData)
-        # ## Create display node
-        modelDisplay = slicer.vtkMRMLModelDisplayNode()
-        modelDisplay.SetScene(scene)
-        scene.AddNode(modelDisplay)
-        model.SetAndObserveDisplayNodeID(modelDisplay.GetID())
-        # ## Add to scene
-        modelDisplay.SetInputPolyDataConnection(model.GetPolyDataConnection())
-        scene.AddNode(model)
-    if visible != 1:
-        scene.RemoveNode(model)
+    # if 1 == 1:
+    #     scene = slicer.mrmlScene
+    #     model = slicer.vtkMRMLModelNode()
+    #     model.SetScene(scene)
+    #     model.SetAndObservePolyData(polyData)
+    #     # ## Create display node
+    #     modelDisplay = slicer.vtkMRMLModelDisplayNode()
+    #     modelDisplay.SetScene(scene)
+    #     scene.AddNode(modelDisplay)
+    #     model.SetAndObserveDisplayNodeID(modelDisplay.GetID())
+    #     # ## Add to scene
+    #     modelDisplay.SetInputPolyDataConnection(model.GetPolyDataConnection())
+    #     scene.AddNode(model)
+    # if visible != 1:
+    #     scene.RemoveNode(model)
 
     return polyData
 
