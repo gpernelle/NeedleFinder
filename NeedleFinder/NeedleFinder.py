@@ -1109,14 +1109,13 @@ class NeedleFinderWidget:
         """
         # productive
         profprint()
-        if self.table == None:
+        if self.table is None:
             # self.keys = ("#")
             # self.keys = ("#","Round" ,"Reliability")
             self.keys = "#"
-            self.labelStats = {}
-            self.labelStats["Labels"] = []
+            self.labelStats = {"Labels": []}
             self.items = []
-            if self.model == None:
+            if self.model is None:
                 self.model = qt.QStandardItemModel()
                 self.model.setColumnCount(5)
                 self.model.setHeaderData(0, 1, "")
@@ -1127,18 +1126,13 @@ class NeedleFinderWidget:
                 self.model.setHeaderData(3, 1, "Reformat")
                 self.model.setHeaderData(4, 1, "Comments")
                 # self.model.setStrechLastSection(True)
-                if self.view == None:
+                if self.view is None:
                     self.view = qt.QTableView()
                     self.view.setMinimumHeight(300)
                     self.view.sortingEnabled = True
                     self.view.verticalHeader().visible = False
                     self.view.horizontalHeader().setStretchLastSection(True)
 
-                # col = 1
-                # for k in self.keys:
-                #   # self.view.setColumnWidth(col,15*len(k))
-                #   # self.model.setHeaderData(col,1,k)
-                #   col += 1
                 self.view.setModel(self.model)
                 self.view.setColumnWidth(0, 18)
                 self.view.setColumnWidth(1, 58)
@@ -1160,13 +1154,13 @@ class NeedleFinderWidget:
         """
         # productive
         profprint()
-        if self.tableCTL == None:
+        if self.tableCTL is None:
             self.keysCTL = "#"
             self.labelStatsCTL = {}
             self.labelStatsCTL["Labels"] = []
             self.labelStatsCTL["ID"] = []
             self.itemsCTL = []
-            if self.modelCTL == None:
+            if self.modelCTL is None:
                 self.modelCTL = qt.QStandardItemModel()
                 self.modelCTL.setColumnCount(5)
                 self.modelCTL.setHeaderData(0, 1, "")
@@ -1176,7 +1170,7 @@ class NeedleFinderWidget:
                 self.modelCTL.setHeaderData(3, 1, "Delete")
                 self.modelCTL.setHeaderData(4, 1, "Reformat")
                 self.modelCTL.setHeaderData(5, 1, "Comments")
-                if self.viewCTL == None:
+                if self.viewCTL is None:
                     self.viewCTL = qt.QTableView()
                     self.viewCTL.setMinimumHeight(300)
                     self.viewCTL.sortingEnabled = True
@@ -1225,15 +1219,15 @@ class NeedleFinderWidget:
             scGrn.setLabelMapOpacity(0.5)
             # enable label map outline display mode
             sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
-            if sRed == None:
+            if sRed is None:
                 sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode1")
             sRed.SetUseLabelOutline(1)
             sYel = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
-            if sYel == None:
+            if sYel is None:
                 sYel = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
             sYel.SetUseLabelOutline(1)
             sGrn = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
-            if sGrn == None:
+            if sGrn is None:
                 sGrn = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode3")
             sGrn.SetUseLabelOutline(1)
         self.editorWidget.setMasterNode(vn)
@@ -1768,7 +1762,7 @@ class NeedleFinderWidget:
         #   cn.SetBackgroundVolumeID(vnJPG.GetID())
         #   slicer.app.layoutManager().sliceWidget("Green").sliceLogic().GetBackgroundLayer().Modified()
         #   sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
-        #   if sGreen == None :
+        #   if sGreen is None :
         #     sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
         #   # set to axial view
         #   sGreen.SetSliceVisible(0)
@@ -2231,7 +2225,6 @@ class NeedleFinderWidget:
         # productive #frequent #event-handler
         if frequent:
             profprint()
-        # print event
         widget = slicer.modules.NeedleFinderWidget
         logic = slicer.modules.NeedleFinderWidget.logic
         # GET mouse position
@@ -2377,7 +2370,6 @@ class NeedleFinderWidget:
                                             labelArray[
                                                 kx, jx, ix
                                             ] = 0  # delete old chip?
-                                        # labelArray[kx,jx,ix]=306 # display in label volume for debugging
                                 if not midPtCtr:
                                     print(
                                         "empty slice found ijkTipEstimate=",
@@ -2582,7 +2574,7 @@ class NeedleFinderWidget:
 
             needleNumber = self.logic.assignNeedle(ras)
             print("needlenumber to assign: ", needleNumber)
-            if needleNumber == None:
+            if needleNumber is None:
                 needleNumber = max(self.logic.findNeedles(all=1)) + 1
 
             ijk = self.logic.ras2ijk(ras)
@@ -2655,8 +2647,6 @@ class NeedleFinderWidget:
             )
             imageData = volumeNode.GetImageData()
             spacing = volumeNode.GetSpacing()
-            # ijk=self.ras2ijk(ras)
-            # self.t0=time.clock()
             self.logic.addManualTip(ras)
 
     def onSave(self):
@@ -2820,17 +2810,12 @@ class NeedleFinderLogic:
             if fnmatch.fnmatch(file, "*.acsv"):
                 with open(path + file) as f:
                     content = f.readlines()
-                    # print content
                     s = content[-1]
-                    # print s
                     sArray = s.split("|")
-                    # print sArray
                     # read filename
                     fs = file.split(".")
-                    # print fs
                     fss = fs[1].split("-")
                     if len(fss) > 1:
-                        # print fss
                         try:
                             coord = np.array(
                                 [
@@ -2847,28 +2832,6 @@ class NeedleFinderLogic:
         pointList = np.array(pointList)
 
         self.deleteDuplicateMarkers()
-
-        # get fiducial nodes from scene file ---> May crash slicer
-        # if len(pointList) == 0:
-        #   pointList = []
-        #   nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLAnnotationFiducialNode')
-        #   nbNodes = nodes.GetNumberOfItems()
-        #
-        #   for i in range(nbNodes):
-        #     try:
-        #       node = nodes.GetItemAsObject(i)
-        #       name = node.GetName()
-        #       name = name.strip('.')
-        #       nameArray = name.split('-')
-        #       coord = [0,0,0]
-        #       try:
-        #         node.GetFiducialCoordinates(coord)
-        #         val = [int(nameArray[0]), int(nameArray[1]), coord[0], coord[1], coord[2] ]
-        #         pointList.append(val)
-        #       except:
-        #         logprint(msg = 'cannot add fid to list')
-        #     except:
-        #       logprint(msg = 'cannot access node')
 
         for point in pointList:
             self.placeNeedleShaftEvalMarker(
@@ -2987,7 +2950,7 @@ class NeedleFinderLogic:
                 dNode = node.GetDisplayNode()
                 nth = node.GetAttribute("nth")
                 dNode.SetDescription(nth)
-                if self.observerTags.get(nth) == None:
+                if self.observerTags.get(nth) is None:
                     self.observerTags[nth] = [
                         dNode.AddObserver("ModifiedEvent", self.followVisibility)
                     ]
@@ -3023,7 +2986,7 @@ class NeedleFinderLogic:
         if not volumeNode:
             print("no volume node")
             return False
-        if volumeNode.GetImageData() == None:
+        if volumeNode.GetImageData() is None:
             print("no image data")
             return False
         return True
@@ -3179,13 +3142,12 @@ class NeedleFinderLogic:
         modelNode = slicer.util.getNode("vtkMRMLModelNode" + str(ID))
         displayNode = modelNode.GetModelDisplayNode()
         nVisibility = displayNode.GetVisibility()
-        # print nVisibility
         if nVisibility:
             displayNode.SliceIntersectionVisibilityOff()
             displayNode.SetVisibility(0)
             # also turn off yellow slice
             sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
-            if sYellow == None:
+            if sYellow is None:
                 sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
             sYellow.SetSliceVisible(0)
             reformatLogic = slicer.vtkSlicerReformatLogic()
@@ -3210,9 +3172,8 @@ class NeedleFinderLogic:
             polyData.GetPoint(nb - 1, tip)
             polyData.GetPoint(0, base)
             a, b, c = tip[0] - base[0], tip[1] - base[1], tip[2] - base[2]
-            # print a,b,c
             sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
-            if sYellow == None:
+            if sYellow is None:
                 sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
             reformatLogic = slicer.vtkSlicerReformatLogic()
             sYellow.SetSliceVisible(1)
@@ -3254,7 +3215,7 @@ class NeedleFinderLogic:
             if 20 * i < nb:
                 pt = [0, 0, 0]
                 polydata.GetPoint(20 * i, pt)
-                if (pt[2] - Z) ** 2 < minZ or minZ == None:
+                if (pt[2] - Z) ** 2 < minZ or minZ is None:
                     minZ = (pt[2] - Z) ** 2
                     bestNB = 20 * i
         hole = self.setNeedleCoordinates()
@@ -3263,7 +3224,7 @@ class NeedleFinderLogic:
         polydata.GetPoint(bestNB, A)
         for j in range(63):
             delta = ((hole[0][j] - (A[0])) ** 2 + (hole[1][j] - A[1]) ** 2) ** (0.5)
-            if delta < mindist or mindist == None:
+            if delta < mindist or mindist is None:
                 bestmatch = j
                 mindist = delta
 
@@ -3364,13 +3325,9 @@ class NeedleFinderLogic:
         # ??? i suppose here is a bug:
         print("modelNodes: ", modelNodes)
         print("self.ContourNode: ", self.contourNode)
-        #!!! self.contourNode is None
-
-        # bugfix>>>>
         modelNode = slicer.vtkMRMLModelNode()
         self.contourNode = modelNode.GetID()
-        # print 'self.ContourNode: ', self.contourNode
-        # <<<bugfix
+
 
         # contourNode = slicer.util.getNode(self.contourNode)
         # print 'contourNode: ',contourNode
@@ -3566,7 +3523,7 @@ class NeedleFinderLogic:
         if frequent:
             profprint()
         m = vtk.vtkMatrix4x4()
-        if volumeNode == None:
+        if volumeNode is None:
             volumeNode = (
                 slicer.app.layoutManager()
                 .sliceWidget("Red")
@@ -3596,7 +3553,7 @@ class NeedleFinderLogic:
         if frequent:
             profprint()
         m = vtk.vtkMatrix4x4()
-        if volumeNode == None:
+        if volumeNode is None:
             volumeNode = (
                 slicer.app.layoutManager()
                 .sliceWidget("Red")
@@ -3830,8 +3787,8 @@ class NeedleFinderLogic:
         pointName = "." + str(needleNumber) + "-" + str(stepValue)
         pointName2 = "." + str(needleNumber) + "-" + str(stepValue) + "\r"
         if (
-            slicer.util.getNode(pointName) == None
-            and slicer.util.getNode(pointName2) == None
+            slicer.util.getNode(pointName) is None
+            and slicer.util.getNode(pointName2) is None
             and createPoint == 1
         ):
             print("creating fiducial point...")
@@ -6114,7 +6071,7 @@ class NeedleFinderLogic:
         A = [int(A[0]), int(A[1]), int(A[2])]
         if axialSegmentationLimit != None:
             lenghtNeedle = abs(A[2] - axialSegmentationLimit) * 1.15 * spacing[2]
-        elif axialSegmentationLimit == None and widget.maxLength.isChecked():
+        elif axialSegmentationLimit is None and widget.maxLength.isChecked():
             axialSegmentationLimit = 0
             lenghtNeedle = abs(A[2] - axialSegmentationLimit) * 1.15 * spacing[2]
         else:
@@ -8267,7 +8224,7 @@ class NeedleFinderLogic:
 
         if axialSegmentationLimit != None:
             lenghtNeedle = abs(A[2] - axialSegmentationLimit) * 1.15 * spacing[2]
-        elif axialSegmentationLimit == None and widget.maxLength.isChecked():
+        elif axialSegmentationLimit is None and widget.maxLength.isChecked():
             axialSegmentationLimit = 0
             lenghtNeedle = abs(A[2] - axialSegmentationLimit) * 1.15 * spacing[2]
         else:
@@ -9383,7 +9340,7 @@ class NeedleFinderLogic:
         # for node in nodes.values():
         # slicer.mrmlScene.RemoveNode(node)
         sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
-        if sYellow == None:
+        if sYellow is None:
             sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
         sYellow.SetSliceVisible(0)
         reformatLogic = slicer.vtkSlicerReformatLogic()
@@ -9645,15 +9602,15 @@ class NeedleFinderLogic:
             Z = coord[2]
 
             sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
-            if sRed == None:
+            if sRed is None:
                 sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode1")
 
             sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
-            if sYellow == None:
+            if sYellow is None:
                 sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
 
             sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
-            if sGreen == None:
+            if sGreen is None:
                 sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode3")
 
             mYellow = sYellow.GetSliceToRAS()
@@ -9698,15 +9655,15 @@ class NeedleFinderLogic:
                 Z = coord[2]
 
             sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
-            if sRed == None:
+            if sRed is None:
                 sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode1")
 
             sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
-            if sYellow == None:
+            if sYellow is None:
                 sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
 
             sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
-            if sGreen == None:
+            if sGreen is None:
                 sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode3")
 
             mYellow = sYellow.GetSliceToRAS()
@@ -10464,7 +10421,7 @@ class NeedleFinderLogic:
         widget = slicer.modules.NeedleFinderWidget
         scene = slicer.mrmlScene
         pNode = self.parameterNode()
-        if slicer.mrmlScene.GetNodeByID(pNode.GetParameter("baselineVolumeID")) == None:
+        if slicer.mrmlScene.GetNodeByID(pNode.GetParameter("baselineVolumeID")) is None:
             inputVolume = self.__volumeSelector.currentNode()
             inputVolumeID = self.__volumeSelector.currentNode().GetID()
         else:
@@ -10556,7 +10513,7 @@ class NeedleFinderLogic:
                         (self.p[0][j] - (self.base[i][0])) ** 2
                         + (self.p[1][j] - self.base[i][1]) ** 2
                     ) ** (0.5)
-                    if delta < mindist or mindist == None:
+                    if delta < mindist or mindist is None:
                         bestmatch = j
                         mindist = delta
 
@@ -10691,7 +10648,7 @@ class NeedleFinderLogic:
             displayNode = NeedleNode.GetModelDisplayNode()
             nVisibility = displayNode.GetVisibility()
 
-            if fiducialNode == None:
+            if fiducialNode is None:
                 displayNode.SetVisibility(1)
                 displayNode.SetOpacity(0.9)
                 polyData = NeedleNode.GetPolyData()
@@ -10958,7 +10915,7 @@ class NeedleFinderLogic:
         # research
         profprint()
         sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
-        if sGreen == None:
+        if sGreen is None:
             sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode3")
         reformatLogic = slicer.vtkSlicerReformatLogic()
         # sGreen.SetSliceVisible(0)
@@ -10974,7 +10931,7 @@ class NeedleFinderLogic:
         # research
         profprint()
         sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeYellow")
-        if sYellow == None:
+        if sYellow is None:
             sYellow = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode2")
         reformatLogic = slicer.vtkSlicerReformatLogic()
         sYellow.SetSliceVisible(0)
@@ -11001,7 +10958,7 @@ class NeedleFinderLogic:
             a, b, c = tip[0] - base[0], tip[1] - base[1], tip[2] - base[2]
 
             sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeGreen")
-            if sGreen == None:
+            if sGreen is None:
                 sGreen = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode3")
             reformatLogic = slicer.vtkSlicerReformatLogic()
             # sGreen.SetSliceVisible(1)
@@ -11187,7 +11144,7 @@ class NeedleFinderLogic:
         print("\n" * 10)
         profprint()
         widget = slicer.modules.NeedleFinderWidget
-        if needleNr == None:
+        if needleNr is None:
             self.deleteNeedleDetectionModelsFromScene()
         tips, names = self.returnTipsFromNeedleModels(offset=offset, center=not script)
         if needleNr != None:
@@ -12707,7 +12664,7 @@ class NeedleFinderLogic:
             fiducial.Initialize(slicer.mrmlScene)
 
         sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNodeRed")
-        if sRed == None:
+        if sRed is None:
             sRed = slicer.mrmlScene.GetNodeByID("vtkMRMLSliceNode1")
         # sRed.SetSliceVisible(1)
         m = sRed.GetSliceToRAS()
