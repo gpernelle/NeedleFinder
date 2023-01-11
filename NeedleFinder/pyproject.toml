@@ -1,0 +1,38 @@
+[tool.pytest.ini_options]
+addopts = "-p no:warnings --log-level=DEBUG"
+python_files = "*_test.py"
+
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+]
+
+[tool.black]
+line-length = 120
+target-version = ['py39']
+include = '\.pyi?$'
+exclude = '''
+
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.pytest_cache
+    | \.venv
+    | data_tfrecords
+    | docs
+    | scripts
+  )/
+  | foo.py           # example to exclude a file in
+                     # the root of the project
+)
+'''
+
+[tool.isort]
+known_third_party = []
+multi_line_output=3
+include_trailing_comma=true
+force_grid_wrap=0
+use_parentheses=true
+ensure_newline_before_comments=true
+line_length=120

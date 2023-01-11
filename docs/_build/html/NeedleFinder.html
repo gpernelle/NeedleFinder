@@ -5,12 +5,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
+
     <title>NeedleFinder module &mdash; NeedleFinder 1.0 documentation</title>
-    
+
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
+
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://c328740.ssl.cf1.rackcdn.com/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="NeedleFinder 1.0 documentation" href="index.html" /> 
+    <link rel="top" title="NeedleFinder 1.0 documentation" href="index.html" />
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -36,15 +36,15 @@
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="index.html">NeedleFinder 1.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">NeedleFinder 1.0 documentation</a> &raquo;</li>
       </ul>
-    </div>  
+    </div>
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
           <div class="body" role="main">
-            
+
   <div class="section" id="module-NeedleFinder">
 <span id="needlefinder-module"></span><h1>NeedleFinder module<a class="headerlink" href="#module-NeedleFinder" title="Permalink to this headline">¶</a></h1>
 <p><strong>NeedleFinder Documentation</strong></p>
@@ -477,7 +477,7 @@ factorial(n) with n&lt;0 is -factorial(abs(n))</p>
 <dl class="method">
 <dt id="NeedleFinder.NeedleFinderLogic.ijk2ras">
 <code class="descname">ijk2ras</code><span class="sig-paren">(</span><em>A</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.ijk2ras"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.ijk2ras" title="Permalink to this definition">¶</a></dt>
-<dd><p>Convert IJK coordinates to RAS coordinates. The transformation matrix is the one 
+<dd><p>Convert IJK coordinates to RAS coordinates. The transformation matrix is the one
 of the active volume on the red slice</p>
 </dd></dl>
 
@@ -502,11 +502,11 @@ Model and view for stats table</p>
 <dl class="method">
 <dt id="NeedleFinder.NeedleFinderLogic.needleDetectionThread">
 <code class="descname">needleDetectionThread</code><span class="sig-paren">(</span><em>A</em>, <em>imageData</em>, <em>colorVar</em>, <em>spacing</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.needleDetectionThread"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.needleDetectionThread" title="Permalink to this definition">¶</a></dt>
-<dd><p>From the needle tip, the algorithm looks for a direction maximizing the &#8220;needle likelihood&#8221; of a small segment in a conic region. 
-The second extremity of this segment is saved as a control point (in controlPoints), used later. 
-Then, this step is iterated, replacing the needle tip by the latest control point. 
-The height of the new conic region (stepsize) is increased as well as its base diameter (rMax) and its normal is collinear to the previous computed segment. (cf. C0) 
-NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip. 
+<dd><p>From the needle tip, the algorithm looks for a direction maximizing the &#8220;needle likelihood&#8221; of a small segment in a conic region.
+The second extremity of this segment is saved as a control point (in controlPoints), used later.
+Then, this step is iterated, replacing the needle tip by the latest control point.
+The height of the new conic region (stepsize) is increased as well as its base diameter (rMax) and its normal is collinear to the previous computed segment. (cf. C0)
+NbStepsNeedle iterations give NbStepsNeedle-1 control points, the last one being used as an extremity as well as the needle tip.
 From these NbStepsNeedle-1 control points and 2 extremities a Bezier curve is computed, approximating the needle path.
 ??? is this a threaded function -&gt; no it is not yet unfortunately, but the idea was to do it</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -631,7 +631,7 @@ and having the same length</p>
 <dl class="method">
 <dt id="NeedleFinder.NeedleFinderLogic.ras2ijk">
 <code class="descname">ras2ijk</code><span class="sig-paren">(</span><em>A</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.ras2ijk"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.ras2ijk" title="Permalink to this definition">¶</a></dt>
-<dd><p>Convert RAS coordinates to IJK coordinates. The transformation matrix is the one 
+<dd><p>Convert RAS coordinates to IJK coordinates. The transformation matrix is the one
 of the active volume on the red slice</p>
 </dd></dl>
 
@@ -694,7 +694,7 @@ of the active volume on the red slice</p>
 <dl class="method">
 <dt id="NeedleFinder.NeedleFinderLogic.selectCurrentAxialSlice">
 <code class="descname">selectCurrentAxialSlice</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/NeedleFinder.html#NeedleFinderLogic.selectCurrentAxialSlice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NeedleFinder.NeedleFinderLogic.selectCurrentAxialSlice" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get the K (of IJK) value of the current axial slice. 
+<dd><p>Get the K (of IJK) value of the current axial slice.
 Used to define the slice containing the template</p>
 </dd></dl>
 
@@ -1011,7 +1011,7 @@ Used to define the slice containing the template</p>
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="index.html">NeedleFinder 1.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">NeedleFinder 1.0 documentation</a> &raquo;</li>
       </ul>
     </div>
     <div class="footer" role="contentinfo">

@@ -16,4 +16,3 @@ slicerMacroBuildScriptedModule(
   SCRIPTS ${MODULE_PYTHON_SCRIPTS}
   RESOURCES ${MODULE_PYTHON_RESOURCES}
   )
-
