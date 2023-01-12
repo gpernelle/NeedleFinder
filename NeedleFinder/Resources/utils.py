@@ -56,7 +56,7 @@ def breakbox(text):
 
 
 def profprint(className=""):
-    if 1 or profiling:
+    if profiling:
         profString = f"{className}.{whosdaddy()} -----------------------"
         print(profString)
         if loggingInfos:
