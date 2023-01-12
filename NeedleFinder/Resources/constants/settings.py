@@ -1,7 +1,6 @@
 # global constants:
-profiling = True
-loggingInfos = False
-# if profiling: msgbox("turned on")
+profiling = False
+loggingInfos = True
 frequent = False
 MAXNEEDLES = (
     MAXCOL

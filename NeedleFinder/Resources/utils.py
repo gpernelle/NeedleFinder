@@ -14,6 +14,7 @@ def whosdaddy():
 def whosgranny():
     return inspect.stack()[3][3]
 
+
 def lineno():
     # Returns the current line number in our program
     return int(inspect.currentframe().f_back.f_lineno)
@@ -55,7 +56,7 @@ def breakbox(text):
 
 
 def profprint(className=""):
-    if profiling:
+    if 1 or profiling:
         profString = f"{className}.{whosdaddy()} -----------------------"
         print(profString)
         if loggingInfos:
