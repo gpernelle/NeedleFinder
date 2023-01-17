@@ -344,7 +344,7 @@ class NeedleFinderWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             )
         # select label volume
         if (
-                not script
+            not script
         ):  # TODO guess there is a bug here (at least while testing with parSearch): also changes the main volume!!
             selectionNode = slicer.app.applicationLogic().GetSelectionNode()
             selectionNode.SetReferenceActiveLabelVolumeID(self.labelMapNode.GetID())
@@ -1473,8 +1473,8 @@ class NeedleFinderWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
                             # labelArray[labelArray!=self.currentLabel] = 0 #slow, clear old chips
                             # TODO: replace this part by better tip estimation algo
                             for kx in range(
-                                    max(int(kxStart) - 0, 0),
-                                    min(int(kxStart + 20 / spcg[2]), shape[0]),
+                                max(int(kxStart) - 0, 0),
+                                min(int(kxStart + 20 / spcg[2]), shape[0]),
                             ):  # CONST 20mm
                                 print("kx", kx)
                                 # scan xy slice
@@ -1484,12 +1484,12 @@ class NeedleFinderWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
                                 )  # center of mass of pixels in a slice
                                 midPtCtr = 0
                                 for ix in range(
-                                        max(int(ixStart - 10 / spcg[0]), 0),
-                                        min(int(ixStart + 10 / spcg[0]), shape[2]),
+                                    max(int(ixStart - 10 / spcg[0]), 0),
+                                    min(int(ixStart + 10 / spcg[0]), shape[2]),
                                 ):  # CONST 10mm
                                     for jx in range(
-                                            max(int(jxStart - 10 / spcg[1]), 0),
-                                            min(int(jxStart + 10 / spcg[1]), shape[1]),
+                                        max(int(jxStart - 10 / spcg[1]), 0),
+                                        min(int(jxStart + 10 / spcg[1]), shape[1]),
                                     ):  # CONST 10mm
                                         # try: labelArray[kx,jx,ix]
                                         # except: print "range error ix,jx:", ix, jx
@@ -1502,9 +1502,9 @@ class NeedleFinderWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
                                             ijkMid += [ix, jx, kx]
                                             midPtCtr += 1
                                         if (
-                                                labelArray[kx, jx, ix]
-                                                and labelArray[kx, jx, ix]
-                                                != self.currentLabel
+                                            labelArray[kx, jx, ix]
+                                            and labelArray[kx, jx, ix]
+                                            != self.currentLabel
                                         ):
                                             labelArray[
                                                 kx, jx, ix
@@ -1569,7 +1569,7 @@ class NeedleFinderWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
                                     logic.ijk2ras(ijkTipEstimate)
                                 )
                         if (
-                                not tempFidNodes.GetNumberOfItems()
+                            not tempFidNodes.GetNumberOfItems()
                         ):  # create new ".tip? [Ctrl+y/n]" node
                             fiducial = self.createMarkup(
                                 name=".tip? [Ctrl+y/n/u]",
@@ -2165,7 +2165,7 @@ class NeedleFinderLogic:
             )
 
     def run(
-            self, inputVolume, outputVolume, enableScreenshots=0, screenshotScaleFactor=1
+        self, inputVolume, outputVolume, enableScreenshots=0, screenshotScaleFactor=1
     ):
         """
         Test: Run the actual algorithm
@@ -2196,8 +2196,8 @@ class NeedleFinderLogic:
         for modelNode in list(modelNodes.values()):
             print("for")
             if (
-                    modelNode.GetAttribute("nth") != None
-                    and modelNode.GetDisplayVisibility() == 1
+                modelNode.GetAttribute("nth") != None
+                and modelNode.GetDisplayVisibility() == 1
             ):
                 canContinue = 1
                 v.AddInputData(modelNode.GetPolyData())
@@ -2568,8 +2568,8 @@ class NeedleFinderLogic:
                 nthNode, "vtkMRMLMarkupsFiducialNode"
             )
             if (
-                    modelNode.GetAttribute("ValidationNeedle") == "1"
-                    and int(modelNode.GetAttribute("NeedleNumber")) == needleNumber
+                modelNode.GetAttribute("ValidationNeedle") == "1"
+                and int(modelNode.GetAttribute("NeedleNumber")) == needleNumber
             ):
                 if int(modelNode.GetAttribute("NeedleStep")) > stepValue:
                     stepValue = int(modelNode.GetAttribute("NeedleStep"))
@@ -2593,14 +2593,14 @@ class NeedleFinderLogic:
             )
             if lock:
                 if (
-                        modelNode.GetAttribute("ValidationNeedle") == "1"
-                        and int(modelNode.GetAttribute("NeedleNumber")) != needleNumber
+                    modelNode.GetAttribute("ValidationNeedle") == "1"
+                    and int(modelNode.GetAttribute("NeedleNumber")) != needleNumber
                 ):
                     modelNode.SetLocked(lock)
             else:
                 if (
-                        modelNode.GetAttribute("ValidationNeedle") == "1"
-                        and int(modelNode.GetAttribute("NeedleNumber")) == needleNumber
+                    modelNode.GetAttribute("ValidationNeedle") == "1"
+                    and int(modelNode.GetAttribute("NeedleNumber")) == needleNumber
                 ):
                     modelNode.SetLocked(lock)
 
@@ -2704,7 +2704,7 @@ class NeedleFinderLogic:
                     slicer.mrmlScene.RemoveNode(node)
 
     def placeNeedleShaftEvalMarker(
-            self, A, needleNumber, stepValue, type="ijk", createPoint=1
+        self, A, needleNumber, stepValue, type="ijk", createPoint=1
     ):
         """
         Add a fiducial point to the vtkMRMLScence, where the mouse click was triggered. The fiducial points reprents a control
@@ -2721,9 +2721,9 @@ class NeedleFinderLogic:
         pointName = "." + str(needleNumber) + "-" + str(stepValue)
         pointName2 = "." + str(needleNumber) + "-" + str(stepValue) + "\r"
         if (
-                slicer.util.getNode(pointName) is None
-                and slicer.util.getNode(pointName2) is None
-                and createPoint == 1
+            slicer.util.getNode(pointName) is None
+            and slicer.util.getNode(pointName2) is None
+            and createPoint == 1
         ):
             print("creating fiducial point...")
             # if createPoint == 1:
@@ -2835,19 +2835,19 @@ class NeedleFinderLogic:
 
         if needleNumber >= 1:
             Vx = (
-                    widget.obtuNeedleValueCtrPt[0][1][0]
-                    - widget.obtuNeedleValueCtrPt[0][0][0]
+                widget.obtuNeedleValueCtrPt[0][1][0]
+                - widget.obtuNeedleValueCtrPt[0][0][0]
             )
             Vy = (
-                    widget.obtuNeedleValueCtrPt[0][1][1]
-                    - widget.obtuNeedleValueCtrPt[0][0][1]
+                widget.obtuNeedleValueCtrPt[0][1][1]
+                - widget.obtuNeedleValueCtrPt[0][0][1]
             )
             Vz = (
-                    widget.obtuNeedleValueCtrPt[0][1][2]
-                    - widget.obtuNeedleValueCtrPt[0][0][2]
+                widget.obtuNeedleValueCtrPt[0][1][2]
+                - widget.obtuNeedleValueCtrPt[0][0][2]
             )
 
-            L = float(Vx ** 2 + Vy ** 2 + Vz ** 2) ** 0.5
+            L = float(Vx**2 + Vy**2 + Vz**2) ** 0.5
 
             E = self.ijk2ras(A)
             Ex = E[0] + 100 * Vx / L
@@ -2861,7 +2861,7 @@ class NeedleFinderLogic:
         widget.start(3)
 
     def objectiveFunction(
-            self, imageData, ijk, radiusNeedleParameter, spacing, gradientPonderation
+        self, imageData, ijk, radiusNeedleParameter, spacing, gradientPonderation
     ):
         """
         used by needleDetectionUPThread
@@ -2909,9 +2909,9 @@ class NeedleFinderLogic:
             )
 
             total = (
-                    center / float(5)
-                    - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / float(8))
-                    * gradientPonderation
+                center / float(5)
+                - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / float(8))
+                * gradientPonderation
             )
         else:
             total = center / float(5)
@@ -2919,7 +2919,7 @@ class NeedleFinderLogic:
         return total
 
     def objectiveFunctionLOG(
-            self, imageData, ijk, radiusNeedleParameter, spacing, gradientPonderation
+        self, imageData, ijk, radiusNeedleParameter, spacing, gradientPonderation
     ):
         """
         ??? used?
@@ -2969,7 +2969,7 @@ class NeedleFinderLogic:
             )
 
             total = center / float(5) - (
-                    (g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / float(8)
+                (g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / float(8)
             )
         else:
             total = center / float(5)
@@ -2985,16 +2985,16 @@ class NeedleFinderLogic:
     # ------------------------------------------------------------------------------
 
     def findTip(
-            self,
-            A,
-            imageData,
-            radiusNeedle,
-            coeff,
-            sigmaValue,
-            gradientPonderation,
-            X,
-            Y,
-            Z,
+        self,
+        A,
+        imageData,
+        radiusNeedle,
+        coeff,
+        sigmaValue,
+        gradientPonderation,
+        X,
+        Y,
+        Z,
     ):
         """
         Find tip
@@ -3034,10 +3034,10 @@ class NeedleFinderLogic:
                         )
 
                         totalTip += (
-                                v0 - ((v1 + v2 + v3 + v4) / float(4)) * gradientPonderation
+                            v0 - ((v1 + v2 + v3 + v4) / float(4)) * gradientPonderation
                         )
 
-                    rgauss = (i ** 2 + j ** 2 + k ** 2) ** 0.5
+                    rgauss = (i**2 + j**2 + k**2) ** 0.5
 
                     gaussianAttenuation = math.exp(
                         -((rgauss / float(10)) ** 2)
@@ -3152,20 +3152,20 @@ class NeedleFinderLogic:
             zd = z - zf
             zdd = 1 - zd
             i1 = (
-                    V.GetScalarComponentAsDouble(xf, yf, zf, 0) * zdd
-                    + V.GetScalarComponentAsDouble(xf, yf, zc, 0) * zd
+                V.GetScalarComponentAsDouble(xf, yf, zf, 0) * zdd
+                + V.GetScalarComponentAsDouble(xf, yf, zc, 0) * zd
             )
             i2 = (
-                    V.GetScalarComponentAsDouble(xf, yc, zf, 0) * zdd
-                    + V.GetScalarComponentAsDouble(xf, yc, zc, 0) * zd
+                V.GetScalarComponentAsDouble(xf, yc, zf, 0) * zdd
+                + V.GetScalarComponentAsDouble(xf, yc, zc, 0) * zd
             )
             j1 = (
-                    V.GetScalarComponentAsDouble(xc, yf, zf, 0) * zdd
-                    + V.GetScalarComponentAsDouble(xc, yf, zc, 0) * zd
+                V.GetScalarComponentAsDouble(xc, yf, zf, 0) * zdd
+                + V.GetScalarComponentAsDouble(xc, yf, zc, 0) * zd
             )
             j2 = (
-                    V.GetScalarComponentAsDouble(xc, yc, zf, 0) * zdd
-                    + V.GetScalarComponentAsDouble(xc, yc, zc, 0) * zd
+                V.GetScalarComponentAsDouble(xc, yc, zf, 0) * zdd
+                + V.GetScalarComponentAsDouble(xc, yc, zc, 0) * zd
             )
             w1 = i1 * (1 - yd) + i2 * yd
             w2 = j1 * (1 - yd) + j2 * yd
@@ -3177,14 +3177,14 @@ class NeedleFinderLogic:
         return value
 
     def needleDetectionAPI(
-            self,
-            args={},
-            tips=[],
-            imageData=None,
-            spacing=[1, 1, 1],
-            script=False,
-            names="",
-            segLimit=[],
+        self,
+        args={},
+        tips=[],
+        imageData=None,
+        spacing=[1, 1, 1],
+        script=False,
+        names="",
+        segLimit=[],
     ):
         """Ruibin: comment...
         Switches between the versions of the algorithm. For comparison tests.
@@ -3302,7 +3302,7 @@ class NeedleFinderLogic:
             )
 
     def needleDetectionThread(
-            self, tips=[], imageData=None, spacing=[1, 1, 1], script=False, names=""
+        self, tips=[], imageData=None, spacing=[1, 1, 1], script=False, names=""
     ):
         """Ruibin: comment...
         Switches between the versions of the algorithm. For comparison tests.
@@ -3412,16 +3412,16 @@ class NeedleFinderLogic:
             )
 
     def needleDetectionThread_RM(
-            self,
-            tips,
-            imgData,
-            imgLabelData,
-            lrasTempPoints,
-            fvSpacing,
-            bUp=False,
-            bScript=False,
-            names="",
-            tipOnly=False,
+        self,
+        tips,
+        imgData,
+        imgLabelData,
+        lrasTempPoints,
+        fvSpacing,
+        bUp=False,
+        bScript=False,
+        names="",
+        tipOnly=False,
     ):
         print("RM15____________________________Thread")
         u.profprint()
@@ -3632,27 +3632,27 @@ class NeedleFinderLogic:
                             wrongpositiontosend.append(WrongPosition[i][1])
                             for k in range(NumberOfWrongNeedles):
                                 if (
-                                        k != i
-                                        and WrongPosition[k][0] == WrongPosition[i][0]
+                                    k != i
+                                    and WrongPosition[k][0] == WrongPosition[i][0]
                                 ):
                                     wrongpositiontosend.append(WrongPosition[k][1])
                                     Counting[k] = 1
                             for k in range(NumberOfLastWrongNeedles):
                                 if (
-                                        LastWrongPositionsToSend[k][0]
-                                        == WrongPosition[i][0]
+                                    LastWrongPositionsToSend[k][0]
+                                    == WrongPosition[i][0]
                                 ):
                                     NumberOfRelated = (
-                                            len(LastWrongPositionsToSend[k]) - 1
+                                        len(LastWrongPositionsToSend[k]) - 1
                                     )
                                     for w in range(NumberOfRelated):
                                         wrongpositiontosend.append(
                                             LastWrongPositionsToSend[k][w + 1]
                                         )
                                         if (
-                                                LastWrongPositionsToSend[k][w + 1]
-                                                == WrongPosition[i][1]
-                                                and WrongReason[i] == 1
+                                            LastWrongPositionsToSend[k][w + 1]
+                                            == WrongPosition[i][1]
+                                            and WrongReason[i] == 1
                                         ):  # this means they stil cross each other, Punish!
                                             Punish = feedbackindex + 1
                             WrongPositionsToSend.append(wrongpositiontosend)
@@ -3733,14 +3733,14 @@ class NeedleFinderLogic:
         print("The Time of 15_RM:_________________________", time.clock() - t0)
 
     def needleRationalityProtect(
-            self,
-            OriginalControlPointsPackage,
-            OriginalControlPointsPackageIJK,
-            ControlPointsPackage,
-            ControlPointsPackageIJK,
-            OriginalWrongPositions,
-            imageData,
-            spacing,
+        self,
+        OriginalControlPointsPackage,
+        OriginalControlPointsPackageIJK,
+        ControlPointsPackage,
+        ControlPointsPackageIJK,
+        OriginalWrongPositions,
+        imageData,
+        spacing,
     ):
         """Ruibin: comment..."""
         print("Protection Start")
@@ -3794,9 +3794,9 @@ class NeedleFinderLogic:
         ]
         for i in range(NumberOfNeedles):
             tempmetric1 = 1 - (
-                    SingleDirection[i][0] * GlobalDirection[0]
-                    + SingleDirection[i][1] * GlobalDirection[1]
-                    + SingleDirection[i][2] * GlobalDirection[2]
+                SingleDirection[i][0] * GlobalDirection[0]
+                + SingleDirection[i][1] * GlobalDirection[1]
+                + SingleDirection[i][2] * GlobalDirection[2]
             )
             print("The ", i + 1, " slope_metric_1:", tempmetric1)
             SlopeMetric_1.append(tempmetric1)
@@ -3825,8 +3825,8 @@ class NeedleFinderLogic:
                         - ControlPointsPackage[i][j + 1][2],
                     ]
                     l1 = (
-                                 direction1[0] ** 2 + direction1[1] ** 2 + direction1[2] ** 2
-                         ) ** 0.5
+                        direction1[0] ** 2 + direction1[1] ** 2 + direction1[2] ** 2
+                    ) ** 0.5
                     direction2 = [
                         ControlPointsPackage[i][j + 1][0]
                         - ControlPointsPackage[i][j + 2][0],
@@ -3836,8 +3836,8 @@ class NeedleFinderLogic:
                         - ControlPointsPackage[i][j + 2][2],
                     ]
                     l2 = (
-                                 direction2[0] ** 2 + direction2[1] ** 2 + direction2[2] ** 2
-                         ) ** 0.5
+                        direction2[0] ** 2 + direction2[1] ** 2 + direction2[2] ** 2
+                    ) ** 0.5
                     if l1 != 0 and l2 != 0:
                         direction1 = [
                             direction1[0] / l1,
@@ -3850,9 +3850,9 @@ class NeedleFinderLogic:
                             direction2[2] / l2,
                         ]
                         temp = 1 - (
-                                direction1[0] * direction2[0]
-                                + direction1[1] * direction2[1]
-                                + direction1[2] * direction2[2]
+                            direction1[0] * direction2[0]
+                            + direction1[1] * direction2[1]
+                            + direction1[2] * direction2[2]
                         )
                         tempmetric2 += temp
             print("The ", i + 1, " curvature_metric_2:", tempmetric2)
@@ -3877,76 +3877,76 @@ class NeedleFinderLogic:
                         distance = 9999
                         if currentPoint[2] >= ControlPointsPackage[p][0][2]:
                             distance = (
-                                               (currentPoint[0] - ControlPointsPackage[p][0][0]) ** 2
-                                               + (currentPoint[1] - ControlPointsPackage[p][0][1]) ** 2
-                                               + (currentPoint[2] - ControlPointsPackage[p][0][2]) ** 2
-                                       ) ** 0.5
+                                (currentPoint[0] - ControlPointsPackage[p][0][0]) ** 2
+                                + (currentPoint[1] - ControlPointsPackage[p][0][1]) ** 2
+                                + (currentPoint[2] - ControlPointsPackage[p][0][2]) ** 2
+                            ) ** 0.5
                         elif (
-                                currentPoint[2]
-                                <= ControlPointsPackage[p][NumberOfPointsOnThatNeedle - 1][
-                                    2
-                                ]
+                            currentPoint[2]
+                            <= ControlPointsPackage[p][NumberOfPointsOnThatNeedle - 1][
+                                2
+                            ]
                         ):
                             distance = (
-                                               (
-                                                       currentPoint[0]
-                                                       - ControlPointsPackage[p][
-                                                           NumberOfPointsOnThatNeedle - 1
-                                                           ][0]
-                                               )
-                                               ** 2
-                                               + (
-                                                       currentPoint[1]
-                                                       - ControlPointsPackage[p][
-                                                           NumberOfPointsOnThatNeedle - 1
-                                                           ][1]
-                                               )
-                                               ** 2
-                                               + (
-                                                       currentPoint[2]
-                                                       - ControlPointsPackage[p][
-                                                           NumberOfPointsOnThatNeedle - 1
-                                                           ][2]
-                                               )
-                                               ** 2
-                                       ) ** 0.5
+                                (
+                                    currentPoint[0]
+                                    - ControlPointsPackage[p][
+                                        NumberOfPointsOnThatNeedle - 1
+                                    ][0]
+                                )
+                                ** 2
+                                + (
+                                    currentPoint[1]
+                                    - ControlPointsPackage[p][
+                                        NumberOfPointsOnThatNeedle - 1
+                                    ][1]
+                                )
+                                ** 2
+                                + (
+                                    currentPoint[2]
+                                    - ControlPointsPackage[p][
+                                        NumberOfPointsOnThatNeedle - 1
+                                    ][2]
+                                )
+                                ** 2
+                            ) ** 0.5
                         else:
                             for q in range(NumberOfPointsOnThatNeedle - 1):
                                 pointabove = ControlPointsPackage[p][q]
                                 pointbelow = ControlPointsPackage[p][q + 1]
                                 if pointabove[2] <= currentPoint[2]:
                                     h = (
-                                                (currentPoint[0] - pointabove[0]) ** 2
-                                                + (currentPoint[1] - pointabove[1]) ** 2
-                                                + (currentPoint[2] - pointabove[2]) ** 2
-                                        ) ** 0.5
+                                        (currentPoint[0] - pointabove[0]) ** 2
+                                        + (currentPoint[1] - pointabove[1]) ** 2
+                                        + (currentPoint[2] - pointabove[2]) ** 2
+                                    ) ** 0.5
                                 elif pointbelow[2] >= currentPoint[2]:
                                     h = (
-                                                (currentPoint[0] - pointbelow[0]) ** 2
-                                                + (currentPoint[1] - pointbelow[1]) ** 2
-                                                + (currentPoint[2] - pointbelow[2]) ** 2
-                                        ) ** 0.5
+                                        (currentPoint[0] - pointbelow[0]) ** 2
+                                        + (currentPoint[1] - pointbelow[1]) ** 2
+                                        + (currentPoint[2] - pointbelow[2]) ** 2
+                                    ) ** 0.5
                                 else:
                                     a = (
-                                                (pointabove[0] - currentPoint[0]) ** 2
-                                                + (pointabove[1] - currentPoint[1]) ** 2
-                                                + (pointabove[2] - currentPoint[2]) ** 2
-                                        ) ** 0.5
+                                        (pointabove[0] - currentPoint[0]) ** 2
+                                        + (pointabove[1] - currentPoint[1]) ** 2
+                                        + (pointabove[2] - currentPoint[2]) ** 2
+                                    ) ** 0.5
                                     b = (
-                                                (pointbelow[0] - currentPoint[0]) ** 2
-                                                + (pointbelow[1] - currentPoint[1]) ** 2
-                                                + (pointbelow[2] - currentPoint[2]) ** 2
-                                        ) ** 0.5
+                                        (pointbelow[0] - currentPoint[0]) ** 2
+                                        + (pointbelow[1] - currentPoint[1]) ** 2
+                                        + (pointbelow[2] - currentPoint[2]) ** 2
+                                    ) ** 0.5
                                     c = (
-                                                (pointabove[0] - pointbelow[0]) ** 2
-                                                + (pointabove[1] - pointbelow[1]) ** 2
-                                                + (pointabove[2] - pointbelow[2]) ** 2
-                                        ) ** 0.5
+                                        (pointabove[0] - pointbelow[0]) ** 2
+                                        + (pointabove[1] - pointbelow[1]) ** 2
+                                        + (pointabove[2] - pointbelow[2]) ** 2
+                                    ) ** 0.5
                                     hc = (a + b + c) / 2
                                     h = (
-                                            (hc * (hc - a) * (hc - b) * (hc - c)) ** 0.5
-                                            * 2
-                                            / c
+                                        (hc * (hc - a) * (hc - b) * (hc - c)) ** 0.5
+                                        * 2
+                                        / c
                                     )
                                 if h < distance:
                                     distance = h
@@ -3987,22 +3987,22 @@ class NeedleFinderLogic:
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex + 1][0]
-                                        - ControlPointsPackage[i][nearestPointIndex][0]
+                                    ControlPointsPackage[i][nearestPointIndex + 1][0]
+                                    - ControlPointsPackage[i][nearestPointIndex][0]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][0],
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex + 1][1]
-                                        - ControlPointsPackage[i][nearestPointIndex][1]
+                                    ControlPointsPackage[i][nearestPointIndex + 1][1]
+                                    - ControlPointsPackage[i][nearestPointIndex][1]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][1],
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex + 1][2]
-                                        - ControlPointsPackage[i][nearestPointIndex][2]
+                                    ControlPointsPackage[i][nearestPointIndex + 1][2]
+                                    - ControlPointsPackage[i][nearestPointIndex][2]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][2],
                             ]
@@ -4013,22 +4013,22 @@ class NeedleFinderLogic:
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex - 1][0]
-                                        - ControlPointsPackage[i][nearestPointIndex][0]
+                                    ControlPointsPackage[i][nearestPointIndex - 1][0]
+                                    - ControlPointsPackage[i][nearestPointIndex][0]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][0],
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex - 1][1]
-                                        - ControlPointsPackage[i][nearestPointIndex][1]
+                                    ControlPointsPackage[i][nearestPointIndex - 1][1]
+                                    - ControlPointsPackage[i][nearestPointIndex][1]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][1],
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex - 1][2]
-                                        - ControlPointsPackage[i][nearestPointIndex][2]
+                                    ControlPointsPackage[i][nearestPointIndex - 1][2]
+                                    - ControlPointsPackage[i][nearestPointIndex][2]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][2],
                             ]
@@ -4039,22 +4039,22 @@ class NeedleFinderLogic:
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex + 1][0]
-                                        - ControlPointsPackage[i][nearestPointIndex][0]
+                                    ControlPointsPackage[i][nearestPointIndex + 1][0]
+                                    - ControlPointsPackage[i][nearestPointIndex][0]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][0],
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex + 1][1]
-                                        - ControlPointsPackage[i][nearestPointIndex][1]
+                                    ControlPointsPackage[i][nearestPointIndex + 1][1]
+                                    - ControlPointsPackage[i][nearestPointIndex][1]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][1],
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex + 1][2]
-                                        - ControlPointsPackage[i][nearestPointIndex][2]
+                                    ControlPointsPackage[i][nearestPointIndex + 1][2]
+                                    - ControlPointsPackage[i][nearestPointIndex][2]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][2],
                             ]
@@ -4063,22 +4063,22 @@ class NeedleFinderLogic:
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex - 1][0]
-                                        - ControlPointsPackage[i][nearestPointIndex][0]
+                                    ControlPointsPackage[i][nearestPointIndex - 1][0]
+                                    - ControlPointsPackage[i][nearestPointIndex][0]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][0],
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex - 1][1]
-                                        - ControlPointsPackage[i][nearestPointIndex][1]
+                                    ControlPointsPackage[i][nearestPointIndex - 1][1]
+                                    - ControlPointsPackage[i][nearestPointIndex][1]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][1],
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex - 1][2]
-                                        - ControlPointsPackage[i][nearestPointIndex][2]
+                                    ControlPointsPackage[i][nearestPointIndex - 1][2]
+                                    - ControlPointsPackage[i][nearestPointIndex][2]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][2],
                             ]
@@ -4089,39 +4089,39 @@ class NeedleFinderLogic:
                         currentPoint = neighbour[n]
                         if currentPoint[2] >= ControlPointsPackage[j][0][2]:
                             hmin = (
-                                           (currentPoint[0] - ControlPointsPackage[j][0][0]) ** 2
-                                           + (currentPoint[1] - ControlPointsPackage[j][0][1]) ** 2
-                                           + (currentPoint[2] - ControlPointsPackage[j][0][2]) ** 2
-                                   ) ** 0.5
+                                (currentPoint[0] - ControlPointsPackage[j][0][0]) ** 2
+                                + (currentPoint[1] - ControlPointsPackage[j][0][1]) ** 2
+                                + (currentPoint[2] - ControlPointsPackage[j][0][2]) ** 2
+                            ) ** 0.5
                         elif (
-                                currentPoint[2]
-                                <= ControlPointsPackage[j][NumberOfPointsOnThatNeedle - 1][
-                                    2
-                                ]
+                            currentPoint[2]
+                            <= ControlPointsPackage[j][NumberOfPointsOnThatNeedle - 1][
+                                2
+                            ]
                         ):
                             hmin = (
-                                           (
-                                                   currentPoint[0]
-                                                   - ControlPointsPackage[j][
-                                                       NumberOfPointsOnThatNeedle - 1
-                                                       ][0]
-                                           )
-                                           ** 2
-                                           + (
-                                                   currentPoint[1]
-                                                   - ControlPointsPackage[j][
-                                                       NumberOfPointsOnThatNeedle - 1
-                                                       ][1]
-                                           )
-                                           ** 2
-                                           + (
-                                                   currentPoint[2]
-                                                   - ControlPointsPackage[j][
-                                                       NumberOfPointsOnThatNeedle - 1
-                                                       ][2]
-                                           )
-                                           ** 2
-                                   ) ** 0.5
+                                (
+                                    currentPoint[0]
+                                    - ControlPointsPackage[j][
+                                        NumberOfPointsOnThatNeedle - 1
+                                    ][0]
+                                )
+                                ** 2
+                                + (
+                                    currentPoint[1]
+                                    - ControlPointsPackage[j][
+                                        NumberOfPointsOnThatNeedle - 1
+                                    ][1]
+                                )
+                                ** 2
+                                + (
+                                    currentPoint[2]
+                                    - ControlPointsPackage[j][
+                                        NumberOfPointsOnThatNeedle - 1
+                                    ][2]
+                                )
+                                ** 2
+                            ) ** 0.5
                         else:
                             hmin = 9999
                             for q in range(NumberOfPointsOnThatNeedle - 1):
@@ -4129,37 +4129,37 @@ class NeedleFinderLogic:
                                 pointbelow = ControlPointsPackage[j][q + 1]
                                 if pointabove[2] <= currentPoint[2]:
                                     h = (
-                                                (currentPoint[0] - pointabove[0]) ** 2
-                                                + (currentPoint[1] - pointabove[1]) ** 2
-                                                + (currentPoint[2] - pointabove[2]) ** 2
-                                        ) ** 0.5
+                                        (currentPoint[0] - pointabove[0]) ** 2
+                                        + (currentPoint[1] - pointabove[1]) ** 2
+                                        + (currentPoint[2] - pointabove[2]) ** 2
+                                    ) ** 0.5
                                 elif pointbelow[2] >= currentPoint[2]:
                                     h = (
-                                                (currentPoint[0] - pointbelow[0]) ** 2
-                                                + (currentPoint[1] - pointbelow[1]) ** 2
-                                                + (currentPoint[2] - pointbelow[2]) ** 2
-                                        ) ** 0.5
+                                        (currentPoint[0] - pointbelow[0]) ** 2
+                                        + (currentPoint[1] - pointbelow[1]) ** 2
+                                        + (currentPoint[2] - pointbelow[2]) ** 2
+                                    ) ** 0.5
                                 else:
                                     a = (
-                                                (pointabove[0] - currentPoint[0]) ** 2
-                                                + (pointabove[1] - currentPoint[1]) ** 2
-                                                + (pointabove[2] - currentPoint[2]) ** 2
-                                        ) ** 0.5
+                                        (pointabove[0] - currentPoint[0]) ** 2
+                                        + (pointabove[1] - currentPoint[1]) ** 2
+                                        + (pointabove[2] - currentPoint[2]) ** 2
+                                    ) ** 0.5
                                     b = (
-                                                (pointbelow[0] - currentPoint[0]) ** 2
-                                                + (pointbelow[1] - currentPoint[1]) ** 2
-                                                + (pointbelow[2] - currentPoint[2]) ** 2
-                                        ) ** 0.5
+                                        (pointbelow[0] - currentPoint[0]) ** 2
+                                        + (pointbelow[1] - currentPoint[1]) ** 2
+                                        + (pointbelow[2] - currentPoint[2]) ** 2
+                                    ) ** 0.5
                                     c = (
-                                                (pointabove[0] - pointbelow[0]) ** 2
-                                                + (pointabove[1] - pointbelow[1]) ** 2
-                                                + (pointabove[2] - pointbelow[2]) ** 2
-                                        ) ** 0.5
+                                        (pointabove[0] - pointbelow[0]) ** 2
+                                        + (pointabove[1] - pointbelow[1]) ** 2
+                                        + (pointabove[2] - pointbelow[2]) ** 2
+                                    ) ** 0.5
                                     hc = (a + b + c) / 2
                                     h = (
-                                            (hc * (hc - a) * (hc - b) * (hc - c)) ** 0.5
-                                            * 2
-                                            / c
+                                        (hc * (hc - a) * (hc - b) * (hc - c)) ** 0.5
+                                        * 2
+                                        / c
                                     )
                                 if h < hmin:
                                     hmin = h
@@ -4216,26 +4216,26 @@ class NeedleFinderLogic:
                         interactreason = 2
 
                     elif (
-                            SlopeMetric_1[i] > SlopeMetric_1[j] + 0.02
-                            or CurvatureMetric[i] > CurvatureMetric[j] + 0.015
+                        SlopeMetric_1[i] > SlopeMetric_1[j] + 0.02
+                        or CurvatureMetric[i] > CurvatureMetric[j] + 0.015
                     ):
                         interactpair = [i, j]
                         interactreason = 1
                     elif (
-                            SlopeMetric_1[i] + 0.02 < SlopeMetric_1[j]
-                            or CurvatureMetric[i] + 0.015 < CurvatureMetric[j]
+                        SlopeMetric_1[i] + 0.02 < SlopeMetric_1[j]
+                        or CurvatureMetric[i] + 0.015 < CurvatureMetric[j]
                     ):
                         interactpair = [j, i]
                         interactreason = 1
                     elif (
-                            SlopeMetric_1[i] > SlopeMetric_1[j] + 0.01
-                            and CurvatureMetric[i] > CurvatureMetric[j] + 0.005
+                        SlopeMetric_1[i] > SlopeMetric_1[j] + 0.01
+                        and CurvatureMetric[i] > CurvatureMetric[j] + 0.005
                     ):
                         interactpair = [i, j]
                         interactreason = 1
                     elif (
-                            SlopeMetric_1[i] + 0.01 < SlopeMetric_1[j]
-                            and CurvatureMetric[i] + 0.005 < CurvatureMetric[j]
+                        SlopeMetric_1[i] + 0.01 < SlopeMetric_1[j]
+                        and CurvatureMetric[i] + 0.005 < CurvatureMetric[j]
                     ):  # one of the needles has a much higher slope or curvature
                         interactpair = [j, i]
                         interactreason = 1
@@ -4252,25 +4252,25 @@ class NeedleFinderLogic:
                             ControlPointsPackage[j][0][2] - NearestCoordinate[i][j][2],
                         ]
                         l1 = (
-                                     direction1[0] ** 2 + direction1[1] ** 2 + direction1[2] ** 2
-                             ) ** 0.5
+                            direction1[0] ** 2 + direction1[1] ** 2 + direction1[2] ** 2
+                        ) ** 0.5
                         l2 = (
-                                     direction2[0] ** 2 + direction2[1] ** 2 + direction2[2] ** 2
-                             ) ** 0.5
+                            direction2[0] ** 2 + direction2[1] ** 2 + direction2[2] ** 2
+                        ) ** 0.5
 
                         if (
-                                l1 < 1
-                                and ControlPointsPackage[j][0][2]
-                                > ControlPointsPackage[i][0][2]
-                                or l1 == 0
+                            l1 < 1
+                            and ControlPointsPackage[j][0][2]
+                            > ControlPointsPackage[i][0][2]
+                            or l1 == 0
                         ):
                             interactpair = [j, i]
                             interactreason = 2
                         elif (
-                                l2 < 1
-                                and ControlPointsPackage[i][0][2]
-                                > ControlPointsPackage[j][0][2]
-                                or l2 == 0
+                            l2 < 1
+                            and ControlPointsPackage[i][0][2]
+                            > ControlPointsPackage[j][0][2]
+                            or l2 == 0
                         ):
                             interactpair = [i, j]
                             interactreason = 2
@@ -4295,8 +4295,8 @@ class NeedleFinderLogic:
         NumberOfOriginalWrongPositions = len(OriginalWrongPositions)
         for i in range(NumberOfOriginalWrongPositions):
             if (
-                    CurvatureMetric[OriginalWrongPositions[i][0]] > 0.4
-                    or SlopeMetric_1[OriginalWrongPositions[i][0]] > 0.03
+                CurvatureMetric[OriginalWrongPositions[i][0]] > 0.4
+                or SlopeMetric_1[OriginalWrongPositions[i][0]] > 0.03
             ):
                 print("The ", OriginalWrongPositions[i][0] + 1, "needle is protected")
                 FinalControlPointsPackage[
@@ -4314,7 +4314,7 @@ class NeedleFinderLogic:
         return FinalControlPointsPackage, FinalControlPointsPackageIJK
 
     def needleRationalityCheck(
-            self, ControlPointsPackageIJK, ControlPointsPackage, imageData, spacing
+        self, ControlPointsPackageIJK, ControlPointsPackage, imageData, spacing
     ):
         """
         Ruibin:
@@ -4375,9 +4375,9 @@ class NeedleFinderLogic:
         ]
         for i in range(NumberOfNeedles):
             tempmetric1 = 1 - (
-                    SingleDirection[i][0] * GlobalDirection[0]
-                    + SingleDirection[i][1] * GlobalDirection[1]
-                    + SingleDirection[i][2] * GlobalDirection[2]
+                SingleDirection[i][0] * GlobalDirection[0]
+                + SingleDirection[i][1] * GlobalDirection[1]
+                + SingleDirection[i][2] * GlobalDirection[2]
             )
             print("The ", i + 1, " slope_metric_1:", tempmetric1)
             SlopeMetric_1.append(tempmetric1)
@@ -4406,8 +4406,8 @@ class NeedleFinderLogic:
                         - ControlPointsPackage[i][j + 1][2],
                     ]
                     l1 = (
-                                 direction1[0] ** 2 + direction1[1] ** 2 + direction1[2] ** 2
-                         ) ** 0.5
+                        direction1[0] ** 2 + direction1[1] ** 2 + direction1[2] ** 2
+                    ) ** 0.5
                     direction2 = [
                         ControlPointsPackage[i][j + 1][0]
                         - ControlPointsPackage[i][j + 2][0],
@@ -4417,8 +4417,8 @@ class NeedleFinderLogic:
                         - ControlPointsPackage[i][j + 2][2],
                     ]
                     l2 = (
-                                 direction2[0] ** 2 + direction2[1] ** 2 + direction2[2] ** 2
-                         ) ** 0.5
+                        direction2[0] ** 2 + direction2[1] ** 2 + direction2[2] ** 2
+                    ) ** 0.5
                     if l1 != 0 and l2 != 0:
                         direction1 = [
                             direction1[0] / l1,
@@ -4431,9 +4431,9 @@ class NeedleFinderLogic:
                             direction2[2] / l2,
                         ]
                         temp = 1 - (
-                                direction1[0] * direction2[0]
-                                + direction1[1] * direction2[1]
-                                + direction1[2] * direction2[2]
+                            direction1[0] * direction2[0]
+                            + direction1[1] * direction2[1]
+                            + direction1[2] * direction2[2]
                         )
                         tempmetric2 += temp
             print("The ", i + 1, " curvature_metric_2:", tempmetric2)
@@ -4526,76 +4526,76 @@ class NeedleFinderLogic:
                         distance = 9999
                         if currentPoint[2] >= ControlPointsPackage[p][0][2]:
                             distance = (
-                                               (currentPoint[0] - ControlPointsPackage[p][0][0]) ** 2
-                                               + (currentPoint[1] - ControlPointsPackage[p][0][1]) ** 2
-                                               + (currentPoint[2] - ControlPointsPackage[p][0][2]) ** 2
-                                       ) ** 0.5
+                                (currentPoint[0] - ControlPointsPackage[p][0][0]) ** 2
+                                + (currentPoint[1] - ControlPointsPackage[p][0][1]) ** 2
+                                + (currentPoint[2] - ControlPointsPackage[p][0][2]) ** 2
+                            ) ** 0.5
                         elif (
-                                currentPoint[2]
-                                <= ControlPointsPackage[p][NumberOfPointsOnThatNeedle - 1][
-                                    2
-                                ]
+                            currentPoint[2]
+                            <= ControlPointsPackage[p][NumberOfPointsOnThatNeedle - 1][
+                                2
+                            ]
                         ):
                             distance = (
-                                               (
-                                                       currentPoint[0]
-                                                       - ControlPointsPackage[p][
-                                                           NumberOfPointsOnThatNeedle - 1
-                                                           ][0]
-                                               )
-                                               ** 2
-                                               + (
-                                                       currentPoint[1]
-                                                       - ControlPointsPackage[p][
-                                                           NumberOfPointsOnThatNeedle - 1
-                                                           ][1]
-                                               )
-                                               ** 2
-                                               + (
-                                                       currentPoint[2]
-                                                       - ControlPointsPackage[p][
-                                                           NumberOfPointsOnThatNeedle - 1
-                                                           ][2]
-                                               )
-                                               ** 2
-                                       ) ** 0.5
+                                (
+                                    currentPoint[0]
+                                    - ControlPointsPackage[p][
+                                        NumberOfPointsOnThatNeedle - 1
+                                    ][0]
+                                )
+                                ** 2
+                                + (
+                                    currentPoint[1]
+                                    - ControlPointsPackage[p][
+                                        NumberOfPointsOnThatNeedle - 1
+                                    ][1]
+                                )
+                                ** 2
+                                + (
+                                    currentPoint[2]
+                                    - ControlPointsPackage[p][
+                                        NumberOfPointsOnThatNeedle - 1
+                                    ][2]
+                                )
+                                ** 2
+                            ) ** 0.5
                         else:
                             for q in range(NumberOfPointsOnThatNeedle - 1):
                                 pointabove = ControlPointsPackage[p][q]
                                 pointbelow = ControlPointsPackage[p][q + 1]
                                 if pointabove[2] <= currentPoint[2]:
                                     h = (
-                                                (currentPoint[0] - pointabove[0]) ** 2
-                                                + (currentPoint[1] - pointabove[1]) ** 2
-                                                + (currentPoint[2] - pointabove[2]) ** 2
-                                        ) ** 0.5
+                                        (currentPoint[0] - pointabove[0]) ** 2
+                                        + (currentPoint[1] - pointabove[1]) ** 2
+                                        + (currentPoint[2] - pointabove[2]) ** 2
+                                    ) ** 0.5
                                 elif pointbelow[2] >= currentPoint[2]:
                                     h = (
-                                                (currentPoint[0] - pointbelow[0]) ** 2
-                                                + (currentPoint[1] - pointbelow[1]) ** 2
-                                                + (currentPoint[2] - pointbelow[2]) ** 2
-                                        ) ** 0.5
+                                        (currentPoint[0] - pointbelow[0]) ** 2
+                                        + (currentPoint[1] - pointbelow[1]) ** 2
+                                        + (currentPoint[2] - pointbelow[2]) ** 2
+                                    ) ** 0.5
                                 else:
                                     a = (
-                                                (pointabove[0] - currentPoint[0]) ** 2
-                                                + (pointabove[1] - currentPoint[1]) ** 2
-                                                + (pointabove[2] - currentPoint[2]) ** 2
-                                        ) ** 0.5
+                                        (pointabove[0] - currentPoint[0]) ** 2
+                                        + (pointabove[1] - currentPoint[1]) ** 2
+                                        + (pointabove[2] - currentPoint[2]) ** 2
+                                    ) ** 0.5
                                     b = (
-                                                (pointbelow[0] - currentPoint[0]) ** 2
-                                                + (pointbelow[1] - currentPoint[1]) ** 2
-                                                + (pointbelow[2] - currentPoint[2]) ** 2
-                                        ) ** 0.5
+                                        (pointbelow[0] - currentPoint[0]) ** 2
+                                        + (pointbelow[1] - currentPoint[1]) ** 2
+                                        + (pointbelow[2] - currentPoint[2]) ** 2
+                                    ) ** 0.5
                                     c = (
-                                                (pointabove[0] - pointbelow[0]) ** 2
-                                                + (pointabove[1] - pointbelow[1]) ** 2
-                                                + (pointabove[2] - pointbelow[2]) ** 2
-                                        ) ** 0.5
+                                        (pointabove[0] - pointbelow[0]) ** 2
+                                        + (pointabove[1] - pointbelow[1]) ** 2
+                                        + (pointabove[2] - pointbelow[2]) ** 2
+                                    ) ** 0.5
                                     hc = (a + b + c) / 2
                                     h = (
-                                            (hc * (hc - a) * (hc - b) * (hc - c)) ** 0.5
-                                            * 2
-                                            / c
+                                        (hc * (hc - a) * (hc - b) * (hc - c)) ** 0.5
+                                        * 2
+                                        / c
                                     )
                                 if h < distance:
                                     distance = h
@@ -4636,22 +4636,22 @@ class NeedleFinderLogic:
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex + 1][0]
-                                        - ControlPointsPackage[i][nearestPointIndex][0]
+                                    ControlPointsPackage[i][nearestPointIndex + 1][0]
+                                    - ControlPointsPackage[i][nearestPointIndex][0]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][0],
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex + 1][1]
-                                        - ControlPointsPackage[i][nearestPointIndex][1]
+                                    ControlPointsPackage[i][nearestPointIndex + 1][1]
+                                    - ControlPointsPackage[i][nearestPointIndex][1]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][1],
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex + 1][2]
-                                        - ControlPointsPackage[i][nearestPointIndex][2]
+                                    ControlPointsPackage[i][nearestPointIndex + 1][2]
+                                    - ControlPointsPackage[i][nearestPointIndex][2]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][2],
                             ]
@@ -4662,22 +4662,22 @@ class NeedleFinderLogic:
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex - 1][0]
-                                        - ControlPointsPackage[i][nearestPointIndex][0]
+                                    ControlPointsPackage[i][nearestPointIndex - 1][0]
+                                    - ControlPointsPackage[i][nearestPointIndex][0]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][0],
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex - 1][1]
-                                        - ControlPointsPackage[i][nearestPointIndex][1]
+                                    ControlPointsPackage[i][nearestPointIndex - 1][1]
+                                    - ControlPointsPackage[i][nearestPointIndex][1]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][1],
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex - 1][2]
-                                        - ControlPointsPackage[i][nearestPointIndex][2]
+                                    ControlPointsPackage[i][nearestPointIndex - 1][2]
+                                    - ControlPointsPackage[i][nearestPointIndex][2]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][2],
                             ]
@@ -4688,22 +4688,22 @@ class NeedleFinderLogic:
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex + 1][0]
-                                        - ControlPointsPackage[i][nearestPointIndex][0]
+                                    ControlPointsPackage[i][nearestPointIndex + 1][0]
+                                    - ControlPointsPackage[i][nearestPointIndex][0]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][0],
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex + 1][1]
-                                        - ControlPointsPackage[i][nearestPointIndex][1]
+                                    ControlPointsPackage[i][nearestPointIndex + 1][1]
+                                    - ControlPointsPackage[i][nearestPointIndex][1]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][1],
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex + 1][2]
-                                        - ControlPointsPackage[i][nearestPointIndex][2]
+                                    ControlPointsPackage[i][nearestPointIndex + 1][2]
+                                    - ControlPointsPackage[i][nearestPointIndex][2]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][2],
                             ]
@@ -4712,22 +4712,22 @@ class NeedleFinderLogic:
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex - 1][0]
-                                        - ControlPointsPackage[i][nearestPointIndex][0]
+                                    ControlPointsPackage[i][nearestPointIndex - 1][0]
+                                    - ControlPointsPackage[i][nearestPointIndex][0]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][0],
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex - 1][1]
-                                        - ControlPointsPackage[i][nearestPointIndex][1]
+                                    ControlPointsPackage[i][nearestPointIndex - 1][1]
+                                    - ControlPointsPackage[i][nearestPointIndex][1]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][1],
                                 float(t)
                                 / float(res)
                                 * (
-                                        ControlPointsPackage[i][nearestPointIndex - 1][2]
-                                        - ControlPointsPackage[i][nearestPointIndex][2]
+                                    ControlPointsPackage[i][nearestPointIndex - 1][2]
+                                    - ControlPointsPackage[i][nearestPointIndex][2]
                                 )
                                 + ControlPointsPackage[i][nearestPointIndex][2],
                             ]
@@ -4738,39 +4738,39 @@ class NeedleFinderLogic:
                         currentPoint = neighbour[n]
                         if currentPoint[2] >= ControlPointsPackage[j][0][2]:
                             hmin = (
-                                           (currentPoint[0] - ControlPointsPackage[j][0][0]) ** 2
-                                           + (currentPoint[1] - ControlPointsPackage[j][0][1]) ** 2
-                                           + (currentPoint[2] - ControlPointsPackage[j][0][2]) ** 2
-                                   ) ** 0.5
+                                (currentPoint[0] - ControlPointsPackage[j][0][0]) ** 2
+                                + (currentPoint[1] - ControlPointsPackage[j][0][1]) ** 2
+                                + (currentPoint[2] - ControlPointsPackage[j][0][2]) ** 2
+                            ) ** 0.5
                         elif (
-                                currentPoint[2]
-                                <= ControlPointsPackage[j][NumberOfPointsOnThatNeedle - 1][
-                                    2
-                                ]
+                            currentPoint[2]
+                            <= ControlPointsPackage[j][NumberOfPointsOnThatNeedle - 1][
+                                2
+                            ]
                         ):
                             hmin = (
-                                           (
-                                                   currentPoint[0]
-                                                   - ControlPointsPackage[j][
-                                                       NumberOfPointsOnThatNeedle - 1
-                                                       ][0]
-                                           )
-                                           ** 2
-                                           + (
-                                                   currentPoint[1]
-                                                   - ControlPointsPackage[j][
-                                                       NumberOfPointsOnThatNeedle - 1
-                                                       ][1]
-                                           )
-                                           ** 2
-                                           + (
-                                                   currentPoint[2]
-                                                   - ControlPointsPackage[j][
-                                                       NumberOfPointsOnThatNeedle - 1
-                                                       ][2]
-                                           )
-                                           ** 2
-                                   ) ** 0.5
+                                (
+                                    currentPoint[0]
+                                    - ControlPointsPackage[j][
+                                        NumberOfPointsOnThatNeedle - 1
+                                    ][0]
+                                )
+                                ** 2
+                                + (
+                                    currentPoint[1]
+                                    - ControlPointsPackage[j][
+                                        NumberOfPointsOnThatNeedle - 1
+                                    ][1]
+                                )
+                                ** 2
+                                + (
+                                    currentPoint[2]
+                                    - ControlPointsPackage[j][
+                                        NumberOfPointsOnThatNeedle - 1
+                                    ][2]
+                                )
+                                ** 2
+                            ) ** 0.5
                         else:
                             hmin = 9999
                             for q in range(NumberOfPointsOnThatNeedle - 1):
@@ -4778,37 +4778,37 @@ class NeedleFinderLogic:
                                 pointbelow = ControlPointsPackage[j][q + 1]
                                 if pointabove[2] <= currentPoint[2]:
                                     h = (
-                                                (currentPoint[0] - pointabove[0]) ** 2
-                                                + (currentPoint[1] - pointabove[1]) ** 2
-                                                + (currentPoint[2] - pointabove[2]) ** 2
-                                        ) ** 0.5
+                                        (currentPoint[0] - pointabove[0]) ** 2
+                                        + (currentPoint[1] - pointabove[1]) ** 2
+                                        + (currentPoint[2] - pointabove[2]) ** 2
+                                    ) ** 0.5
                                 elif pointbelow[2] >= currentPoint[2]:
                                     h = (
-                                                (currentPoint[0] - pointbelow[0]) ** 2
-                                                + (currentPoint[1] - pointbelow[1]) ** 2
-                                                + (currentPoint[2] - pointbelow[2]) ** 2
-                                        ) ** 0.5
+                                        (currentPoint[0] - pointbelow[0]) ** 2
+                                        + (currentPoint[1] - pointbelow[1]) ** 2
+                                        + (currentPoint[2] - pointbelow[2]) ** 2
+                                    ) ** 0.5
                                 else:
                                     a = (
-                                                (pointabove[0] - currentPoint[0]) ** 2
-                                                + (pointabove[1] - currentPoint[1]) ** 2
-                                                + (pointabove[2] - currentPoint[2]) ** 2
-                                        ) ** 0.5
+                                        (pointabove[0] - currentPoint[0]) ** 2
+                                        + (pointabove[1] - currentPoint[1]) ** 2
+                                        + (pointabove[2] - currentPoint[2]) ** 2
+                                    ) ** 0.5
                                     b = (
-                                                (pointbelow[0] - currentPoint[0]) ** 2
-                                                + (pointbelow[1] - currentPoint[1]) ** 2
-                                                + (pointbelow[2] - currentPoint[2]) ** 2
-                                        ) ** 0.5
+                                        (pointbelow[0] - currentPoint[0]) ** 2
+                                        + (pointbelow[1] - currentPoint[1]) ** 2
+                                        + (pointbelow[2] - currentPoint[2]) ** 2
+                                    ) ** 0.5
                                     c = (
-                                                (pointabove[0] - pointbelow[0]) ** 2
-                                                + (pointabove[1] - pointbelow[1]) ** 2
-                                                + (pointabove[2] - pointbelow[2]) ** 2
-                                        ) ** 0.5
+                                        (pointabove[0] - pointbelow[0]) ** 2
+                                        + (pointabove[1] - pointbelow[1]) ** 2
+                                        + (pointabove[2] - pointbelow[2]) ** 2
+                                    ) ** 0.5
                                     hc = (a + b + c) / 2
                                     h = (
-                                            (hc * (hc - a) * (hc - b) * (hc - c)) ** 0.5
-                                            * 2
-                                            / c
+                                        (hc * (hc - a) * (hc - b) * (hc - c)) ** 0.5
+                                        * 2
+                                        / c
                                     )
                                 if h < hmin:
                                     hmin = h
@@ -4865,26 +4865,26 @@ class NeedleFinderLogic:
                         interactreason = 2
 
                     elif (
-                            SlopeMetric_1[i] > SlopeMetric_1[j] + 0.02
-                            or CurvatureMetric[i] > CurvatureMetric[j] + 0.015
+                        SlopeMetric_1[i] > SlopeMetric_1[j] + 0.02
+                        or CurvatureMetric[i] > CurvatureMetric[j] + 0.015
                     ):
                         interactpair = [i, j]
                         interactreason = 1
                     elif (
-                            SlopeMetric_1[i] + 0.02 < SlopeMetric_1[j]
-                            or CurvatureMetric[i] + 0.015 < CurvatureMetric[j]
+                        SlopeMetric_1[i] + 0.02 < SlopeMetric_1[j]
+                        or CurvatureMetric[i] + 0.015 < CurvatureMetric[j]
                     ):
                         interactpair = [j, i]
                         interactreason = 1
                     elif (
-                            SlopeMetric_1[i] > SlopeMetric_1[j] + 0.01
-                            and CurvatureMetric[i] > CurvatureMetric[j] + 0.005
+                        SlopeMetric_1[i] > SlopeMetric_1[j] + 0.01
+                        and CurvatureMetric[i] > CurvatureMetric[j] + 0.005
                     ):
                         interactpair = [i, j]
                         interactreason = 1
                     elif (
-                            SlopeMetric_1[i] + 0.01 < SlopeMetric_1[j]
-                            and CurvatureMetric[i] + 0.005 < CurvatureMetric[j]
+                        SlopeMetric_1[i] + 0.01 < SlopeMetric_1[j]
+                        and CurvatureMetric[i] + 0.005 < CurvatureMetric[j]
                     ):  # one of the needles has a much higher slope or curvature
                         interactpair = [j, i]
                         interactreason = 1
@@ -4901,25 +4901,25 @@ class NeedleFinderLogic:
                             ControlPointsPackage[j][0][2] - NearestCoordinate[i][j][2],
                         ]
                         l1 = (
-                                     direction1[0] ** 2 + direction1[1] ** 2 + direction1[2] ** 2
-                             ) ** 0.5
+                            direction1[0] ** 2 + direction1[1] ** 2 + direction1[2] ** 2
+                        ) ** 0.5
                         l2 = (
-                                     direction2[0] ** 2 + direction2[1] ** 2 + direction2[2] ** 2
-                             ) ** 0.5
+                            direction2[0] ** 2 + direction2[1] ** 2 + direction2[2] ** 2
+                        ) ** 0.5
 
                         if (
-                                l1 < 1
-                                and ControlPointsPackage[j][0][2]
-                                > ControlPointsPackage[i][0][2]
-                                or l1 == 0
+                            l1 < 1
+                            and ControlPointsPackage[j][0][2]
+                            > ControlPointsPackage[i][0][2]
+                            or l1 == 0
                         ):
                             interactpair = [j, i]
                             interactreason = 2
                         elif (
-                                l2 < 1
-                                and ControlPointsPackage[i][0][2]
-                                > ControlPointsPackage[j][0][2]
-                                or l2 == 0
+                            l2 < 1
+                            and ControlPointsPackage[i][0][2]
+                            > ControlPointsPackage[j][0][2]
+                            or l2 == 0
                         ):
                             interactpair = [i, j]
                             interactreason = 2
@@ -4944,14 +4944,14 @@ class NeedleFinderLogic:
         return WrongPosition, WrongReason, GlobalDirection
 
     def needleDetectionThreadCurrentDev(
-            self,
-            A,
-            imageData,
-            colorVar,
-            spacing,
-            script=False,
-            imgLabelData=None,
-            manualName="",
+        self,
+        A,
+        imageData,
+        colorVar,
+        spacing,
+        script=False,
+        imgLabelData=None,
+        manualName="",
     ):
         """
         From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region.
@@ -5197,12 +5197,12 @@ class NeedleFinderLogic:
 
                         # first, test if points are in the image space
                         if (
-                                ijk[0] < dims[0]
-                                and ijk[0] > 0
-                                and ijk[1] < dims[1]
-                                and ijk[1] > 0
-                                and ijk[2] < dims[2]
-                                and ijk[2] > 0
+                            ijk[0] < dims[0]
+                            and ijk[0] > 0
+                            and ijk[1] < dims[1]
+                            and ijk[1] > 0
+                            and ijk[2] < dims[2]
+                            and ijk[2] > 0
                         ):
 
                             center = imageData.GetScalarComponentAsDouble(
@@ -5233,7 +5233,7 @@ class NeedleFinderLogic:
                                 ijk[0] - 1, ijk[1] - 1, ijk[2], 0
                             )
 
-                            total += center ** exponent
+                            total += center**exponent
                             if gradient == 1 and mode == "circle":
                                 g1 = imageData.GetScalarComponentAsDouble(
                                     ijk[0] + radiusNeedle, ijk[1], ijk[2], 0
@@ -5315,10 +5315,10 @@ class NeedleFinderLogic:
                                 )
 
                                 total += (
-                                                 8 * center
-                                                 - ((g1 + g2 + g3 + g4) / float(4))
-                                                 * gradientPonderation
-                                         ) / float(tIter)
+                                    8 * center
+                                    - ((g1 + g2 + g3 + g4) / float(4))
+                                    * gradientPonderation
+                                ) / float(tIter)
 
                                 # total = self.objectiveFunctionLOG(imageData, ijk, radiusNeedleParameter, spacing, 1)
                             # >>>>>>>>>>>>>>>>>>>>>> exp.02
@@ -5353,18 +5353,18 @@ class NeedleFinderLogic:
                             """
 
                             rgauss = (
-                                             (C[0] - C0[0]) ** 2
-                                             + (C[1] - C0[1]) ** 2
-                                             + (C[2] - C0[2]) ** 2
-                                     ) ** 0.5
+                                (C[0] - C0[0]) ** 2
+                                + (C[1] - C0[1]) ** 2
+                                + (C[2] - C0[2]) ** 2
+                            ) ** 0.5
 
                             gaussianAttenuation = math.exp(
                                 -((rgauss / float(rMax)) ** 2)
                                 / float(2 * (sigmaValue / float(10)) ** 2)
                             )  # 1 for x=0, 0.2 for x=5
                             estimator = (
-                                            total
-                                        ) * gaussianAttenuation  # ??? this doesn't work as intended for negative values (they get larger!)
+                                total
+                            ) * gaussianAttenuation  # ??? this doesn't work as intended for negative values (they get larger!)
                         else:
                             estimator = total
 
@@ -5424,21 +5424,21 @@ class NeedleFinderLogic:
             )
 
     def needleDetectionThread13_1(
-            self,
-            Aori,
-            imageData,
-            colorVar,
-            spacing,
-            script=False,
-            imgLabelData=None,
-            manName="",
-            bDrawNeedle=False,
-            whetherfeedback=False,
-            ControlPointsPackage=None,
-            ControlPointsPackageIJK=None,
-            WrongPosition=None,
-            GlobalDirection=None,
-            Punish=None,
+        self,
+        Aori,
+        imageData,
+        colorVar,
+        spacing,
+        script=False,
+        imgLabelData=None,
+        manName="",
+        bDrawNeedle=False,
+        whetherfeedback=False,
+        ControlPointsPackage=None,
+        ControlPointsPackageIJK=None,
+        WrongPosition=None,
+        GlobalDirection=None,
+        Punish=None,
     ):
         """MICCAI2013 suspect version, 3/11/13
         iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
@@ -5558,7 +5558,7 @@ class NeedleFinderLogic:
                 tIter = stepSize  # ## ??? stepSize can be smaller 1 and it is in mm not int index coordinates
 
             if (
-                    not script and widget.drawFiducialPoints.isChecked()
+                not script and widget.drawFiducialPoints.isChecked()
             ):  # show cone base markers b
                 oFiducial = slicer.mrmlScene.CreateNodeByClass(
                     "vtkMRMLAnnotationFiducialNode"
@@ -5603,12 +5603,12 @@ class NeedleFinderLogic:
 
                         # first, test if points are in the image space
                         if (
-                                ijk[0] < dims[0]
-                                and ijk[0] > 0
-                                and ijk[1] < dims[1]
-                                and ijk[1] > 0
-                                and ijk[2] < dims[2]
-                                and ijk[2] > 0
+                            ijk[0] < dims[0]
+                            and ijk[0] > 0
+                            and ijk[1] < dims[1]
+                            and ijk[1] > 0
+                            and ijk[2] < dims[2]
+                            and ijk[2] > 0
                         ):
 
                             center = imageData.GetScalarComponentAsDouble(
@@ -5681,9 +5681,9 @@ class NeedleFinderLogic:
                                 )
 
                                 total += (
-                                        8 * center
-                                        - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8)
-                                        * gradientPonderation
+                                    8 * center
+                                    - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8)
+                                    * gradientPonderation
                                 )
                             # >>>>>>>>>>>>>>>>>>>>>> exp.02
                             if imgLabelData:
@@ -5716,18 +5716,18 @@ class NeedleFinderLogic:
                             ]
 
                             rgauss = (
-                                             (C[0] - X[0]) ** 2
-                                             + (C[1] - X[1]) ** 2
-                                             + (C[2] - X[2]) ** 2
-                                     ) ** 0.5
+                                (C[0] - X[0]) ** 2
+                                + (C[1] - X[1]) ** 2
+                                + (C[2] - X[2]) ** 2
+                            ) ** 0.5
 
                             gaussianAttenuation = math.exp(
                                 -((rgauss / float(rMax)) ** 2)
                                 / float(2 * (sigmaValue / float(10)) ** 2)
                             )  # 1 for x=0, 0.2 for x=5
                             estimator = (
-                                            total
-                                        ) * gaussianAttenuation  # ??? this doesn't work as intended for negative values (they get larger!)
+                                total
+                            ) * gaussianAttenuation  # ??? this doesn't work as intended for negative values (they get larger!)
                         else:
                             estimator = total
 
@@ -5781,14 +5781,14 @@ class NeedleFinderLogic:
         return controlPoints, controlPointsIJK  # <<< Ruibin
 
     def needleDetectionThread13_2(
-            self,
-            A,
-            imageData,
-            colorVar,
-            spacing,
-            script=False,
-            imgLabelData=None,
-            manualName="",
+        self,
+        A,
+        imageData,
+        colorVar,
+        spacing,
+        script=False,
+        imgLabelData=None,
+        manualName="",
     ):
         """MICCAI2013 suspect version, 3/11/13
         iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
@@ -5902,7 +5902,7 @@ class NeedleFinderLogic:
                 tIter = stepSize  # /spacing[2]  #more steps, slightly better! ??? stepSize can be smaller 1 and it is in mm not int index coordinates
 
             if (
-                    not script and widget.drawFiducialPoints.isChecked()
+                not script and widget.drawFiducialPoints.isChecked()
             ):  # show cone base markers b
                 oFiducial = slicer.mrmlScene.CreateNodeByClass(
                     "vtkMRMLAnnotationFiducialNode"
@@ -5947,12 +5947,12 @@ class NeedleFinderLogic:
 
                         # first, test if points are in the image space
                         if (
-                                ijk[0] < dims[0]
-                                and ijk[0] > 0
-                                and ijk[1] < dims[1]
-                                and ijk[1] > 0
-                                and ijk[2] < dims[2]
-                                and ijk[2] > 0
+                            ijk[0] < dims[0]
+                            and ijk[0] > 0
+                            and ijk[1] < dims[1]
+                            and ijk[1] > 0
+                            and ijk[2] < dims[2]
+                            and ijk[2] > 0
                         ):
 
                             center = imageData.GetScalarComponentAsDouble(
@@ -6009,9 +6009,9 @@ class NeedleFinderLogic:
                                 )
 
                                 total += (
-                                        8 * center
-                                        - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8)
-                                        * gradientPonderation
+                                    8 * center
+                                    - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8)
+                                    * gradientPonderation
                                 )
                             # >>>>>>>>>>>>>>>>>>>>>> exp.02
                             if imgLabelData:
@@ -6044,18 +6044,18 @@ class NeedleFinderLogic:
                             ]
 
                             rgauss = (
-                                             (C[0] - X[0]) ** 2
-                                             + (C[1] - X[1]) ** 2
-                                             + (C[2] - X[2]) ** 2
-                                     ) ** 0.5
+                                (C[0] - X[0]) ** 2
+                                + (C[1] - X[1]) ** 2
+                                + (C[2] - X[2]) ** 2
+                            ) ** 0.5
 
                             gaussianAttenuation = math.exp(
                                 -((rgauss / float(rMax)) ** 2)
                                 / float(2 * (sigmaValue / float(10)) ** 2)
                             )  # 1 for x=0, 0.2 for x=5
                             estimator = (
-                                            total
-                                        ) * gaussianAttenuation  # ??? this might not work as intended for negative values (they get larger!)
+                                total
+                            ) * gaussianAttenuation  # ??? this might not work as intended for negative values (they get larger!)
                             # >>> bugfix ? makes it even worse on average: bugfixbug ;-)
                             # estimator=total
                             # estimatorAtt = total * gaussianAttenuation
@@ -6156,7 +6156,7 @@ class NeedleFinderLogic:
         # transform.SetAndObserveMatrixTransformToParent(vTransform.GetMatrix())
 
     def addFiducialToScene(
-            self, ijk, name, rgbColor=(1, 1, 0), glyphScale=2, textScale=2
+        self, ijk, name, rgbColor=(1, 1, 0), glyphScale=2, textScale=2
     ):
         """
         Add fiducial marker to scene.
@@ -6176,24 +6176,24 @@ class NeedleFinderLogic:
         fid.GetAnnotationTextDisplayNode().SetTextScale(textScale)
 
     def needleDetectionThread15_1(
-            self,
-            ijkAori,
-            imgData,
-            imgLabelData,
-            lrasTempPoints,
-            iColorVar,
-            fvSpacing,
-            bUp=False,
-            bScript=False,
-            strManualName="",
-            tipOnly=False,
-            bDrawNeedle=False,
-            whetherfeedback=False,
-            ControlPointsPackage=None,
-            ControlPointsPackageIJK=None,
-            WrongPosition=None,
-            GlobalDirection=None,
-            Punish=None,
+        self,
+        ijkAori,
+        imgData,
+        imgLabelData,
+        lrasTempPoints,
+        iColorVar,
+        fvSpacing,
+        bUp=False,
+        bScript=False,
+        strManualName="",
+        tipOnly=False,
+        bDrawNeedle=False,
+        whetherfeedback=False,
+        ControlPointsPackage=None,
+        ControlPointsPackageIJK=None,
+        WrongPosition=None,
+        GlobalDirection=None,
+        Punish=None,
     ):
         """MICCAI2015 version, 4/16/15
     based on iGyne_old b16872c19a3bc6be1f4a9722e5daf16a603393f6
@@ -6260,14 +6260,14 @@ class NeedleFinderLogic:
             return fv / fLen, fLen
 
         def defLocalNeedleCooSys(
-                fvX,
-                fvY,
-                fvZ,
-                iStep,
-                rasA,
-                rasDeflectionDirection,
-                rasNeedlePlaneNormal,
-                bDraw=False,
+            fvX,
+            fvY,
+            fvZ,
+            iStep,
+            rasA,
+            rasDeflectionDirection,
+            rasNeedlePlaneNormal,
+            bDraw=False,
         ):
             rasSegmentVector = rasA - rasAPrev
             fLenSV = norm(rasSegmentVector)
@@ -6298,16 +6298,16 @@ class NeedleFinderLogic:
             return rasDeflectionDirection1, rasNeedlePlaneNormal1, fvZ
 
         def initNeedleModel(
-                fAngleRefNeedle_rad, fEstNeedleLength_mm, fvZ, rasA, bDraw=False
+            fAngleRefNeedle_rad, fEstNeedleLength_mm, fvZ, rasA, bDraw=False
         ):
             rasAPrev2A = rasA - rasAPrev
             rasAPrev2A /= norm(rasAPrev2A)
             fAngleLongSegVZ_rad = np.arccos(np.dot(fvZ, rasAPrev2A))
             fEstDeflection_mm = (
-                    fEstNeedleLength_mm
-                    * 1
-                    / np.cos(fAngleRefNeedle_rad)
-                    * np.sin(fAngleLongSegVZ_rad)
+                fEstNeedleLength_mm
+                * 1
+                / np.cos(fAngleRefNeedle_rad)
+                * np.sin(fAngleLongSegVZ_rad)
             )  # estimate deflection as from z-axis
             # look up the needle length model matrices and find best matches
             faArcLen_mm = list(zip(*matArcLen_mm))[0]  # transpose
@@ -6324,15 +6324,15 @@ class NeedleFinderLogic:
             return fF_mmN, fSumAngle_rad
 
         def runNeedleModel(
-                fStepAngle_rad,
-                fF_mmN,
-                fStepSize_mm,
-                fvZ,
-                iModelIt,
-                rasDeflectionDirection1,
-                fSumAngle_rad,
-                rasB,
-                bDraw=False,
+            fStepAngle_rad,
+            fF_mmN,
+            fStepSize_mm,
+            fvZ,
+            iModelIt,
+            rasDeflectionDirection1,
+            fSumAngle_rad,
+            rasB,
+            bDraw=False,
         ):
             rasModelStepVector = rasDeflectionDirection1 * np.sin(
                 fSumAngle_rad
@@ -6340,7 +6340,7 @@ class NeedleFinderLogic:
             rasEstStepVector1 = rasModelStepVector / norm(rasModelStepVector)
             rasBDef = rasB
             rasB = (
-                    rasA + rasEstStepVector1 * fStepSize_mm
+                rasA + rasEstStepVector1 * fStepSize_mm
             )  # TODO check sign, and if this still makes sense
             fDistBDef2BMod = norm(rasBDef - rasB)
             fMaxDistBDef2BMod_mm = 0  # .25 # CONST
@@ -6360,7 +6360,7 @@ class NeedleFinderLogic:
                 iFineStep = 1
                 print("normal steps")
             for j in range(
-                    0, int(round(fStepSize_mm / (fModelSegmentLength_mm / iFineStep)))
+                0, int(round(fStepSize_mm / (fModelSegmentLength_mm / iFineStep)))
             ):
                 fF_mmN = fF_mmN / np.cos(fSumAngle_rad)
                 fStepAngle_rad = fF_mmN / (fK * iFineStep)
@@ -6425,7 +6425,7 @@ class NeedleFinderLogic:
         rasA0 = rasA
         ijkA0 = ijkA
         nStepsNeedle = (
-                nPointsPerNeedle - 1
+            nPointsPerNeedle - 1
         )  # one point (mouse click on tip) is already there
         if bUp:
             iZDirectionSign = 1
@@ -6457,7 +6457,7 @@ class NeedleFinderLogic:
                 % (strManualName, iStart, iStep, iStep + 1)
             )
             fStepSize_mm = (
-                    self.stepSize13(iStep + 1, nStepsNeedle + 1) * fEstNeedleLength_mm
+                self.stepSize13(iStep + 1, nStepsNeedle + 1) * fEstNeedleLength_mm
             )
             # fStepSize_mm = (1.-self.stepSizeAndre(iStep+1,nStepsNeedle+1))*fEstNeedleLength_mm
             fStepSize_mm = fEstNeedleLength_mm / (nStepsNeedle)  # <<< equal step size
@@ -6473,12 +6473,12 @@ class NeedleFinderLogic:
             if iStep < 0:
 
                 fFac = (
-                        1.0 / ((2) * abs(iStart)) * (iAbsStep + 1)
+                    1.0 / ((2) * abs(iStart)) * (iAbsStep + 1)
                 )  # <o> CONST how much of the nedle used for init. (1=full, 2=half)
                 fStepSizeInit_mm = fFac * fEstNeedleLength_mm
                 rasEstStepVector1 = np.array([fvZ[0], fvZ[1], fvZ[2]])
                 rasB = (
-                        rasA + rasEstStepVector1 * fStepSizeInit_mm
+                    rasA + rasEstStepVector1 * fStepSizeInit_mm
                 )  # <<< first step along reference needle axis
                 ijkB = self.ras2ijk(rasB)
                 iRMax = max(
@@ -6631,12 +6631,12 @@ class NeedleFinderLogic:
                         lim = max(iRadiusNeedle, iRadiusNeedleCorner) + 1
 
                         if (
-                                ijk[0] < ivDims[0] - lim
-                                and ijk[0] > lim
-                                and ijk[1] < ivDims[1] - lim
-                                and ijk[1] > lim
-                                and ijk[2] < ivDims[2]
-                                and ijk[2] > 0
+                            ijk[0] < ivDims[0] - lim
+                            and ijk[0] > lim
+                            and ijk[1] < ivDims[1] - lim
+                            and ijk[1] > lim
+                            and ijk[2] < ivDims[2]
+                            and ijk[2] > 0
                         ):
 
                             dCenter = imgData.GetScalarComponentAsDouble(
@@ -6708,9 +6708,9 @@ class NeedleFinderLogic:
                                 )
 
                                 fTotal += (
-                                        8 * dCenter
-                                        - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8)
-                                        * iGradientPonderation
+                                    8 * dCenter
+                                    - ((g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8) / 8)
+                                    * iGradientPonderation
                                 )
                             # fi gradient
                             # >>>>>>>>>>>>>>>>>>>>>> exp.02
@@ -6724,7 +6724,7 @@ class NeedleFinderLogic:
                     # rof iTStep
 
                     if (
-                            1 and bGaussianAttenuation == 1 and iStep >= 2
+                        1 and bGaussianAttenuation == 1 and iStep >= 2
                     ):  # <<< feature on/off
 
                         if ijkAPrev[2] - ijkA[2] != 0:
@@ -6738,10 +6738,10 @@ class NeedleFinderLogic:
                             ]
 
                             fRgauss = (
-                                              (ijkC[0] - ijkX[0]) ** 2
-                                              + (ijkC[1] - ijkX[1]) ** 2
-                                              + (ijkC[2] - ijkX[2]) ** 2
-                                      ) ** 0.5
+                                (ijkC[0] - ijkX[0]) ** 2
+                                + (ijkC[1] - ijkX[1]) ** 2
+                                + (ijkC[2] - ijkX[2]) ** 2
+                            ) ** 0.5
 
                             fGaussianAttenuation = math.exp(
                                 -((fRgauss / float(iRMax)) ** 2)
@@ -6795,7 +6795,7 @@ class NeedleFinderLogic:
                     fDistB2CBest_mm = -np.inf
                     fLimitCrit4 = fMaxDistB2CBest_mm = np.inf  # CONST
                 if (
-                        (iStart == 0 and iStep >= 1) or (iStart < 0 and iStep >= 0)
+                    (iStart == 0 and iStep >= 1) or (iStart < 0 and iStep >= 0)
                 ) and ijkCBest != [
                     np.nan,
                     np.nan,
@@ -6811,10 +6811,10 @@ class NeedleFinderLogic:
                     print("#^^^^^^^^^^^^^ crit. rejects best cone point")
                 ########################
                 if (
-                        ijkCBest == [np.nan, np.nan, np.nan] or bReject
+                    ijkCBest == [np.nan, np.nan, np.nan] or bReject
                 ):  # <<<o> use criteria, when we dont use const. behaves as 13_2
                     if (
-                            1
+                        1
                     ):  # <o> TODO try, compromise between model and image feature based vector
                         if rasB2CBest.any():
                             rasB2CBest1, dum = normalized(rasB2CBest)
@@ -6836,7 +6836,7 @@ class NeedleFinderLogic:
                         if iStep == -1:
                             rasA2CBestInit.append(rasA2CBest)  # 2nd init. seg.
                             rasAPrev = (
-                                    rasA0 - rasA2CBest
+                                rasA0 - rasA2CBest
                             )  # trick to restart from user tip click
                             ijkAPrev = self.ras2ijk(rasAPrev)
                             ijkA = ijkA0
@@ -6908,15 +6908,15 @@ class NeedleFinderLogic:
         return lvControlPointsRAS, lvControlPointsIJK  # <<< Ruibin
 
     def Feedback(
-            self,
-            ControlPointsPackage,
-            Punish,
-            iRadiusNeedle_mm,
-            NumberOfRelatedIndexs,
-            len,
-            RelatedIndex,
-            range,
-            ijk,
+        self,
+        ControlPointsPackage,
+        Punish,
+        iRadiusNeedle_mm,
+        NumberOfRelatedIndexs,
+        len,
+        RelatedIndex,
+        range,
+        ijk,
     ):
         """Ruibin: comment..."""
         ras = [0, 0, 0]
@@ -6927,71 +6927,71 @@ class NeedleFinderLogic:
             NumberOfPointsOnThatNeedle = len(ControlPointsPackage[RelatedIndex[w]])
             if ras[2] >= ControlPointsPackage[RelatedIndex[w]][0][2]:
                 distance = (
-                                   (ras[2] - ControlPointsPackage[RelatedIndex[w]][0][2]) ** 2
-                                   + (ras[2] - ControlPointsPackage[RelatedIndex[w]][0][2]) ** 2
-                                   + (ras[2] - ControlPointsPackage[RelatedIndex[w]][0][2]) ** 2
-                           ) ** 0.5
+                    (ras[2] - ControlPointsPackage[RelatedIndex[w]][0][2]) ** 2
+                    + (ras[2] - ControlPointsPackage[RelatedIndex[w]][0][2]) ** 2
+                    + (ras[2] - ControlPointsPackage[RelatedIndex[w]][0][2]) ** 2
+                ) ** 0.5
             elif (
-                    ras[2]
-                    <= ControlPointsPackage[RelatedIndex[w]][
-                        NumberOfPointsOnThatNeedle - 1
-                    ][2]
+                ras[2]
+                <= ControlPointsPackage[RelatedIndex[w]][
+                    NumberOfPointsOnThatNeedle - 1
+                ][2]
             ):
                 distance = (
-                                   (
-                                           ras[2]
-                                           - ControlPointsPackage[RelatedIndex[w]][
-                                               NumberOfPointsOnThatNeedle - 1
-                                               ][2]
-                                   )
-                                   ** 2
-                                   + (
-                                           ras[2]
-                                           - ControlPointsPackage[RelatedIndex[w]][
-                                               NumberOfPointsOnThatNeedle - 1
-                                               ][2]
-                                   )
-                                   ** 2
-                                   + (
-                                           ras[2]
-                                           - ControlPointsPackage[RelatedIndex[w]][
-                                               NumberOfPointsOnThatNeedle - 1
-                                               ][2]
-                                   )
-                                   ** 2
-                           ) ** 0.5
+                    (
+                        ras[2]
+                        - ControlPointsPackage[RelatedIndex[w]][
+                            NumberOfPointsOnThatNeedle - 1
+                        ][2]
+                    )
+                    ** 2
+                    + (
+                        ras[2]
+                        - ControlPointsPackage[RelatedIndex[w]][
+                            NumberOfPointsOnThatNeedle - 1
+                        ][2]
+                    )
+                    ** 2
+                    + (
+                        ras[2]
+                        - ControlPointsPackage[RelatedIndex[w]][
+                            NumberOfPointsOnThatNeedle - 1
+                        ][2]
+                    )
+                    ** 2
+                ) ** 0.5
             else:
                 for q in range(NumberOfPointsOnThatNeedle - 1):
                     pointabove = ControlPointsPackage[RelatedIndex[w]][q]
                     pointbelow = ControlPointsPackage[RelatedIndex[w]][q + 1]
                     if pointabove[2] <= ras[2]:
                         h = (
-                                    (ras[0] - pointabove[0]) ** 2
-                                    + (ras[1] - pointabove[1]) ** 2
-                                    + (ras[2] - pointabove[2]) ** 2
-                            ) ** 0.5
+                            (ras[0] - pointabove[0]) ** 2
+                            + (ras[1] - pointabove[1]) ** 2
+                            + (ras[2] - pointabove[2]) ** 2
+                        ) ** 0.5
                     elif pointbelow[2] >= ras[2]:
                         h = (
-                                    (ras[0] - pointbelow[0]) ** 2
-                                    + (ras[1] - pointbelow[1]) ** 2
-                                    + (ras[2] - pointbelow[2]) ** 2
-                            ) ** 0.5
+                            (ras[0] - pointbelow[0]) ** 2
+                            + (ras[1] - pointbelow[1]) ** 2
+                            + (ras[2] - pointbelow[2]) ** 2
+                        ) ** 0.5
                     else:
                         a = (
-                                    (pointabove[0] - ras[0]) ** 2
-                                    + (pointabove[1] - ras[1]) ** 2
-                                    + (pointabove[2] - ras[2]) ** 2
-                            ) ** 0.5
+                            (pointabove[0] - ras[0]) ** 2
+                            + (pointabove[1] - ras[1]) ** 2
+                            + (pointabove[2] - ras[2]) ** 2
+                        ) ** 0.5
                         b = (
-                                    (pointbelow[0] - ras[0]) ** 2
-                                    + (pointbelow[1] - ras[1]) ** 2
-                                    + (pointbelow[2] - ras[2]) ** 2
-                            ) ** 0.5
+                            (pointbelow[0] - ras[0]) ** 2
+                            + (pointbelow[1] - ras[1]) ** 2
+                            + (pointbelow[2] - ras[2]) ** 2
+                        ) ** 0.5
                         c = (
-                                    (pointabove[0] - pointbelow[0]) ** 2
-                                    + (pointabove[1] - pointbelow[1]) ** 2
-                                    + (pointabove[2] - pointbelow[2]) ** 2
-                            ) ** 0.5
+                            (pointabove[0] - pointbelow[0]) ** 2
+                            + (pointabove[1] - pointbelow[1]) ** 2
+                            + (pointabove[2] - pointbelow[2]) ** 2
+                        ) ** 0.5
                         hc = (a + b + c) / 2
                         h = (hc * (hc - a) * (hc - b) * (hc - c)) ** 0.5 * 2 / c
                     if h < distance:
@@ -7015,7 +7015,7 @@ class NeedleFinderLogic:
     #
     # ------------------------------------------------------------------------------
     def needleDetectionUPThread(
-            self, A, imageData, colorVar, spacing, script=False, strName="", tipOnly=False
+        self, A, imageData, colorVar, spacing, script=False, strName="", tipOnly=False
     ):
         """
         Call different versions of needle detection up thread.
@@ -7096,14 +7096,14 @@ class NeedleFinderLogic:
             u.msgbox(r"/!\ needleDetectionUPThread not defined")
 
     def needleDetectionUPThreadCurrentDev(
-            self,
-            A,
-            imageData,
-            colorVar,
-            spacing,
-            script=False,
-            tipOnly=False,
-            manualName="",
+        self,
+        A,
+        imageData,
+        colorVar,
+        spacing,
+        script=False,
+        tipOnly=False,
+        manualName="",
     ):
         """
         From the needle tip, the algorithm looks for a direction maximizing the "needle likelihood" of a small segment in a conic region.
@@ -7334,12 +7334,12 @@ class NeedleFinderLogic:
 
                             # first, test if points are in the image space
                             if (
-                                    ijk[0] < dims[0]
-                                    and ijk[0] > 0
-                                    and ijk[1] < dims[1]
-                                    and ijk[1] > 0
-                                    and ijk[2] < dims[2]
-                                    and ijk[2] > 0
+                                ijk[0] < dims[0]
+                                and ijk[0] > 0
+                                and ijk[1] < dims[1]
+                                and ijk[1] > 0
+                                and ijk[2] < dims[2]
+                                and ijk[2] > 0
                             ):
 
                                 center = imageData.GetScalarComponentAsDouble(
@@ -7385,13 +7385,13 @@ class NeedleFinderLogic:
                                     )
 
                                     total += (
-                                                     8 * center
-                                                     - (
-                                                             (g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8)
-                                                             / float(8)
-                                                     )
-                                                     * gradientPonderation
-                                             ) / float(tIter)
+                                        8 * center
+                                        - (
+                                            (g1 + g2 + g3 + g4 + g5 + g6 + g7 + g8)
+                                            / float(8)
+                                        )
+                                        * gradientPonderation
+                                    ) / float(tIter)
 
                         if R == 0:
                             initialIntensity = total
@@ -7411,10 +7411,10 @@ class NeedleFinderLogic:
                                 """
 
                                 rgauss = (
-                                                 (C[0] - C0[0]) ** 2
-                                                 + (C[1] - C0[1]) ** 2
-                                                 + (C[2] - C0[2]) ** 2
-                                         ) ** 0.5
+                                    (C[0] - C0[0]) ** 2
+                                    + (C[1] - C0[1]) ** 2
+                                    + (C[2] - C0[2]) ** 2
+                                ) ** 0.5
 
                                 gaussianAttenuation = math.exp(
                                     -((rgauss / float(rMax)) ** 2)
@@ -7456,7 +7456,7 @@ class NeedleFinderLogic:
                         bestPoint = A
                         break
                     if (
-                            (RelMinEstimator < 0.6) and valCtrPt < 0 and minEstimator0 < 0
+                        (RelMinEstimator < 0.6) and valCtrPt < 0 and minEstimator0 < 0
                     ) or (minEstimator < -80 and valCtrPt < 0):
                         testSuccess = 1
                         if dichoStep > 1:
@@ -7567,19 +7567,19 @@ class NeedleFinderLogic:
             # As we give the tip of the obturator needles, we only want to g in the increasing z direction.
 
             Vx = (
-                    widget.obtuNeedleValueCtrPt[0][1][0]
-                    - widget.obtuNeedleValueCtrPt[0][0][0]
+                widget.obtuNeedleValueCtrPt[0][1][0]
+                - widget.obtuNeedleValueCtrPt[0][0][0]
             )
             Vy = (
-                    widget.obtuNeedleValueCtrPt[0][1][1]
-                    - widget.obtuNeedleValueCtrPt[0][0][1]
+                widget.obtuNeedleValueCtrPt[0][1][1]
+                - widget.obtuNeedleValueCtrPt[0][0][1]
             )
             Vz = (
-                    widget.obtuNeedleValueCtrPt[0][1][2]
-                    - widget.obtuNeedleValueCtrPt[0][0][2]
+                widget.obtuNeedleValueCtrPt[0][1][2]
+                - widget.obtuNeedleValueCtrPt[0][0][2]
             )
 
-            L = float(Vx ** 2 + Vy ** 2 + Vz ** 2) ** 0.5
+            L = float(Vx**2 + Vy**2 + Vz**2) ** 0.5
             if L:
                 E = widget.obtuNeedleValueCtrPt[i][0]
                 Ex = E[0] + realNeedleLength * Vx / L
@@ -7618,8 +7618,8 @@ class NeedleFinderLogic:
         widget.initTableView()
         self.deleteEvaluationNeedlesFromTable()
         while (
-                slicer.util.getNodes("manual-seg_" + str(widget.editNeedleTxtBox.value))
-                != {}
+            slicer.util.getNodes("manual-seg_" + str(widget.editNeedleTxtBox.value))
+            != {}
         ):
             nodes = slicer.util.getNodes(
                 "manual-seg_" + str(widget.editNeedleTxtBox.value)
@@ -7669,14 +7669,14 @@ class NeedleFinderLogic:
         )  # AM force the presence of the limit marker
 
     def addCSplineToScene(
-            self,
-            controlPoint,
-            colorVar,
-            needleType="Detection",
-            endMarker=False,
-            name="^",
-            script=False,
-            manualName="",
+        self,
+        controlPoint,
+        colorVar,
+        needleType="Detection",
+        endMarker=False,
+        name="^",
+        script=False,
+        manualName="",
     ):
         """Adds visual needle representation as interpolating cardinal spline to the scene.
         Alternative to Bezier curves.
@@ -7831,17 +7831,17 @@ class NeedleFinderLogic:
             textNode.SetColor(0, 0, 0)
 
     def addPolyLineToScene(
-            self,
-            controlPoint,
-            colorVar,
-            needleType="Detection",
-            script=False,
-            endMarker=False,
-            name="^",
-            trans=0,
-            manualName="",
-            radius=1,
-            bPause=False,
+        self,
+        controlPoint,
+        colorVar,
+        needleType="Detection",
+        script=False,
+        endMarker=False,
+        name="^",
+        trans=0,
+        manualName="",
+        radius=1,
+        bPause=False,
     ):
         """Just adds visual representation of linear (needle) segments to the scene.
         Useful for drawing the control polygon of a smooth curve.
@@ -7995,14 +7995,14 @@ class NeedleFinderLogic:
         return a[ui]
 
     def addNeedleToScene(
-            self,
-            controlPoint,
-            colorVar,
-            needleType="Detection",
-            script=False,
-            trans=0,
-            manualName="",
-            bPause=False,
+        self,
+        controlPoint,
+        colorVar,
+        needleType="Detection",
+        script=False,
+        trans=0,
+        manualName="",
+        bPause=False,
     ):
         """Computes the Bezier's curve and adds visual representation of a needle to the scene
 
@@ -8069,16 +8069,16 @@ class NeedleFinderLogic:
         Q = [[0, 0, 0] for t in range(nbEvaluationPoints + 1)]
         # start calculation
         for t in range(
-                nbEvaluationPoints + 1
+            nbEvaluationPoints + 1
         ):  # +1):  #<<< lil bug    <<< we need +1, it's not a bug! otherwise needle is too short!
             tt = float(t) / (1 * nbEvaluationPoints)
             for j in range(3):
                 for i in range(n + 1):
                     Q[t][j] += (
-                            self.binomial(n, i)
-                            * (1 - tt) ** (n - i)
-                            * tt ** i
-                            * controlPointListSorted[i][j]
+                        self.binomial(n, i)
+                        * (1 - tt) ** (n - i)
+                        * tt**i
+                        * controlPointListSorted[i][j]
                     )
             pointIndex = points.InsertNextPoint(*Q[t])
             linesIDArray.InsertNextTuple1(pointIndex)
@@ -8607,11 +8607,11 @@ class NeedleFinderLogic:
         widget = slicer.modules.NeedleFinderWidget
         # widget.editNeedleTxtBox.value += 1
         widget.validationNeedleButton.text = (
-                "New Validation Needle: ("
-                + str(widget.editNeedleTxtBox.value)
-                + ")->("
-                + str(widget.editNeedleTxtBox.value + 1)
-                + ")"
+            "New Validation Needle: ("
+            + str(widget.editNeedleTxtBox.value)
+            + ")->("
+            + str(widget.editNeedleTxtBox.value + 1)
+            + ")"
         )
         widget.editNeedleTxtBox.value += 1
         # self.tableValueCtrPt.append([])
@@ -8872,12 +8872,12 @@ class NeedleFinderLogic:
                         sl = np.sort(HD[:, 3])
                         medHD = sl[sl.size / 2]
                         resultsEval = (
-                                [user, id, maxTipHD, maxHD, avgHD, stdHD, medHD]
-                                + [len(results)]
-                                + [len(outliers)]
-                                + [str(outliers)]
-                                + l.valuesExperience
-                                + [id]
+                            [user, id, maxTipHD, maxHD, avgHD, stdHD, medHD]
+                            + [len(results)]
+                            + [len(outliers)]
+                            + [str(outliers)]
+                            + l.valuesExperience
+                            + [id]
                         )
                         l.exportEvaluation(resultsEval, dir + "/AP-All_stats.csv")
                         # pause()
@@ -8908,12 +8908,12 @@ class NeedleFinderLogic:
                 sl = np.sort(HD[:, 3])
                 medHD = sl[sl.size / 2]
                 resultsEval = (
-                        [user, id, maxTipHD, maxHD, avgHD, stdHD, medHD]
-                        + [len(results)]
-                        + [len(outliers)]
-                        + [str(outliers)]
-                        + l.valuesExperience
-                        + [id]
+                    [user, id, maxTipHD, maxHD, avgHD, stdHD, medHD]
+                    + [len(results)]
+                    + [len(outliers)]
+                    + [str(outliers)]
+                    + l.valuesExperience
+                    + [id]
                 )
                 l.exportEvaluation(resultsEval, dir + "/BF-" + str(id) + "_stats.csv")
                 # pause()
@@ -8957,12 +8957,12 @@ class NeedleFinderLogic:
                         sl = np.sort(HD[:, 3])
                         medHD = sl[sl.size / 2]
                         resultsEval = (
-                                [user, id, maxTipHD, maxHD, avgHD, stdHD, medHD]
-                                + [len(results)]
-                                + [len(outliers)]
-                                + [str(outliers)]
-                                + l.valuesExperience
-                                + [id]
+                            [user, id, maxTipHD, maxHD, avgHD, stdHD, medHD]
+                            + [len(results)]
+                            + [len(outliers)]
+                            + [str(outliers)]
+                            + l.valuesExperience
+                            + [id]
                         )
                         l.exportEvaluation(
                             resultsEval, dir + "/RS-" + str(id) + "_stats.csv"
@@ -9087,7 +9087,7 @@ class NeedleFinderLogic:
             widget.row -= 1
 
     def addPointToTable(
-            self, ID, needleNumber, pointNumber, label=None, needleType=None, sortTable=1
+        self, ID, needleNumber, pointNumber, label=None, needleType=None, sortTable=1
     ):
         """
         Add control point to the table
@@ -9255,7 +9255,7 @@ class NeedleFinderLogic:
                 p, pOpp, pbis = [0, 0, 0], [0, 0, 0], [0, 0, 0]
                 # if not polydata: u.breakbox("/!!!\ needle tube not found as polydata in scene/vtk file missing: "+widget.caseNr+" "+node.GetName())
                 if (
-                        polydata and polydata.GetNumberOfPoints() > 100
+                    polydata and polydata.GetNumberOfPoints() > 100
                 ):  # ??? this is risky when u have other models in the scene (not only neeedles(
                     if not widget.autoStopTip.isChecked():
                         polydata.GetPoint(0 + offset, p)
@@ -9304,7 +9304,7 @@ class NeedleFinderLogic:
                 p, pbis = [0, 0, 0], [0, 0, 0]
                 # if not polydata: u.breakbox("/!!!\ needle tube not found as polydata in scene: "+widget.caseNr+" "+node.GetName())
                 if (
-                        polydata and polydata.GetNumberOfPoints() > 100
+                    polydata and polydata.GetNumberOfPoints() > 100
                 ):  # ??? this is risky when u have other models in the scene (not only neeedles(
                     if not widget.autoStopTip.isChecked():
                         polydata.GetPoint(0 + offset, p)
@@ -9336,7 +9336,7 @@ class NeedleFinderLogic:
                 pmid = [0, 0, 0]
                 # if not polydata: u.breakbox("/!!!\ needle tube not found as polydata in scene/vtk file missing: "+widget.caseNr+" "+node.GetName())
                 if (
-                        polydata and polydata.GetNumberOfPoints() > 100
+                    polydata and polydata.GetNumberOfPoints() > 100
                 ):  # ??? this is risky when u have other models in the scene (not only neeedles(
                     polydata.GetPoint(
                         int((polydata.GetNumberOfPoints() - 1) / 2) + offset, pmid
@@ -9444,9 +9444,9 @@ class NeedleFinderLogic:
             offSet = s.GetSliceOffset()
             rasVector = [0, 0, offSet]
             widget.templateSliceButton.text = (
-                    "1. Select Current Axial Slice as Seg. Limit (current: "
-                    + str(offSet)
-                    + ")"
+                "1. Select Current Axial Slice as Seg. Limit (current: "
+                + str(offSet)
+                + ")"
             )
 
             widget.axialSegmentationLimit = int(round(self.ras2ijk(rasVector)[2]))
@@ -9456,7 +9456,7 @@ class NeedleFinderLogic:
                 name="template slice position",
                 position=rasVector,
                 color=[0, 1, 0],
-                visible=True
+                visible=True,
             )
         widget.fiducialButton.setEnabled(1)
         # here we are set and can create a first label volume from volume data
@@ -9467,15 +9467,16 @@ class NeedleFinderLogic:
         crosshairNode.SetCrosshairMode(slicer.vtkMRMLCrosshairNode().ShowIntersection)
 
     @staticmethod
-    def createMarkup(name,
-                     position: list,
-                     color: list = [0, 1, 0],
-                     visible: bool = True,
-                     locked: bool = True,
-                     textScale=None,
-                     glyphScale=None,
-                     attributes=None
-                     ):
+    def createMarkup(
+        name,
+        position: list,
+        color: list = [0, 1, 0],
+        visible: bool = True,
+        locked: bool = True,
+        textScale=None,
+        glyphScale=None,
+        attributes=None,
+    ):
         """Add new Markup node to slicer MRML scene"""
         if not name:
             raise ValueError("Name cannot be empty")
@@ -9574,8 +9575,8 @@ class NeedleFinderLogic:
             truncatedPolydata2 = self.clipPolyData(node2, valueBase)
 
             if (
-                    truncatedPolydata1.GetNumberOfPoints() > 100
-                    and truncatedPolydata2.GetNumberOfPoints() > 100
+                truncatedPolydata1.GetNumberOfPoints() > 100
+                and truncatedPolydata2.GetNumberOfPoints() > 100
             ):
 
                 cellId = vtk.mutable(1)
@@ -9774,24 +9775,24 @@ class NeedleFinderLogic:
                 continue
             if script == True:
                 results = (
-                        [
-                            result[i][0],
-                            float(val),
-                            int(needleNrFromFilename),
-                            int(result[i][1].strip("vtkMRMLModelNode")),
-                            int(result[i][2].strip("vtkMRMLModelNode")),
-                        ]
-                        + [val > outlierThresh_mm]
-                        + self.valuesExperience
+                    [
+                        result[i][0],
+                        float(val),
+                        int(needleNrFromFilename),
+                        int(result[i][1].strip("vtkMRMLModelNode")),
+                        int(result[i][2].strip("vtkMRMLModelNode")),
+                    ]
+                    + [val > outlierThresh_mm]
+                    + self.valuesExperience
                 )
             else:
                 results = [
-                              result[i][0],
-                              float(val),
-                              int(needleNrFromFilename),
-                              int(result[i][1].strip("vtkMRMLModelNode")),
-                              int(result[i][2].strip("vtkMRMLModelNode")),
-                          ] + [val > outlierThresh_mm]
+                    result[i][0],
+                    float(val),
+                    int(needleNrFromFilename),
+                    int(result[i][1].strip("vtkMRMLModelNode")),
+                    int(result[i][2].strip("vtkMRMLModelNode")),
+                ] + [val > outlierThresh_mm]
             HD.append(results)
             if val > outlierThresh_mm:
                 outliers.append(needleNrFromFilename)  # CONST
@@ -9861,9 +9862,9 @@ class NeedleFinderLogic:
                 p2bis = p2
             baseDistance.append(
                 (
-                        (p2bis[0] - pbis[0]) ** 2
-                        + (p2bis[1] - pbis[1]) ** 2
-                        + (p2bis[2] - pbis[2]) ** 2
+                    (p2bis[0] - pbis[0]) ** 2
+                    + (p2bis[1] - pbis[1]) ** 2
+                    + (p2bis[2] - pbis[2]) ** 2
                 )
                 ** 0.5
             )
@@ -9898,8 +9899,8 @@ class NeedleFinderLogic:
                         if "manual-seg" in node2.GetName():
                             polydata2 = node2.GetPolyData()
                             if (
-                                    polydata2 is not None
-                                    and polydata2.GetNumberOfPoints() > 100
+                                polydata2 is not None
+                                and polydata2.GetNumberOfPoints() > 100
                             ):
                                 tipDistance = self.distTip(
                                     int(node.GetID().strip("vtkMRMLModelNode")),
@@ -9956,10 +9957,10 @@ class NeedleFinderLogic:
         if frequent:
             u.profprint()
         d = (
-                    (float(pt1[0]) - float(pt2[0])) ** 2
-                    + (float(pt1[1]) - float(pt2[1])) ** 2
-                    + (float(pt1[2]) - float(pt2[2])) ** 2
-            ) ** 0.5
+            (float(pt1[0]) - float(pt2[0])) ** 2
+            + (float(pt1[1]) - float(pt2[1])) ** 2
+            + (float(pt1[2]) - float(pt2[2])) ** 2
+        ) ** 0.5
         return d
 
     def addManualTip(self, A):
@@ -9967,12 +9968,7 @@ class NeedleFinderLogic:
 
         :param A: RAS coordinates
         """
-        self.createMarkup(
-            name="tip",
-            position=A,
-            color=[0, 1, 0],
-            visible=True
-        )
+        self.createMarkup(name="tip", position=A, color=[0, 1, 0], visible=True)
 
     def distanceTwoPoints(self, A, B):
         """3D distance between two points
@@ -10823,11 +10819,11 @@ class NeedleFinderLogic:
                     d = 0
                     if i != j and markerCenters[i] != (0, 0, 0):
                         d2 = (
-                                (markerCenters[i][0] - markerCenters[j][0]) ** 2
-                                + (markerCenters[i][1] - markerCenters[j][1]) ** 2
-                                + (markerCenters[i][2] - markerCenters[j][2]) ** 2
+                            (markerCenters[i][0] - markerCenters[j][0]) ** 2
+                            + (markerCenters[i][1] - markerCenters[j][1]) ** 2
+                            + (markerCenters[i][2] - markerCenters[j][2]) ** 2
                         )
-                        d = d2 ** 0.5
+                        d = d2**0.5
                     # print markerCenters[i],markerCenters[j]
                     # print d
                     if d >= 45 and d <= 53:
@@ -10887,8 +10883,7 @@ class NeedleFinderLogic:
         l.SetActiveHierarchyNodeID(slicer.util.getNode("Fiducial List_fixed").GetID())
         for k in range(4):
             fiducial = self.createMarkup(
-                name=str(k),
-                position=markerCenters[sorted2[k]]
+                name=str(k), position=markerCenters[sorted2[k]]
             )
             # fiducial.SetReferenceCount(fiducial.GetReferenceCount() - 1)
 
@@ -11116,8 +11111,8 @@ class NeedleFinderLogic:
         removeListIDS = []
         for i, child in enumerate(e):
             if (
-                    child.tag == "AnnotationFiducials"
-                    and child.attrib["name"] != "template slice position"
+                child.tag == "AnnotationFiducials"
+                and child.attrib["name"] != "template slice position"
             ):
                 try:
                     n = child.attrib["references"].split(";")
@@ -11150,8 +11145,8 @@ class NeedleFinderLogic:
 
         for i, child in enumerate(e):
             if (
-                    child.tag == "SliceComposite"
-                    and child.attrib["name"] == "SliceComposite"
+                child.tag == "SliceComposite"
+                and child.attrib["name"] == "SliceComposite"
             ):
                 IDToKeep = child.attrib["backgroundVolumeID"]
                 keepIDS.append(child.attrib["backgroundVolumeID"])

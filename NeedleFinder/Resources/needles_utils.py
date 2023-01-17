@@ -103,9 +103,7 @@ def stepSize13(k, l):
     - how many control points per needle
     """
     F = fibonacci(l + 1)
-    s = (sum(fibonacci(k + 1), -1) + F[k + 1]) / float(
-        sum(fibonacci(l + 1), -1)
-    )
+    s = (sum(fibonacci(k + 1), -1) + F[k + 1]) / float(sum(fibonacci(l + 1), -1))
     return s
 
 
@@ -205,8 +203,8 @@ def displayBentNeedle(i):
     modelNodes = slicer.util.getNodes("vtkMRMLModelNode*")
     for modelNode in list(modelNodes.values()):
         if (
-                modelNode.GetAttribute("nth") == str(i)
-                and modelNode.GetAttribute("optimized") == "1"
+            modelNode.GetAttribute("nth") == str(i)
+            and modelNode.GetAttribute("optimized") == "1"
         ):
             displayNode = modelNode.GetModelDisplayNode()
             nVisibility = displayNode.GetVisibility()
@@ -226,8 +224,8 @@ def displayNeedle(i):
     modelNodes = slicer.util.getNodes("vtkMRMLModelNode*")
     for modelNode in list(modelNodes.values()):
         if (
-                modelNode.GetAttribute("nth") == str(i)
-                and modelNode.GetAttribute("segmented") == "1"
+            modelNode.GetAttribute("nth") == str(i)
+            and modelNode.GetAttribute("segmented") == "1"
         ):
             displayNode = modelNode.GetModelDisplayNode()
             nVisibility = displayNode.GetVisibility()
@@ -311,7 +309,7 @@ def displayContour(i, visibility):
     modelNodes = slicer.util.getNodes("vtkMRMLModelNode*")
     for modelNode in list(modelNodes.values()):
         if modelNode.GetAttribute("contour") == "1" and modelNode.GetAttribute(
-                "nth"
+            "nth"
         ) == str(i):
             needleNode = slicer.mrmlScene.GetNodeByID(
                 modelNode.GetAttribute("needleID")
@@ -432,8 +430,8 @@ def drawIsoSurfaces0(self):
 
     for modelNode in list(modelNodes.values()):
         if (
-                modelNode.GetAttribute("nth") != None
-                and modelNode.GetDisplayVisibility() == 1
+            modelNode.GetAttribute("nth") != None
+            and modelNode.GetDisplayVisibility() == 1
         ):
             v.AddInput(modelNode.GetPolyData())
 
@@ -461,6 +459,7 @@ def drawIsoSurfaces0(self):
     isoSurface = contourFilter.GetOutput()
     self.AddContour(isoSurface)
 
+
 def addRadiation(i, needleID):
     """
     Goal of this function is to draw quadratics, simulating the dose radiation.
@@ -471,36 +470,36 @@ def addRadiation(i, needleID):
     needleNode = slicer.mrmlScene.GetNodeByID(needleID)
     polyData = needleNode.GetPolyData()
     nb = polyData.GetNumberOfPoints()
-    base = [0,0,0]
-    tip = [[0,0,0] for k in range(11)]
-    if nb>100:
-        polyData.GetPoint(nb-1,tip[10])
-        polyData.GetPoint(0,base)
+    base = [0, 0, 0]
+    tip = [[0, 0, 0] for k in range(11)]
+    if nb > 100:
+        polyData.GetPoint(nb - 1, tip[10])
+        polyData.GetPoint(0, base)
 
-    a = tip[10][0]-base[0]
-    b = tip[10][1]-base[1]
-    c = tip[10][2]-base[2]
+    a = tip[10][0] - base[0]
+    b = tip[10][1] - base[1]
+    c = tip[10][2] - base[2]
 
     for l in range(7):
-        tip[9-l][0] = tip[10][0]-0.1*a*(l+1)
-        tip[9-l][1] = tip[10][1]-0.1*b*(l+1)
-        tip[9-l][2] = tip[10][2]-0.1*c*(l+1)
-    for l in range(1,3):
-        tip[l][0] = tip[10][0]+0.1*a*l
-        tip[l][1] = tip[10][1]+0.1*b*l
-        tip[l][2] = tip[10][2]+0.1*c*l
+        tip[9 - l][0] = tip[10][0] - 0.1 * a * (l + 1)
+        tip[9 - l][1] = tip[10][1] - 0.1 * b * (l + 1)
+        tip[9 - l][2] = tip[10][2] - 0.1 * c * (l + 1)
+    for l in range(1, 3):
+        tip[l][0] = tip[10][0] + 0.1 * a * l
+        tip[l][1] = tip[10][1] + 0.1 * b * l
+        tip[l][2] = tip[10][2] + 0.1 * c * l
 
     rad = vtk.vtkAppendPolyData()
 
-    for l in range(1,11):
-        TransformPolyDataFilter=vtk.vtkTransformPolyDataFilter()
-        Transform=vtk.vtkTransform()
+    for l in range(1, 11):
+        TransformPolyDataFilter = vtk.vtkTransformPolyDataFilter()
+        Transform = vtk.vtkTransform()
         TransformPolyDataFilter.SetInput(m_polyRadiation)
 
         vtkmat = Transform.GetMatrix()
-        vtkmat.SetElement(0,3,tip[l][0])
-        vtkmat.SetElement(1,3,tip[l][1])
-        vtkmat.SetElement(2,3,tip[l][2])
+        vtkmat.SetElement(0, 3, tip[l][0])
+        vtkmat.SetElement(1, 3, tip[l][1])
+        vtkmat.SetElement(2, 3, tip[l][2])
         TransformPolyDataFilter.SetTransform(Transform)
         TransformPolyDataFilter.Update()
 
@@ -510,7 +509,7 @@ def addRadiation(i, needleID):
     displayNode = slicer.vtkMRMLModelDisplayNode()
     storageNode = slicer.vtkMRMLModelStorageNode()
 
-    fileName = 'Rad' + option[i] + '.vtk'
+    fileName = "Rad" + option[i] + ".vtk"
 
     mrmlScene = slicer.mrmlScene
     modelNode.SetName(fileName)
@@ -533,11 +532,13 @@ def addRadiation(i, needleID):
 
     displayNode.SetSliceIntersectionVisibility(0)
     displayNode.SetScalarVisibility(1)
-    displayNode.SetActiveScalarName('scalars')
+    displayNode.SetActiveScalarName("scalars")
     displayNode.SetScalarRange(0, 230)
     displayNode.SetOpacity(0.06)
-    displayNode.SetAndObserveColorNodeID('vtkMRMLColorTableNodeFileHotToColdRainbow.txt')
+    displayNode.SetAndObserveColorNodeID(
+        "vtkMRMLColorTableNodeFileHotToColdRainbow.txt"
+    )
     displayNode.SetBackfaceCulling(0)
     pNode = parameterNode()
-    pNode.SetParameter(fileName,modelNode.GetID())
+    pNode.SetParameter(fileName, modelNode.GetID())
     mrmlScene.AddNode(modelNode)
